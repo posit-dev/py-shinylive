@@ -173,7 +173,7 @@ def print_shinylive_local_info() -> None:
         print("""    Installed versions:""")
         installed_versions = _installed_shinylive_versions()
         if len(installed_versions) > 0:
-            print("    " + "\n".join(installed_versions))
+            print("    " + "\n    ".join(installed_versions))
         else:
             print("    (None)")
     else:
