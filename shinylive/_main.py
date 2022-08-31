@@ -76,14 +76,14 @@ def deploy(
 
 
 @main.command(
-    help="""Manage local copy of assets for static Shinylive app deployment.
+    help=f"""Manage local copy of assets for static Shinylive app deployment.
 
     \b
     Commands:
-        download: Download assets from the remote server.
-        remove: Remove local copies of assets.
-        info: Print information about the local assets.
-        install_from_local: Install shinylive assets from a local directory. Must be used with --source.
+      download: Download assets from the remote server.
+      remove: Remove local copies of assets. By default, removes all versions except {_assets.SHINYLIVE_ASSETS_VERSION}. Can be used with --version to remove a specific version.
+      info: Print information about the local assets.
+      install-from-local: Install shinylive assets from a local directory. Must be used with --source.
 
 """,
     no_args_is_help=True,
@@ -131,14 +131,10 @@ def assets(
             version = _version.SHINYLIVE_ASSETS_VERSION
         _assets.download_shinylive(destdir=dir, version=version, url=url)
     elif command == "remove":
-        if version is None:
-            print(f"Removing {dir}")
-        else:
-            print(f"Removing shinylive-{version} from {dir}")
         _assets.remove_shinylive_local(shinylive_dir=dir, version=version)
     elif command == "info":
         _assets.print_shinylive_local_info()
-    elif command == "install_from_local":
+    elif command == "install-from-local":
         if source is None:
             raise click.UsageError("Must specify --source")
         if version is None:

@@ -123,7 +123,7 @@ def ensure_shinylive_assets(
 
 def remove_shinylive_local(
     shinylive_dir: Union[str, Path, None] = None,
-    version: Optional[str] = None,
+    version: Union[str, List[str], None] = None,
 ) -> None:
     """Removes local copy of shinylive.
 
@@ -135,7 +135,7 @@ def remove_shinylive_local(
 
     version
         If a version is specified, only that version will be removed.
-        If None, all local versions of shinylive will be removed.
+        If None, all local versions except the version specified by SHINYLIVE_ASSETS_VERSION will be removed.
     """
 
     if shinylive_dir is None:
@@ -144,13 +144,29 @@ def remove_shinylive_local(
     shinylive_dir = Path(shinylive_dir)
 
     target_dir = shinylive_dir
-    if version is not None:
-        target_dir = target_dir / f"shinylive-{version}"
 
-    if target_dir.exists():
-        shutil.rmtree(target_dir)
-    else:
-        print(f"{target_dir} does not exist.")
+    if isinstance(version, str):
+        version = [version]
+
+    if version is None:
+        version = _installed_shinylive_versions(shinylive_dir)
+        version = [re.sub("^shinylive-", "", os.path.basename(v)) for v in version]
+        if SHINYLIVE_ASSETS_VERSION in version:
+            print("Keeping version " + SHINYLIVE_ASSETS_VERSION)
+            version.remove(SHINYLIVE_ASSETS_VERSION)
+
+    target_dirs = [shinylive_dir / f"shinylive-{v}" for v in version]
+
+    if len(target_dirs) == 0:
+        print(f"No versions of shinylive to remove from {shinylive_dir}/")
+        return
+
+    for target_dir in target_dirs:
+        print("Removing " + str(target_dir))
+        if target_dir.exists():
+            shutil.rmtree(target_dir)
+        else:
+            print(f"{target_dir} does not exist.")
 
 
 def _installed_shinylive_versions(shinylive_dir: Optional[Path] = None) -> List[str]:
