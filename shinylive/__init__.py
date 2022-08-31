@@ -1,5 +1,5 @@
-"""A package for building reactive web applications."""
+"""A package for deploying Shiny applications that run on Python in the browser."""
 
 from . import _version
 
-__version__ = _version.version
+__version__ = _version.SHINYLIVE_PACKAGE_VERSION

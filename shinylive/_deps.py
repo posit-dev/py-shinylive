@@ -22,7 +22,6 @@ else:
 
 from ._assets import shinylive_assets_dir, repodata_json_file, ensure_shinylive_assets
 from ._app_json import FileContentJson
-from . import _version
 
 # Files in Pyodide that should always be included.
 BASE_PYODIDE_FILES = {
@@ -231,7 +230,6 @@ def shinylive_base_files() -> List[str]:
 def package_deps_htmldep(
     json_file: Union[str, Path],
     path_prefix: str = "shinylive-dist/",
-    version: str = _version.version,
     verbose: bool = True,
 ) -> List[QuartoHtmlDependency]:
     """
@@ -248,7 +246,7 @@ def package_deps_htmldep(
     with open(json_file) as f:
         file_contents: List[FileContentJson] = json.load(f)
 
-    pkg_infos = find_package_deps(file_contents, path_prefix)
+    pkg_infos = find_package_deps(file_contents)
     deps = _pyodide_pkg_infos_to_quarto_html_deps(pkg_infos, path_prefix)
     return deps
 
@@ -266,7 +264,6 @@ def base_package_deps() -> List[PyodidePackageInfo]:
 
 def find_package_deps(
     app_contents: List[FileContentJson],
-    version: str = _version.version,
     verbose_print: Callable[..., None] = lambda *args: None,
 ) -> List[PyodidePackageInfo]:
     """
@@ -320,24 +317,22 @@ def _find_recursive_deps(
     return deps
 
 
-def _dep_name_to_dep_file(dep_name: str, version: str = _version.version) -> str:
+def _dep_name_to_dep_file(dep_name: str) -> str:
     """
     Given the name of a dependency, like "pandas", return the name of the .whl file,
     like "pandas-1.4.2-cp310-cp310-emscripten_3_1_14_wasm32.whl".
     """
-    repodata = _pyodide_repodata(version)
+    repodata = _pyodide_repodata()
     return repodata["packages"][dep_name]["file_name"]
 
 
-def _dep_names_to_dep_files(
-    dep_names: List[str], version: str = _version.version
-) -> List[str]:
+def _dep_names_to_dep_files(dep_names: List[str]) -> List[str]:
     """
     Given a list of dependency names, like ["pandas"], return a list with the names of
     corresponding .whl files (from data in repodata.json), like
     ["pandas-1.4.2-cp310-cp310-emscripten_3_1_14_wasm32.whl"].
     """
-    repodata = _pyodide_repodata(version)
+    repodata = _pyodide_repodata()
     dep_files = [repodata["packages"][x]["file_name"] for x in dep_names]
     return dep_files
 
@@ -357,13 +352,13 @@ def _find_import_app_contents(app_contents: List[FileContentJson]) -> Set[str]:
 
 
 @functools.lru_cache
-def _pyodide_repodata(version: str = _version.version) -> PyodideRepodataFile:
+def _pyodide_repodata() -> PyodideRepodataFile:
     """
     Read in the Pyodide repodata.json file and return the contents. The result is
     cached, so if the file changes, it won't register until the Python session is
     restarted.
     """
-    with open(repodata_json_file(version), "r") as f:
+    with open(repodata_json_file(), "r") as f:
         return json.load(f)
 
 

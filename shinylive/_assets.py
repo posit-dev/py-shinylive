@@ -5,31 +5,33 @@ import re
 import shutil
 import sys
 
-from . import _version
-
-SHINYLIVE_DOWNLOAD_URL = "https://pyshiny.netlify.app/shinylive"
+from ._version import SHINYLIVE_ASSETS_VERSION
 
 
 def download_shinylive(
     destdir: Union[str, Path, None] = None,
-    version: str = _version.version,
-    url: str = SHINYLIVE_DOWNLOAD_URL,
+    version: str = SHINYLIVE_ASSETS_VERSION,
+    url: Optional[str] = None,
 ) -> None:
     import tarfile
     import urllib.request
 
     if destdir is None:
-        destdir = shinylive_assets_dir()
+        # Note that this is the cache directory, which is the parent of the assets
+        # directory. The tarball will have the assets directory as the top-level subdir.
+        destdir = shinylive_cache_dir()
+
+    if url is None:
+        url = shinylive_bundle_url(version)
 
     destdir = Path(destdir)
     tmp_name = None
 
     try:
-        bundle_url = f"{url}/shinylive-{version}.tar.gz"
-        print(f"Downloading {bundle_url}...")
-        tmp_name, _ = urllib.request.urlretrieve(bundle_url)
+        print(f"Downloading {url}...")
+        tmp_name, _ = urllib.request.urlretrieve(url)
 
-        print(f"Unzipping to {destdir}")
+        print(f"Unzipping to {destdir}/")
         with tarfile.open(tmp_name) as tar:
             tar.extractall(destdir)
     finally:
@@ -42,6 +44,16 @@ def download_shinylive(
                     os.remove(tmp_name)
 
 
+def shinylive_bundle_url(version: str = SHINYLIVE_ASSETS_VERSION) -> str:
+    """
+    Returns the URL for the Shinylive assets bundle.
+    """
+    return (
+        "https://github.com/rstudio/shinylive/releases/download/"
+        + f"v{SHINYLIVE_ASSETS_VERSION}/shinylive-{SHINYLIVE_ASSETS_VERSION}.tar.gz"
+    )
+
+
 def shinylive_cache_dir() -> str:
     """
     Returns the directory used for caching Shinylive assets. This directory can contain
@@ -52,7 +64,7 @@ def shinylive_cache_dir() -> str:
     return appdirs.user_cache_dir("shinylive")
 
 
-def shinylive_assets_dir(version: str = _version.version) -> str:
+def shinylive_assets_dir(version: str = SHINYLIVE_ASSETS_VERSION) -> str:
     """
     Returns the directory containing cached Shinylive assets, for a particular version
     of Shinylive.
@@ -60,7 +72,7 @@ def shinylive_assets_dir(version: str = _version.version) -> str:
     return os.path.join(shinylive_cache_dir(), "shinylive-" + version)
 
 
-def repodata_json_file(version: str = _version.version) -> Path:
+def repodata_json_file(version: str = SHINYLIVE_ASSETS_VERSION) -> Path:
     return (
         Path(shinylive_assets_dir(version)) / "shinylive" / "pyodide" / "repodata.json"
     )
@@ -69,7 +81,7 @@ def repodata_json_file(version: str = _version.version) -> Path:
 def copy_shinylive_local(
     source_dir: Union[str, Path],
     destdir: Optional[Union[str, Path]] = None,
-    version: str = _version.version,
+    version: str = SHINYLIVE_ASSETS_VERSION,
 ):
     if destdir is None:
         destdir = Path(shinylive_assets_dir())
@@ -86,13 +98,16 @@ def copy_shinylive_local(
 
 def ensure_shinylive_assets(
     destdir: Union[Path, None] = None,
-    version: str = _version.version,
-    url: str = SHINYLIVE_DOWNLOAD_URL,
+    version: str = SHINYLIVE_ASSETS_VERSION,
+    url: Optional[str] = None,
 ) -> Path:
     """Ensure that there is a local copy of shinylive."""
 
     if destdir is None:
         destdir = Path(shinylive_cache_dir())
+
+    if url is None:
+        url = shinylive_bundle_url(version)
 
     if not destdir.exists():
         print("Creating directory " + str(destdir))

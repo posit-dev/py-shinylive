@@ -7,7 +7,14 @@ import click
 from . import _assets, _deploy, _deps, _version
 
 
-@click.group()  # pyright: ignore[reportUnknownMemberType]
+@click.group(
+    no_args_is_help=True,
+    help=f"""
+    \b
+    shinylive Python package version: {_version.SHINYLIVE_PACKAGE_VERSION}
+    shinylive web assets version:     {_assets.SHINYLIVE_ASSETS_VERSION}
+""",
+)
 def main() -> None:
     pass
 
@@ -26,7 +33,8 @@ This will not deploy the contents of venv/ or any files that start with '.'
 After writing the output files, you can serve them locally with the following command:
 
     python3 -m http.server --directory DESTDIR 8008
-"""
+""",
+    no_args_is_help=True,
 )
 @click.argument("appdir", type=str)
 @click.argument("destdir", type=str)
@@ -48,7 +56,7 @@ After writing the output files, you can serve them locally with the following co
     "--full-shinylive",
     is_flag=True,
     default=False,
-    help="Include the full Shinylive bundle, including all Pyodide packages. Without this flag, only the packages needed to run the application are included.",
+    help="Include the full Shinylive assets, including all Pyodide packages. Without this flag, only the packages needed to run the application are included.",
     show_default=True,
 )
 def deploy(
@@ -77,7 +85,8 @@ def deploy(
         info: Print information about the local assets.
         install_from_local: Install shinylive assets from a local directory. Must be used with --source.
 
-"""
+""",
+    no_args_is_help=True,
 )
 @click.argument("command", type=str)
 @click.option(
@@ -90,8 +99,8 @@ def deploy(
 @click.option(
     "--url",
     type=str,
-    default=_assets.SHINYLIVE_DOWNLOAD_URL,
-    help="URL to download from.",
+    default=None,
+    help="URL to download from. If used, this will override --version.",
     show_default=True,
 )
 @click.option(
@@ -107,16 +116,19 @@ def deploy(
     help="Directory where shinylive assets will be copied from. Must be used with 'copy' command.",
 )
 def assets(
-    command: str, version: str, url: str, dir: Union[str, Path], source: Optional[str]
+    command: str,
+    version: Optional[str],
+    url: Optional[str],
+    dir: Union[str, Path],
+    source: Optional[str],
 ) -> None:
     if dir is None:
-        dir = _assets.shinylive_assets_dir()
+        dir = _assets.shinylive_cache_dir()
     dir = Path(dir)
 
     if command == "download":
         if version is None:
-            version = _version.version
-        print(f"Downloading shinylive-{version} from {url} to {dir}")
+            version = _version.SHINYLIVE_ASSETS_VERSION
         _assets.download_shinylive(destdir=dir, version=version, url=url)
     elif command == "remove":
         if version is None:
@@ -130,7 +142,7 @@ def assets(
         if source is None:
             raise click.UsageError("Must specify --source")
         if version is None:
-            version = _version.version
+            version = _version.SHINYLIVE_ASSETS_VERSION
         print(f"Copying shinylive-{version} from {source} to {dir}")
         _assets.copy_shinylive_local(source_dir=source, destdir=dir, version=version)
     else:
@@ -141,7 +153,8 @@ def assets(
     help="""Get a set of base dependencies for a Shinylive deployment.
 
     This is intended for use by the Shinylive Quarto extension.
-"""
+""",
+    no_args_is_help=True,
 )
 @click.option(
     "--path-prefix",
@@ -159,7 +172,8 @@ def base_deps(path_prefix: str) -> None:
     help="""Get a set of dependencies for a set of Python files packaged into a .json file.
 
     This is intended for use by the Shinylive Quarto extension.
-"""
+""",
+    no_args_is_help=True,
 )
 @click.argument("json_file", type=str)
 def package_deps(json_file: str) -> None:
