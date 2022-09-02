@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import re
 import shutil
+import urllib.request
 
 from ._version import SHINYLIVE_ASSETS_VERSION
 
@@ -13,7 +14,6 @@ def download_shinylive(
     url: Optional[str] = None,
 ) -> None:
     import tarfile
-    import urllib.request
 
     if destdir is None:
         # Note that this is the cache directory, which is the parent of the assets
@@ -188,3 +188,26 @@ def print_shinylive_local_info() -> None:
             print("    (None)")
     else:
         print("    (Cache dir does not exist)")
+
+
+def _check_assets_url(
+    version: str = SHINYLIVE_ASSETS_VERSION, url: Optional[str] = None
+) -> bool:
+    """Checks if the URL for the Shinylive assets bundle is valid.
+
+    Returns True if the URL is valid (with a 200 status code), False otherwise.
+
+    The reason it has both the `version` and `url` parameters is so that it behaves the
+    same as `download_shinylive()` and `ensure_shinylive_assets()`.
+    """
+    if url is None:
+        url = shinylive_bundle_url(version)
+
+    req = urllib.request.Request(url, method="HEAD")
+    resp = urllib.request.urlopen(req)
+    status = resp.getcode()
+
+    if status == 200:
+        return True
+    else:
+        return False
