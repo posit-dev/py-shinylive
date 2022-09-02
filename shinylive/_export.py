@@ -2,10 +2,9 @@ import os
 from pathlib import Path
 from typing import List, Union
 
-from . import _deps
-from ._assets import shinylive_assets_dir
+from . import _deps, _utils
 from ._app_json import AppInfo, read_app_files, write_app_json
-from . import _utils
+from ._assets import shinylive_assets_dir
 
 
 def export(

@@ -3,7 +3,6 @@ import os
 from pathlib import Path
 import re
 import shutil
-import sys
 
 from ._version import SHINYLIVE_ASSETS_VERSION
 
@@ -36,12 +35,7 @@ def download_shinylive(
             tar.extractall(destdir)
     finally:
         if tmp_name is not None:
-            # Can simplify this block after we drop Python 3.7 support.
-            if sys.version_info >= (3, 8):
-                Path(tmp_name).unlink(missing_ok=True)
-            else:
-                if os.path.exists(tmp_name):
-                    os.remove(tmp_name)
+            Path(tmp_name).unlink(missing_ok=True)
 
 
 def shinylive_bundle_url(version: str = SHINYLIVE_ASSETS_VERSION) -> str:
