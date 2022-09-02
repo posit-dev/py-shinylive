@@ -150,7 +150,6 @@ def assets(
 
     This is intended for use by the Shinylive Quarto extension.
 """,
-    no_args_is_help=True,
 )
 @click.option(
     "--path-prefix",
