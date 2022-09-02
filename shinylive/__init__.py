@@ -1,4 +1,4 @@
-"""A package for deploying Shiny applications that run on Python in the browser."""
+"""A package for packaging Shiny applications that run on Python in the browser."""
 
 from . import _version
 

@@ -4,7 +4,7 @@ from typing import Optional, Union
 
 import click
 
-from . import _assets, _deploy, _deps, _version
+from . import _assets, _deps, _export, _version
 
 
 @click.group(
@@ -28,7 +28,7 @@ APPDIR is the directory containing the Shiny application.
 DESTDIR is the destination directory where the output files will be written to. This
 directory can be deployed as a static web site.
 
-This will not deploy the contents of venv/ or any files that start with '.'
+This command will not include the contents of venv/ or any files that start with '.'
 
 After writing the output files, you can serve them locally with the following command:
 
@@ -59,14 +59,14 @@ After writing the output files, you can serve them locally with the following co
     help="Include the full Shinylive assets, including all Pyodide packages. Without this flag, only the packages needed to run the application are included.",
     show_default=True,
 )
-def deploy(
+def export(
     appdir: str,
     destdir: str,
     subdir: Union[str, None],
     verbose: bool,
     full_shinylive: bool,
 ) -> None:
-    _deploy.deploy(
+    _export.export(
         appdir,
         destdir,
         subdir=subdir,
@@ -76,7 +76,7 @@ def deploy(
 
 
 @main.command(
-    help=f"""Manage local copy of assets for static Shinylive app deployment.
+    help=f"""Manage local copy of Shinylive web assets
 
     \b
     Commands:
@@ -146,7 +146,7 @@ def assets(
 
 
 @main.command(
-    help="""Get a set of base dependencies for a Shinylive deployment.
+    help="""Get a set of base dependencies for a Shinylive application.
 
     This is intended for use by the Shinylive Quarto extension.
 """,

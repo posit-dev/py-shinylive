@@ -84,11 +84,11 @@ def copy_shinylive_local(
     version: str = SHINYLIVE_ASSETS_VERSION,
 ):
     if destdir is None:
-        destdir = Path(shinylive_assets_dir())
+        destdir = Path(shinylive_cache_dir())
 
     destdir = Path(destdir)
 
-    target_dir = destdir
+    target_dir = destdir / f"shinylive-{version}"
 
     if target_dir.exists():
         shutil.rmtree(target_dir)

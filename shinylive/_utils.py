@@ -81,8 +81,8 @@ def create_copy_fn(
                 print(
                     "\nSource and destination copies differ:",
                     dst,
-                    """\nThis is probably because your shinylive sources have been updated and differ from the copy in the deployed app.""",
-                    """\nYou probably should remove the deployment directory and re-deploy the application.""",
+                    """\nThis is probably because your shinylive sources have been updated and differ from the copy in the exported app.""",
+                    """\nYou probably should remove the export directory and re-export the application.""",
                 )
             if overwrite:
                 verbose_print(f"Overwriting {dst}")

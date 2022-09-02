@@ -1,5 +1,4 @@
 import os
-import sys
 from pathlib import Path
 from typing import List, Union
 
@@ -9,10 +8,7 @@ from ._app_json import AppInfo, read_app_files, write_app_json
 from . import _utils
 
 
-# =============================================================================
-# Deployment
-# =============================================================================
-def deploy(
+def export(
     appdir: Union[str, Path],
     destdir: Union[str, Path],
     *,
@@ -20,9 +16,6 @@ def deploy(
     verbose: bool = False,
     full_shinylive: bool = False,
 ):
-    if sys.version_info < (3, 8):
-        raise RuntimeError("Shiny static deployment requires Python 3.8 or higher.")
-
     def verbose_print(*args: object) -> None:
         if verbose:
             print(*args)
@@ -110,7 +103,7 @@ def deploy(
     write_app_json(
         app_info,
         destdir,
-        html_source_dir=Path(shinylive_assets_dir()) / "deploy_template",
+        html_source_dir=Path(shinylive_assets_dir()) / "export_template",
     )
 
     print(

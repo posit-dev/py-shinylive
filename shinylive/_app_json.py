@@ -31,8 +31,8 @@ def read_app_files(appdir: Path, destdir: Path) -> List[FileContentJson]:
        Directory containing the application.
 
     destdir : str
-       Destination directory. This is used only to avoid adding deployed shinylive
-       assets when they are in a subdir of the application.
+       Destination directory. This is used only to avoid adding shinylive assets when
+       they are in a subdir of the application.
     """
     app_files: List[FileContentJson] = []
     # Recursively iterate over files in app directory, and collect the files into

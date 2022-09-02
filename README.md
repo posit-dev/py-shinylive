@@ -6,9 +6,9 @@ Shinylive Python package
 
 [Documentation site](https://shiny.rstudio.com/py/docs/shinylive.html)
 
-This repository contains a Python package for deploying Shinylive applications.
+This repository contains a Python package for exporting Shiny applications as Shinylive applications.
 
-This repository is not the same as the https://github.com/rstudio/shinylive repository. That repository is used to generate the Shinylive assets distribution, which is a bundle containing HTML, JavaScript, CSS, and wasm files. The Python package in this repository downloads the assets and uses them to create Shinylive application deployments.
+This repository is not the same as the https://github.com/rstudio/shinylive repository. That repository is used to generate the Shinylive assets distribution, which is a bundle containing HTML, JavaScript, CSS, and wasm files. The Python package in this repository downloads the assets and uses them to create Shinylive applications.
 
 ## Installation
 
@@ -25,10 +25,10 @@ pip install shinylive
 shiny create myapp
 ```
 
-Once you have a Shiny application in `myapp/` and would like create a deployment in `site/`:
+Once you have a Shiny application in `myapp/` and would like turn it into a Shinylive app in `site/`:
 
 ```
-shinylive deploy myapp site
+shinylive export myapp site
 ```
 
 Then you can preview the application by running a web server and visiting it in a browser:
@@ -42,11 +42,11 @@ At this point, you can deploy the `site/` directory to any static web hosting se
 
 ### Multiple applications
 
-If you have multiple applications that you want to put on the same site, you can deploy them in subdirectories of the site, so that they can all share the same Shinylive assets. You can do this with the `--subdir` option:
+If you have multiple applications that you want to put on the same site, you can export them to subdirectories of the site, so that they can all share the same Shinylive assets. You can do this with the `--subdir` option:
 
 ```bash
-shinylive deploy myapp1 site --subdir app1
-shinylive deploy myapp2 site --subdir app2
+shinylive export myapp1 site --subdir app1
+shinylive export myapp2 site --subdir app2
 ```
 
 
@@ -65,7 +65,7 @@ Usage: shinylive [OPTIONS] COMMAND [ARGS]...
 ...
 ```
 
-The web assets will be downloaded and cached the first time you run `shinylive deploy`. Or, you can run `shinylive assets download` to fetch them.
+The web assets will be downloaded and cached the first time you run `shinylive export`. Or, you can run `shinylive assets download` to fetch them.
 
 ```
 $ shinylive assets download
