@@ -131,7 +131,7 @@ def assets(
             version = _version.SHINYLIVE_ASSETS_VERSION
         _assets.download_shinylive(destdir=dir, version=version, url=url)
     elif command == "remove":
-        _assets.remove_shinylive_local(shinylive_dir=dir, version=version)
+        _assets.remove_shinylive_assets(shinylive_dir=dir, version=version)
     elif command == "info":
         _assets.print_shinylive_local_info()
     elif command == "install-from-local":

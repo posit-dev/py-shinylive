@@ -115,7 +115,7 @@ def ensure_shinylive_assets(
     return shinylive_bundle_dir
 
 
-def remove_shinylive_local(
+def remove_shinylive_assets(
     shinylive_dir: Union[str, Path, None] = None,
     version: Union[str, List[str], None] = None,
 ) -> None:
