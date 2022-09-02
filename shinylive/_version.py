@@ -2,4 +2,4 @@
 SHINYLIVE_PACKAGE_VERSION = "0.0.2"
 
 # This is the version of the Shinylive assets to use.
-SHINYLIVE_ASSETS_VERSION = "0.0.6.9000"
+SHINYLIVE_ASSETS_VERSION = "0.0.7"
