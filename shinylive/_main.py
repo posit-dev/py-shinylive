@@ -1,5 +1,6 @@
 import json
 from pathlib import Path
+import sys
 from typing import Optional, Union
 
 import click
@@ -151,26 +152,51 @@ def assets(
     This is intended for use by the Shinylive Quarto extension.
 """,
 )
-@click.option(
-    "--path-prefix",
-    type=str,
-    default="shinylive-dist/",
-    help="A prefix to prepend to the `path` for each dependency.",
-    show_default=True,
+def base_deps() -> None:
+    deps = _deps.shinylive_base_deps_htmldep()
+    print(json.dumps(deps, indent=2))
+
+
+@main.command(
+    help="""Get a set of base package dependencies for a Shinylive application.
+
+    This is intended for use by the Shinylive Quarto extension.
+""",
 )
-def base_deps(path_prefix: str) -> None:
-    deps = _deps.shinylive_base_deps_htmldep(path_prefix)
+def base_package_deps() -> None:
+    deps = _deps.base_package_deps_htmldep()
     print(json.dumps(deps, indent=2))
 
 
 @main.command(
     help="""Get a set of dependencies for a set of Python files packaged into a .json file.
 
+    If JSON_FILE is provided, read from that file. Otherwise, read from stdin.
+
     This is intended for use by the Shinylive Quarto extension.
-""",
-    no_args_is_help=True,
+"""
 )
-@click.argument("json_file", type=str)
-def package_deps(json_file: str) -> None:
-    deps = _deps.package_deps_htmldep(json_file)
+@click.argument(
+    "json_file",
+    required=False,
+    type=str,
+    default=None,
+)
+def package_deps(json_file: Optional[str]) -> None:
+    json_content: Union[str, None] = None
+    if json_file is None:
+        json_content = sys.stdin.read()
+
+    deps = _deps.package_deps_htmldep(json_file, json_content)
     print(json.dumps(deps, indent=2))
+
+
+@main.command(
+    help="""Return the path to a codeblock-to-json.js file, to be executed by Deno.
+
+    This is intended for use by the Shinylive Quarto extension.
+"""
+)
+def codeblock_to_json_path() -> None:
+    p = Path(_assets.shinylive_assets_dir()) / "scripts" / "codeblock-to-json.js"
+    print(str(p))

@@ -10,7 +10,7 @@ import os
 import sys
 from pathlib import Path
 from textwrap import dedent
-from typing import Callable, Dict, Iterable, List, Literal, Set, Union
+from typing import Callable, Dict, Iterable, List, Literal, Optional, Set, Union
 
 # Even though TypedDict is available in Python 3.8, because it's used with NotRequired,
 # they should both come from the same typing module.
@@ -89,17 +89,21 @@ def _dep_names_to_pyodide_pkg_infos(
 
 def _pyodide_pkg_info_to_quarto_html_dep(
     pkg: PyodidePackageInfo,
-    path_prefix: str,
 ) -> QuartoHtmlDependency:
     """
     Convert a PyodidePackageInfo object to a QuartoHtmlDependency object.
     """
+
+    assets_dir = shinylive_assets_dir()
+
     dep: QuartoHtmlDependency = {
         "name": pkg["name"],
         "resources": [
             {
                 "name": pkg["file_name"],
-                "path": os.path.join(path_prefix, pkg["file_name"]),
+                "path": os.path.join(
+                    assets_dir, "shinylive", "pyodide", pkg["file_name"]
+                ),
             }
         ],
     }
@@ -109,21 +113,20 @@ def _pyodide_pkg_info_to_quarto_html_dep(
 
 def _pyodide_pkg_infos_to_quarto_html_deps(
     pkgs: List[PyodidePackageInfo],
-    path_prefix: str,
 ) -> List[QuartoHtmlDependency]:
-    return [_pyodide_pkg_info_to_quarto_html_dep(pkg, path_prefix) for pkg in pkgs]
+    return [_pyodide_pkg_info_to_quarto_html_dep(pkg) for pkg in pkgs]
 
 
 # =============================================================================
 # Shinylive base dependencies
 # =============================================================================
-def shinylive_base_deps_htmldep(
-    path_prefix: str = "shinylive-dist/",
-) -> QuartoHtmlDependency:
+def shinylive_base_deps_htmldep() -> QuartoHtmlDependency:
     """
     Return an HTML dependency object consisting of files that are base dependencies; in
     other words, the files that are always included in a Shinylive deployment.
     """
+
+    assets_dir = shinylive_assets_dir()
 
     # First, get the list of base files.
     base_files = shinylive_base_files()
@@ -135,18 +138,18 @@ def shinylive_base_deps_htmldep(
 
     for file in base_files:
         if os.path.basename(file) in [
-            "load-serviceworker.js",
+            "load-shinylive-sw.js",
             "jquery.min.js",
             "jquery.terminal.min.js",
             "run-python-blocks.js",
         ]:
             script_item: HtmlDepItem = {
                 "name": file,
-                "path": os.path.join(path_prefix, file),
+                "path": os.path.join(assets_dir, file),
             }
 
             if os.path.basename(file) in [
-                "load-serviceworker.js",
+                "load-shinylive-sw.js",
                 "run-python-blocks.js",
             ]:
                 script_item["attribs"] = {"type": "module"}
@@ -160,14 +163,14 @@ def shinylive_base_deps_htmldep(
             stylesheets.append(
                 {
                     "name": file,
-                    "path": os.path.join(path_prefix, file),
+                    "path": os.path.join(assets_dir, file),
                 }
             )
         else:
             resources.append(
                 {
                     "name": file,
-                    "path": os.path.join(path_prefix, file),
+                    "path": os.path.join(assets_dir, file),
                 }
             )
 
@@ -228,26 +231,50 @@ def shinylive_base_files() -> List[str]:
 # Find which packages are used by a Shiny application
 # =============================================================================
 def package_deps_htmldep(
-    json_file: Union[str, Path],
-    path_prefix: str = "shinylive-dist/",
+    json_file: Optional[Union[str, Path]],
+    json_content: Optional[str],
     verbose: bool = True,
 ) -> List[QuartoHtmlDependency]:
     """
     Find package dependencies from an app.json file, and return as a list of
     QuartoHtmlDependency objects.
+
+    Requires either `json_file` or `json_content`, but not both.
     """
+
+    if (json_file is None and json_content is None) or (
+        json_file is not None and json_content is not None
+    ):
+        raise RuntimeError("Must provide either `json_file` or `json_content`.")
 
     def verbose_print(*args: object) -> None:
         if verbose:
             print(*args)
 
-    json_file = Path(json_file)
+    file_contents: List[FileContentJson] = []
 
-    with open(json_file) as f:
-        file_contents: List[FileContentJson] = json.load(f)
+    if json_file is not None:
+        json_file = Path(json_file)
+        with open(json_file) as f:
+            file_contents = json.load(f)
 
-    pkg_infos = find_package_deps(file_contents)
-    deps = _pyodide_pkg_infos_to_quarto_html_deps(pkg_infos, path_prefix)
+    if json_content is not None:
+        file_contents = json.loads(json_content)
+
+    pkg_infos = base_package_deps() + find_package_deps(file_contents)
+    deps = _pyodide_pkg_infos_to_quarto_html_deps(pkg_infos)
+    return deps
+
+
+def base_package_deps_htmldep() -> List[QuartoHtmlDependency]:
+    """
+    Return list of packages that should be included in all Shinylive deployments. The
+    returned data structure is a list of PyodidePackageInfo objects.
+    """
+    dep_names = _find_recursive_deps(BASE_PYODIDE_PACKAGES)
+    pkg_infos = _dep_names_to_pyodide_pkg_infos(dep_names)
+    deps = _pyodide_pkg_infos_to_quarto_html_deps(pkg_infos)
+
     return deps
 
 
