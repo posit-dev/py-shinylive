@@ -9,6 +9,7 @@ from . import _assets, _deps, _export, _version
 
 
 @click.group(
+    invoke_without_command=True,
     no_args_is_help=True,
     help=f"""
     \b
@@ -16,8 +17,16 @@ from . import _assets, _deps, _export, _version
     shinylive web assets version:     {_assets.SHINYLIVE_ASSETS_VERSION}
 """,
 )
-def main() -> None:
-    pass
+@click.option(
+    "--version",
+    is_flag=True,
+    default=False,
+    help="Print version of shinylive python package.",
+    show_default=True,
+)
+def main(version: bool) -> None:
+    if version:
+        print(_version.SHINYLIVE_PACKAGE_VERSION)
 
 
 @main.command(
