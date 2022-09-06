@@ -22,6 +22,7 @@ else:
 
 from ._assets import shinylive_assets_dir, repodata_json_file, ensure_shinylive_assets
 from ._app_json import FileContentJson
+from ._version import SHINYLIVE_ASSETS_VERSION
 
 # Files in Pyodide that should always be included.
 BASE_PYODIDE_FILES = {
@@ -66,12 +67,19 @@ class HtmlDepItem(TypedDict):
     attribs: NotRequired[Dict[str, str]]
 
 
+class HtmlDepServiceworkerItem(TypedDict):
+    source: str
+    destination: str
+
+
 class QuartoHtmlDependency(TypedDict):
     name: str
     version: NotRequired[str]
     scripts: NotRequired[List[Union[str, HtmlDepItem]]]
     stylesheets: NotRequired[List[Union[str, HtmlDepItem]]]
     resources: NotRequired[List[HtmlDepItem]]
+    meta: NotRequired[Dict[str, str]]
+    serviceworkers: NotRequired[List[HtmlDepServiceworkerItem]]
 
 
 # =============================================================================
@@ -87,49 +95,51 @@ def _dep_names_to_pyodide_pkg_infos(
     return pkg_infos
 
 
-def _pyodide_pkg_info_to_quarto_html_dep(
+def _pyodide_pkg_info_to_quarto_html_dep_item(
     pkg: PyodidePackageInfo,
-) -> QuartoHtmlDependency:
+) -> HtmlDepItem:
     """
-    Convert a PyodidePackageInfo object to a QuartoHtmlDependency object.
+    Convert a PyodidePackageInfo object to a HtmlDepItem object.
     """
 
     assets_dir = shinylive_assets_dir()
 
-    dep: QuartoHtmlDependency = {
-        "name": pkg["name"],
-        "resources": [
-            {
-                "name": pkg["file_name"],
-                "path": os.path.join(
-                    assets_dir, "shinylive", "pyodide", pkg["file_name"]
-                ),
-            }
-        ],
+    return {
+        "name": os.path.join("shinylive", "pyodide", pkg["file_name"]),
+        "path": os.path.join(assets_dir, "shinylive", "pyodide", pkg["file_name"]),
     }
 
-    return dep
 
-
-def _pyodide_pkg_infos_to_quarto_html_deps(
+def _pyodide_pkg_infos_to_quarto_html_dep_items(
     pkgs: List[PyodidePackageInfo],
-) -> List[QuartoHtmlDependency]:
-    return [_pyodide_pkg_info_to_quarto_html_dep(pkg) for pkg in pkgs]
+) -> List[HtmlDepItem]:
+    return [_pyodide_pkg_info_to_quarto_html_dep_item(pkg) for pkg in pkgs]
 
 
 # =============================================================================
 # Shinylive base dependencies
 # =============================================================================
-def shinylive_base_deps_htmldep() -> QuartoHtmlDependency:
+def shinylive_base_deps_htmldep(
+    sw_dir: Optional[str] = None,
+) -> List[QuartoHtmlDependency]:
+    return [
+        _serviceworker_dep(sw_dir),
+        _shinylive_common_dep_htmldep(),
+    ]
+
+
+# =============================================================================
+# Common dependencies
+# =============================================================================
+def _shinylive_common_dep_htmldep() -> QuartoHtmlDependency:
     """
     Return an HTML dependency object consisting of files that are base dependencies; in
     other words, the files that are always included in a Shinylive deployment.
     """
-
     assets_dir = shinylive_assets_dir()
 
     # First, get the list of base files.
-    base_files = shinylive_base_files()
+    base_files = shinylive_common_files()
 
     # Next, categorize the base files into scripts, stylesheets, and resources.
     scripts: List[Union[str, HtmlDepItem]] = []
@@ -174,6 +184,9 @@ def shinylive_base_deps_htmldep() -> QuartoHtmlDependency:
                 }
             )
 
+    # Add base python packages as resources
+    resources.extend(base_package_deps_htmldepitems())
+
     # Sort scripts so that load-serviceworker.js is first, and run-python-blocks.js is
     # last.
     def scripts_sort_fun(x: Union[str, HtmlDepItem]) -> int:
@@ -192,14 +205,15 @@ def shinylive_base_deps_htmldep() -> QuartoHtmlDependency:
     scripts.sort(key=scripts_sort_fun)
 
     return {
-        "name": "shinylive-base",
+        "name": "shinylive",
+        "version": SHINYLIVE_ASSETS_VERSION,
         "scripts": scripts,
         "stylesheets": stylesheets,
         "resources": resources,
     }
 
 
-def shinylive_base_files() -> List[str]:
+def shinylive_common_files() -> List[str]:
     """
     Return a list of files that are base dependencies; in other words, the files that are
     always included in a Shinylive deployment.
@@ -227,14 +241,33 @@ def shinylive_base_files() -> List[str]:
     return base_files
 
 
+def _serviceworker_dep(sw_dir: Optional[str] = None) -> QuartoHtmlDependency:
+    dep: QuartoHtmlDependency = {
+        "name": "shinylive-serviceworker",
+        "version": SHINYLIVE_ASSETS_VERSION,
+        "serviceworkers": [
+            {
+                "source": shinylive_assets_dir() + "/shinylive-sw.js",
+                "destination": "/shinylive-sw.js",
+            }
+        ],
+    }
+
+    if sw_dir is not None:
+        # Add meta tag to tell load-shinylive-sw.js where to find shinylive-sw.js.
+        dep["meta"] = {"shinylive:serviceworker_dir": sw_dir}
+
+    return dep
+
+
 # =============================================================================
 # Find which packages are used by a Shiny application
 # =============================================================================
-def package_deps_htmldep(
+def package_deps_htmldepitems(
     json_file: Optional[Union[str, Path]],
     json_content: Optional[str],
     verbose: bool = True,
-) -> List[QuartoHtmlDependency]:
+) -> List[HtmlDepItem]:
     """
     Find package dependencies from an app.json file, and return as a list of
     QuartoHtmlDependency objects.
@@ -261,32 +294,9 @@ def package_deps_htmldep(
     if json_content is not None:
         file_contents = json.loads(json_content)
 
-    pkg_infos = base_package_deps() + find_package_deps(file_contents)
-    deps = _pyodide_pkg_infos_to_quarto_html_deps(pkg_infos)
+    pkg_infos = find_package_deps(file_contents)
+    deps = _pyodide_pkg_infos_to_quarto_html_dep_items(pkg_infos)
     return deps
-
-
-def base_package_deps_htmldep() -> List[QuartoHtmlDependency]:
-    """
-    Return list of packages that should be included in all Shinylive deployments. The
-    returned data structure is a list of PyodidePackageInfo objects.
-    """
-    dep_names = _find_recursive_deps(BASE_PYODIDE_PACKAGES)
-    pkg_infos = _dep_names_to_pyodide_pkg_infos(dep_names)
-    deps = _pyodide_pkg_infos_to_quarto_html_deps(pkg_infos)
-
-    return deps
-
-
-def base_package_deps() -> List[PyodidePackageInfo]:
-    """
-    Return list of packages that should be included in all Shinylive deployments. The
-    returned data structure is a list of PyodidePackageInfo objects.
-    """
-    dep_names = _find_recursive_deps(BASE_PYODIDE_PACKAGES)
-    pkg_infos = _dep_names_to_pyodide_pkg_infos(dep_names)
-
-    return pkg_infos
 
 
 def find_package_deps(
@@ -305,6 +315,29 @@ def find_package_deps(
     verbose_print("Imports detected in app:\n ", ", ".join(sorted(imports)))
 
     dep_names = _find_recursive_deps(imports, verbose_print)
+    pkg_infos = _dep_names_to_pyodide_pkg_infos(dep_names)
+
+    return pkg_infos
+
+
+def base_package_deps_htmldepitems() -> List[HtmlDepItem]:
+    """
+    Return list of packages that should be included in all Shinylive deployments. The
+    returned data structure is a list of PyodidePackageInfo objects.
+    """
+    dep_names = _find_recursive_deps(BASE_PYODIDE_PACKAGES)
+    pkg_infos = _dep_names_to_pyodide_pkg_infos(dep_names)
+    deps = _pyodide_pkg_infos_to_quarto_html_dep_items(pkg_infos)
+
+    return deps
+
+
+def base_package_deps() -> List[PyodidePackageInfo]:
+    """
+    Return list of packages that should be included in all Shinylive deployments. The
+    returned data structure is a list of PyodidePackageInfo objects.
+    """
+    dep_names = _find_recursive_deps(BASE_PYODIDE_PACKAGES)
     pkg_infos = _dep_names_to_pyodide_pkg_infos(dep_names)
 
     return pkg_infos

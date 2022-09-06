@@ -46,7 +46,7 @@ def export(
     # Python package files.
     # =========================================================================
     print(f"Copying base Shinylive files from {assets_dir}/ to {destdir}/")
-    base_files = _deps.shinylive_base_files()
+    base_files = _deps.shinylive_common_files()
     for file in base_files:
         src_path = assets_dir / file
         dest_path = destdir / Path(file)

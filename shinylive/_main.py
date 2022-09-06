@@ -161,19 +161,14 @@ def assets(
     This is intended for use by the Shinylive Quarto extension.
 """,
 )
-def base_deps() -> None:
-    deps = _deps.shinylive_base_deps_htmldep()
-    print(json.dumps(deps, indent=2))
-
-
-@main.command(
-    help="""Get a set of base package dependencies for a Shinylive application.
-
-    This is intended for use by the Shinylive Quarto extension.
-""",
+@click.option(
+    "--sw-dir",
+    type=str,
+    default=None,
+    help="Directory where shinylive-sw.js is located, relative to the output directory.",
 )
-def base_package_deps() -> None:
-    deps = _deps.base_package_deps_htmldep()
+def base_deps(sw_dir: Optional[str]) -> None:
+    deps = _deps.shinylive_base_deps_htmldep(sw_dir)
     print(json.dumps(deps, indent=2))
 
 
@@ -196,7 +191,7 @@ def package_deps(json_file: Optional[str]) -> None:
     if json_file is None:
         json_content = sys.stdin.read()
 
-    deps = _deps.package_deps_htmldep(json_file, json_content)
+    deps = _deps.package_deps_htmldepitems(json_file, json_content)
     print(json.dumps(deps, indent=2))
 
 
