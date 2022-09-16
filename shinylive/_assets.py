@@ -84,10 +84,34 @@ def copy_shinylive_local(
 
     target_dir = destdir / f"shinylive-{version}"
 
+    source_dir = Path(source_dir)
+
     if target_dir.exists():
         shutil.rmtree(target_dir)
 
     shutil.copytree(source_dir, target_dir)
+
+
+def link_shinylive_local(
+    source_dir: Union[str, Path],
+    destdir: Optional[Union[str, Path]] = None,
+    version: str = SHINYLIVE_ASSETS_VERSION,
+):
+    if destdir is None:
+        destdir = Path(shinylive_cache_dir())
+
+    destdir = Path(destdir)
+
+    target_dir = destdir / f"shinylive-{version}"
+
+    source_dir = Path(source_dir)
+    if not source_dir.is_dir():
+        raise RuntimeError("Source directory does not exist: " + str(source_dir))
+
+    if target_dir.exists():
+        shutil.rmtree(target_dir)
+
+    target_dir.symlink_to(source_dir)
 
 
 def ensure_shinylive_assets(
@@ -171,7 +195,9 @@ def remove_shinylive_assets(
 
     for target_dir in target_dirs:
         print("Removing " + str(target_dir))
-        if target_dir.exists():
+        if target_dir.is_symlink():
+            target_dir.unlink()
+        elif target_dir.is_dir():
             shutil.rmtree(target_dir)
         else:
             print(f"{target_dir} does not exist.")

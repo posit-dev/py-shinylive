@@ -99,6 +99,7 @@ def export(
       remove: Remove a specific version of local copies of assets. Must be used with --version.
       info: Print information about the local assets.
       install-from-local: Install shinylive assets from a local directory. Must be used with --source.
+      link-from-local: Create a symlink to shinylive assets from a local directory. Must be used with --source. This is useful when doing development on the Shinylive web assets.
 
 """,
     no_args_is_help=True,
@@ -160,6 +161,13 @@ def assets(
             version = _version.SHINYLIVE_ASSETS_VERSION
         print(f"Copying shinylive-{version} from {source} to {dir}")
         _assets.copy_shinylive_local(source_dir=source, destdir=dir, version=version)
+    elif command == "link-from-local":
+        if source is None:
+            raise click.UsageError("Must specify --source")
+        if version is None:
+            version = _version.SHINYLIVE_ASSETS_VERSION
+        print(f"Creating symlink for shinylive-{version} from {source} to {dir}")
+        _assets.link_shinylive_local(source_dir=source, destdir=dir, version=version)
     else:
         raise click.UsageError(f"Unknown command: {command}")
 
