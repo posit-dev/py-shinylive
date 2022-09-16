@@ -115,9 +115,33 @@ def ensure_shinylive_assets(
     return shinylive_bundle_dir
 
 
+def cleanup_shinylive_assets(
+    shinylive_dir: Union[str, Path],
+) -> None:
+    """Removes local copies of shinylive web assets, except for the one used by the
+    current version of the shinylive python package.
+
+    Parameters
+    ----------
+    shinylive_dir
+        The directory where shinylive is stored. If None, the default directory will
+        be used.
+    """
+
+    shinylive_dir = Path(shinylive_dir)
+
+    version = _installed_shinylive_versions(shinylive_dir)
+    version = [re.sub("^shinylive-", "", os.path.basename(v)) for v in version]
+    if SHINYLIVE_ASSETS_VERSION in version:
+        print("Keeping version " + SHINYLIVE_ASSETS_VERSION)
+        version.remove(SHINYLIVE_ASSETS_VERSION)
+
+    remove_shinylive_assets(shinylive_dir, version)
+
+
 def remove_shinylive_assets(
-    shinylive_dir: Union[str, Path, None] = None,
-    version: Union[str, List[str], None] = None,
+    shinylive_dir: Union[str, Path],
+    version: Union[str, List[str]],
 ) -> None:
     """Removes local copy of shinylive.
 
@@ -132,22 +156,12 @@ def remove_shinylive_assets(
         If None, all local versions except the version specified by SHINYLIVE_ASSETS_VERSION will be removed.
     """
 
-    if shinylive_dir is None:
-        shinylive_dir = shinylive_assets_dir()
-
     shinylive_dir = Path(shinylive_dir)
 
     target_dir = shinylive_dir
 
     if isinstance(version, str):
         version = [version]
-
-    if version is None:
-        version = _installed_shinylive_versions(shinylive_dir)
-        version = [re.sub("^shinylive-", "", os.path.basename(v)) for v in version]
-        if SHINYLIVE_ASSETS_VERSION in version:
-            print("Keeping version " + SHINYLIVE_ASSETS_VERSION)
-            version.remove(SHINYLIVE_ASSETS_VERSION)
 
     target_dirs = [shinylive_dir / f"shinylive-{v}" for v in version]
 

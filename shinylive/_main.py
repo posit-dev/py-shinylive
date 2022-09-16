@@ -89,9 +89,14 @@ def export(
     help=f"""Manage local copy of Shinylive web assets
 
     \b
+    shinylive Python package version: {_version.SHINYLIVE_PACKAGE_VERSION}
+    shinylive web assets version:     {_assets.SHINYLIVE_ASSETS_VERSION}
+
+    \b
     Commands:
       download: Download assets from the remote server.
-      remove: Remove local copies of assets. By default, removes all versions except {_assets.SHINYLIVE_ASSETS_VERSION}. Can be used with --version to remove a specific version.
+      cleanup: Remove all versions of local assets except the currently-used version, {_assets.SHINYLIVE_ASSETS_VERSION}.
+      remove: Remove a specific version of local copies of assets. Must be used with --version.
       info: Print information about the local assets.
       install-from-local: Install shinylive assets from a local directory. Must be used with --source.
 
@@ -140,7 +145,11 @@ def assets(
         if version is None:
             version = _version.SHINYLIVE_ASSETS_VERSION
         _assets.download_shinylive(destdir=dir, version=version, url=url)
+    elif command == "cleanup":
+        _assets.cleanup_shinylive_assets(shinylive_dir=dir)
     elif command == "remove":
+        if version is None:
+            raise click.UsageError("Must specify --version")
         _assets.remove_shinylive_assets(shinylive_dir=dir, version=version)
     elif command == "info":
         _assets.print_shinylive_local_info()
