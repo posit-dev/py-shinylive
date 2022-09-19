@@ -66,7 +66,10 @@ def copy_file_and_substitute(
             fout.write(in_content)
 
 
-def create_copy_fn(overwrite: bool) -> Callable[..., None]:
+def create_copy_fn(
+    overwrite: bool,
+    verbose_print: Callable[..., None] = lambda *args: None,
+) -> Callable[..., None]:
     """Returns a function that can be used as a copy_function for shutil.copytree.
 
     If overwrite is True, the copy function will overwrite files that already exist.
@@ -84,10 +87,10 @@ def create_copy_fn(overwrite: bool) -> Callable[..., None]:
                     file=sys.stderr,
                 )
             if overwrite:
-                print(f"Overwriting {dst}", file=sys.stderr)
+                verbose_print(f"Overwriting {dst}", file=sys.stderr)
                 os.remove(dst)
             else:
-                print(f"Skipping {dst}", file=sys.stderr)
+                verbose_print(f"Skipping {dst}", file=sys.stderr)
                 return
 
         shutil.copy2(src, dst, **kwargs)

@@ -13,8 +13,13 @@ def export(
     destdir: Union[str, Path],
     *,
     subdir: Union[str, Path, None] = None,
+    verbose: bool = False,
     full_shinylive: bool = False,
 ):
+    def verbose_print(*args: object) -> None:
+        if verbose:
+            print(*args)
+
     appdir = Path(appdir)
     destdir = Path(destdir)
 
@@ -33,7 +38,7 @@ def export(
         print(f"Creating {destdir}/", file=sys.stderr)
         destdir.mkdir()
 
-    copy_fn = _utils.create_copy_fn(overwrite=False)
+    copy_fn = _utils.create_copy_fn(overwrite=False, verbose_print=verbose_print)
 
     assets_dir = Path(shinylive_assets_dir())
 
@@ -85,7 +90,7 @@ def export(
             f"Copying imported packages from {assets_dir}/shinylive/pyodide/ to {destdir}/shinylive/pyodide/",
             file=sys.stderr,
         )
-        print(" ", ", ".join(package_files), file=sys.stderr)
+        verbose_print(" ", ", ".join(package_files))
 
     for filename in package_files:
         src_path = assets_dir / "shinylive" / "pyodide" / filename
