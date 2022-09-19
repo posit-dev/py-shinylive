@@ -66,9 +66,7 @@ def copy_file_and_substitute(
             fout.write(in_content)
 
 
-def create_copy_fn(
-    overwrite: bool, verbose_print: Callable[..., None] = lambda *args: None
-) -> Callable[..., None]:
+def create_copy_fn(overwrite: bool) -> Callable[..., None]:
     """Returns a function that can be used as a copy_function for shutil.copytree.
 
     If overwrite is True, the copy function will overwrite files that already exist.
@@ -83,12 +81,13 @@ def create_copy_fn(
                     dst,
                     """\nThis is probably because your shinylive sources have been updated and differ from the copy in the exported app.""",
                     """\nYou probably should remove the export directory and re-export the application.""",
+                    file=sys.stderr,
                 )
             if overwrite:
-                verbose_print(f"Overwriting {dst}")
+                print(f"Overwriting {dst}", file=sys.stderr)
                 os.remove(dst)
             else:
-                verbose_print(f"Skipping {dst}")
+                print(f"Skipping {dst}", file=sys.stderr)
                 return
 
         shutil.copy2(src, dst, **kwargs)

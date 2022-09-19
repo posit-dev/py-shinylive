@@ -1,4 +1,5 @@
 import os
+import sys
 from pathlib import Path
 from typing import List, Union
 
@@ -12,13 +13,8 @@ def export(
     destdir: Union[str, Path],
     *,
     subdir: Union[str, Path, None] = None,
-    verbose: bool = False,
     full_shinylive: bool = False,
 ):
-    def verbose_print(*args: object) -> None:
-        if verbose:
-            print(*args)
-
     appdir = Path(appdir)
     destdir = Path(destdir)
 
@@ -34,10 +30,10 @@ def export(
         )
 
     if not destdir.exists():
-        print(f"Creating {destdir}/")
+        print(f"Creating {destdir}/", file=sys.stderr)
         destdir.mkdir()
 
-    copy_fn = _utils.create_copy_fn(overwrite=False, verbose_print=verbose_print)
+    copy_fn = _utils.create_copy_fn(overwrite=False)
 
     assets_dir = Path(shinylive_assets_dir())
 
@@ -45,7 +41,10 @@ def export(
     # Copy the base dependencies for shinylive/ distribution. This does not include the
     # Python package files.
     # =========================================================================
-    print(f"Copying base Shinylive files from {assets_dir}/ to {destdir}/")
+    print(
+        f"Copying base Shinylive files from {assets_dir}/ to {destdir}/",
+        file=sys.stderr,
+    )
     base_files = _deps.shinylive_common_files()
     for file in base_files:
         src_path = assets_dir / file
@@ -83,9 +82,10 @@ def export(
         package_files: List[str] = [dep["file_name"] for dep in deps]
 
         print(
-            f"Copying imported packages from {assets_dir}/shinylive/pyodide/ to {destdir}/shinylive/pyodide/"
+            f"Copying imported packages from {assets_dir}/shinylive/pyodide/ to {destdir}/shinylive/pyodide/",
+            file=sys.stderr,
         )
-        verbose_print(" ", ", ".join(package_files))
+        print(" ", ", ".join(package_files), file=sys.stderr)
 
     for filename in package_files:
         src_path = assets_dir / "shinylive" / "pyodide" / filename
@@ -106,5 +106,6 @@ def export(
     )
 
     print(
-        f"\nRun the following to serve the app:\n  python3 -m http.server --directory {destdir} 8008"
+        f"\nRun the following to serve the app:\n  python3 -m http.server --directory {destdir} 8008",
+        file=sys.stderr,
     )

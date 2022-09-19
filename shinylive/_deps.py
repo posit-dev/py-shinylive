@@ -282,7 +282,7 @@ def package_deps_htmldepitems(
 
     def verbose_print(*args: object) -> None:
         if verbose:
-            print(*args)
+            print(*args, file=sys.stderr)
 
     file_contents: List[FileContentJson] = []
 
