@@ -1,9 +1,10 @@
-from typing import List, Union, Optional
 import os
-from pathlib import Path
 import re
 import shutil
+import sys
 import urllib.request
+from pathlib import Path
+from typing import List, Optional, Union
 
 from ._version import SHINYLIVE_ASSETS_VERSION
 
@@ -27,10 +28,10 @@ def download_shinylive(
     tmp_name = None
 
     try:
-        print(f"Downloading {url}...")
+        print(f"Downloading {url}...", file=sys.stderr)
         tmp_name, _ = urllib.request.urlretrieve(url)
 
-        print(f"Unzipping to {destdir}/")
+        print(f"Unzipping to {destdir}/", file=sys.stderr)
         with tarfile.open(tmp_name) as tar:
             tar.extractall(destdir)
     finally:
@@ -128,12 +129,12 @@ def ensure_shinylive_assets(
         url = shinylive_bundle_url(version)
 
     if not destdir.exists():
-        print("Creating directory " + str(destdir))
+        print("Creating directory " + str(destdir), file=sys.stderr)
         destdir.mkdir(parents=True)
 
     shinylive_bundle_dir = Path(shinylive_assets_dir(version))
     if not shinylive_bundle_dir.exists():
-        print(f"{shinylive_bundle_dir} does not exist.")
+        print(f"{shinylive_bundle_dir} does not exist.", file=sys.stderr)
         download_shinylive(url=url, version=version, destdir=destdir)
 
     return shinylive_bundle_dir
