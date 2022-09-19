@@ -104,7 +104,7 @@ def link_shinylive_local(
 
     target_dir = destdir / f"shinylive-{version}"
 
-    source_dir = Path(source_dir)
+    source_dir = Path(source_dir).absolute()
     if not source_dir.is_dir():
         raise RuntimeError("Source directory does not exist: " + str(source_dir))
 
