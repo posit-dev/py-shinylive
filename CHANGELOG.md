@@ -9,7 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Added `shinylive assets link-from-local` command.
 
-### Bug fixes
+* Print messages to stderr instead of stdout.
 
 
 ## [0.0.3] - 2022-09-16
