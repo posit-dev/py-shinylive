@@ -87,7 +87,9 @@ def copy_shinylive_local(
 
     source_dir = Path(source_dir)
 
-    if target_dir.exists():
+    if target_dir.is_symlink():
+        target_dir.unlink()
+    elif target_dir.is_dir():
         shutil.rmtree(target_dir)
 
     shutil.copytree(source_dir, target_dir)
@@ -109,7 +111,9 @@ def link_shinylive_local(
     if not source_dir.is_dir():
         raise RuntimeError("Source directory does not exist: " + str(source_dir))
 
-    if target_dir.exists():
+    if target_dir.is_symlink():
+        target_dir.unlink()
+    elif target_dir.is_dir():
         shutil.rmtree(target_dir)
 
     target_dir.symlink_to(source_dir)
