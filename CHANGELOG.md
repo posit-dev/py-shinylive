@@ -11,6 +11,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Bug fixes
 
+* Fixed #1: `verbose_print()` raised an error due to an extra argument.
 
 ## [0.0.4] - 2022-09-19
 

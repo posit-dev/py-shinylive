@@ -87,10 +87,10 @@ def create_copy_fn(
                     file=sys.stderr,
                 )
             if overwrite:
-                verbose_print(f"Overwriting {dst}", file=sys.stderr)
+                verbose_print(f"Overwriting {dst}")
                 os.remove(dst)
             else:
-                verbose_print(f"Skipping {dst}", file=sys.stderr)
+                verbose_print(f"Skipping {dst}")
                 return
 
         shutil.copy2(src, dst, **kwargs)
