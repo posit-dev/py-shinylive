@@ -34,7 +34,7 @@ BASE_PYODIDE_FILES = {
 }
 
 # Packages that should always be included in a Shinylive deployment.
-BASE_PYODIDE_PACKAGES = {"distutils", "micropip"}
+BASE_PYODIDE_PACKAGES = {"distutils", "micropip", "ssl"}
 
 
 # =============================================================================
