@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* Added `shinylive assets version` command, which prints out the version of the Shinylive web assets.
 
 ### Bug fixes
 

@@ -168,6 +168,8 @@ def assets(
             version = _version.SHINYLIVE_ASSETS_VERSION
         print(f"Creating symlink for shinylive-{version} from {source} to {dir}")
         _assets.link_shinylive_local(source_dir=source, destdir=dir, version=version)
+    elif command == "version":
+        print(_assets.SHINYLIVE_ASSETS_VERSION)
     else:
         raise click.UsageError(f"Unknown command: {command}")
 
