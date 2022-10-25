@@ -96,3 +96,18 @@ def create_copy_fn(
         shutil.copy2(src, dst, **kwargs)
 
     return copy_fn
+
+
+# Wrapper for TarFile.extractall(), to avoid CVE-2007-4559.
+def tar_safe_extractall(file: Union[str, Path], destdir: Union[str, Path]) -> None:
+    import tarfile
+
+    destdir = Path(destdir).resolve()
+
+    with tarfile.open(file) as tar:
+        for member in tar.getmembers():
+            member_path = (destdir / member.name).resolve()
+            if not is_relative_to(member_path, destdir):
+                raise RuntimeError("Attempted path traversal in tar file.")
+
+        tar.extractall(destdir)
