@@ -7,6 +7,7 @@ from pathlib import Path
 from typing import List, Optional, Union
 
 from ._version import SHINYLIVE_ASSETS_VERSION
+from ._utils import tar_safe_extractall
 
 
 def download_shinylive(
@@ -14,8 +15,6 @@ def download_shinylive(
     version: str = SHINYLIVE_ASSETS_VERSION,
     url: Optional[str] = None,
 ) -> None:
-    import tarfile
-
     if destdir is None:
         # Note that this is the cache directory, which is the parent of the assets
         # directory. The tarball will have the assets directory as the top-level subdir.
@@ -32,8 +31,7 @@ def download_shinylive(
         tmp_name, _ = urllib.request.urlretrieve(url)
 
         print(f"Unzipping to {destdir}/", file=sys.stderr)
-        with tarfile.open(tmp_name) as tar:
-            tar.extractall(destdir)
+        tar_safe_extractall(tmp_name, destdir)
     finally:
         if tmp_name is not None:
             Path(tmp_name).unlink(missing_ok=True)
