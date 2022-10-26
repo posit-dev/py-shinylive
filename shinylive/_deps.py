@@ -149,8 +149,6 @@ def _shinylive_common_dep_htmldep() -> QuartoHtmlDependency:
     for file in base_files:
         if os.path.basename(file) in [
             "load-shinylive-sw.js",
-            "jquery.min.js",
-            "jquery.terminal.min.js",
             "run-python-blocks.js",
         ]:
             script_item: HtmlDepItem = {
@@ -167,7 +165,6 @@ def _shinylive_common_dep_htmldep() -> QuartoHtmlDependency:
             scripts.append(script_item)
 
         if os.path.basename(file) in [
-            "jquery.terminal.min.css",
             "shinylive.css",
         ]:
             stylesheets.append(
