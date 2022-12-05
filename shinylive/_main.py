@@ -42,7 +42,7 @@ This command will not include the contents of venv/ or any files that start with
 
 After writing the output files, you can serve them locally with the following command:
 
-    python3 -m http.server --directory DESTDIR 8008
+    python3 -m http.server --directory DESTDIR --bind localhost 8008
 """,
     no_args_is_help=True,
 )

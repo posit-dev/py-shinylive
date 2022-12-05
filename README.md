@@ -34,7 +34,7 @@ shinylive export myapp site
 Then you can preview the application by running a web server and visiting it in a browser:
 
 ```
-python3 -m http.server --directory site 8008
+python3 -m http.server --directory site --bind localhost 8008
 ```
 
 At this point, you can deploy the `site/` directory to any static web hosting service.
