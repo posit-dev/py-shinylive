@@ -111,6 +111,7 @@ def export(
     )
 
     print(
-        f"\nRun the following to serve the app:\n  python3 -m http.server --directory {destdir} 8008",
+        "\nRun the following to serve the app:\n"
+        f"  python3 -m http.server --directory {destdir} --bind localhost 8008",
         file=sys.stderr,
     )
