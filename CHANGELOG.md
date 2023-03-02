@@ -8,6 +8,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### New features
 
+* Updated to Shinylive web assets 0.0.12.
 
 ### Bug fixes
 
