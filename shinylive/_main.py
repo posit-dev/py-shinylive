@@ -1,7 +1,9 @@
+from __future__ import annotations
+
 import json
 import sys
 from pathlib import Path
-from typing import Optional, Union
+from typing import Optional
 
 import click
 
@@ -72,7 +74,7 @@ After writing the output files, you can serve them locally with the following co
 def export(
     appdir: str,
     destdir: str,
-    subdir: Union[str, None],
+    subdir: str | None,
     verbose: bool,
     full_shinylive: bool,
 ) -> None:
@@ -135,7 +137,7 @@ def assets(
     command: str,
     version: Optional[str],
     url: Optional[str],
-    dir: Union[str, Path],
+    dir: Optional[str | Path],
     source: Optional[str],
 ) -> None:
     if dir is None:
@@ -206,7 +208,7 @@ def base_deps(sw_dir: Optional[str]) -> None:
     default=None,
 )
 def package_deps(json_file: Optional[str]) -> None:
-    json_content: Union[str, None] = None
+    json_content: str | None = None
     if json_file is None:
         json_content = sys.stdin.read()
 
