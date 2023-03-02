@@ -1,7 +1,8 @@
+from __future__ import annotations
+
 import os
 import sys
 from pathlib import Path
-from typing import List, Union
 
 from . import _deps, _utils
 from ._app_json import AppInfo, read_app_files, write_app_json
@@ -9,10 +10,10 @@ from ._assets import shinylive_assets_dir
 
 
 def export(
-    appdir: Union[str, Path],
-    destdir: Union[str, Path],
+    appdir: str | Path,
+    destdir: str | Path,
     *,
-    subdir: Union[str, Path, None] = None,
+    subdir: str | Path | None = None,
     verbose: bool = False,
     full_shinylive: bool = False,
 ):
@@ -84,7 +85,7 @@ def export(
     else:
         deps = _deps.base_package_deps() + _deps.find_package_deps(app_info["files"])
 
-        package_files: List[str] = [dep["file_name"] for dep in deps]
+        package_files: list[str] = [dep["file_name"] for dep in deps]
 
         print(
             f"Copying imported packages from {assets_dir}/shinylive/pyodide/ to {destdir}/shinylive/pyodide/",

@@ -1,17 +1,19 @@
+from __future__ import annotations
+
 import os
 import re
 import shutil
 import sys
 import urllib.request
 from pathlib import Path
-from typing import List, Optional, Union
+from typing import Optional
 
 from ._utils import tar_safe_extractall
 from ._version import SHINYLIVE_ASSETS_VERSION
 
 
 def download_shinylive(
-    destdir: Union[str, Path, None] = None,
+    destdir: str | Path | None = None,
     version: str = SHINYLIVE_ASSETS_VERSION,
     url: Optional[str] = None,
 ) -> None:
@@ -69,8 +71,8 @@ def repodata_json_file(version: str = SHINYLIVE_ASSETS_VERSION) -> Path:
 
 
 def copy_shinylive_local(
-    source_dir: Union[str, Path],
-    destdir: Optional[Union[str, Path]] = None,
+    source_dir: str | Path,
+    destdir: Optional[str | Path] = None,
     version: str = SHINYLIVE_ASSETS_VERSION,
 ):
     if destdir is None:
@@ -91,8 +93,8 @@ def copy_shinylive_local(
 
 
 def link_shinylive_local(
-    source_dir: Union[str, Path],
-    destdir: Optional[Union[str, Path]] = None,
+    source_dir: str | Path,
+    destdir: Optional[str | Path] = None,
     version: str = SHINYLIVE_ASSETS_VERSION,
 ):
     if destdir is None:
@@ -115,7 +117,7 @@ def link_shinylive_local(
 
 
 def ensure_shinylive_assets(
-    destdir: Union[Path, None] = None,
+    destdir: Path | None = None,
     version: str = SHINYLIVE_ASSETS_VERSION,
     url: Optional[str] = None,
 ) -> Path:
@@ -140,7 +142,7 @@ def ensure_shinylive_assets(
 
 
 def cleanup_shinylive_assets(
-    shinylive_dir: Union[str, Path],
+    shinylive_dir: str | Path,
 ) -> None:
     """Removes local copies of shinylive web assets, except for the one used by the
     current version of the shinylive python package.
@@ -164,8 +166,8 @@ def cleanup_shinylive_assets(
 
 
 def remove_shinylive_assets(
-    shinylive_dir: Union[str, Path],
-    version: Union[str, List[str]],
+    shinylive_dir: str | Path,
+    version: str | list[str],
 ) -> None:
     """Removes local copy of shinylive.
 
@@ -203,7 +205,7 @@ def remove_shinylive_assets(
             print(f"{target_dir} does not exist.")
 
 
-def _installed_shinylive_versions(shinylive_dir: Optional[Path] = None) -> List[str]:
+def _installed_shinylive_versions(shinylive_dir: Optional[Path] = None) -> list[str]:
     if shinylive_dir is None:
         shinylive_dir = Path(shinylive_cache_dir())
 

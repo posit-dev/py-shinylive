@@ -1,8 +1,10 @@
+from __future__ import annotations
+
 import base64
 import json
 import os
 from pathlib import Path
-from typing import List, Literal, TypedDict
+from typing import Literal, TypedDict
 
 from . import _utils
 
@@ -17,11 +19,11 @@ class FileContentJson(TypedDict):
 class AppInfo(TypedDict):
     appdir: str
     subdir: str
-    files: List[FileContentJson]
+    files: list[FileContentJson]
 
 
 # =============================================================================
-def read_app_files(appdir: Path, destdir: Path) -> List[FileContentJson]:
+def read_app_files(appdir: Path, destdir: Path) -> list[FileContentJson]:
     """
     Load files for a Shiny application.
 
@@ -34,7 +36,7 @@ def read_app_files(appdir: Path, destdir: Path) -> List[FileContentJson]:
        Destination directory. This is used only to avoid adding shinylive assets when
        they are in a subdir of the application.
     """
-    app_files: List[FileContentJson] = []
+    app_files: list[FileContentJson] = []
     # Recursively iterate over files in app directory, and collect the files into
     # app_files data structure.
     exclude_names = {"__pycache__", "venv", ".venv"}

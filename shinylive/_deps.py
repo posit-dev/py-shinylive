@@ -10,7 +10,7 @@ import os
 import sys
 from pathlib import Path
 from textwrap import dedent
-from typing import Callable, Dict, Iterable, List, Literal, Optional, Set, Union
+from typing import Callable, Iterable, Literal, Optional
 
 # Even though TypedDict is available in Python 3.8, because it's used with NotRequired,
 # they should both come from the same typing module.
@@ -47,15 +47,15 @@ class PyodidePackageInfo(TypedDict):
     file_name: str
     install_dir: Literal["lib", "site"]
     sha256: str
-    depends: List[str]
-    imports: List[str]
+    depends: list[str]
+    imports: list[str]
     unvendored_tests: NotRequired[bool]
 
 
 # The package information structure used by Pyodide's repodata.json.
 class PyodideRepodataFile(TypedDict):
-    info: Dict[str, str]
-    packages: Dict[str, PyodidePackageInfo]
+    info: dict[str, str]
+    packages: dict[str, PyodidePackageInfo]
 
 
 # =============================================================================
@@ -64,7 +64,7 @@ class PyodideRepodataFile(TypedDict):
 class HtmlDepItem(TypedDict):
     name: str
     path: str
-    attribs: NotRequired[Dict[str, str]]
+    attribs: NotRequired[dict[str, str]]
 
 
 class HtmlDepServiceworkerItem(TypedDict):
@@ -75,11 +75,11 @@ class HtmlDepServiceworkerItem(TypedDict):
 class QuartoHtmlDependency(TypedDict):
     name: str
     version: NotRequired[str]
-    scripts: NotRequired[List[Union[str, HtmlDepItem]]]
-    stylesheets: NotRequired[List[Union[str, HtmlDepItem]]]
-    resources: NotRequired[List[HtmlDepItem]]
-    meta: NotRequired[Dict[str, str]]
-    serviceworkers: NotRequired[List[HtmlDepServiceworkerItem]]
+    scripts: NotRequired[list[str | HtmlDepItem]]
+    stylesheets: NotRequired[list[str | HtmlDepItem]]
+    resources: NotRequired[list[HtmlDepItem]]
+    meta: NotRequired[dict[str, str]]
+    serviceworkers: NotRequired[list[HtmlDepServiceworkerItem]]
 
 
 # =============================================================================
@@ -87,9 +87,9 @@ class QuartoHtmlDependency(TypedDict):
 # =============================================================================
 def _dep_names_to_pyodide_pkg_infos(
     dep_names: Iterable[str],
-) -> List[PyodidePackageInfo]:
+) -> list[PyodidePackageInfo]:
     repodata = _pyodide_repodata()
-    pkg_infos: List[PyodidePackageInfo] = [
+    pkg_infos: list[PyodidePackageInfo] = [
         copy.deepcopy(repodata["packages"][dep_name]) for dep_name in dep_names
     ]
     return pkg_infos
@@ -111,8 +111,8 @@ def _pyodide_pkg_info_to_quarto_html_dep_item(
 
 
 def _pyodide_pkg_infos_to_quarto_html_dep_items(
-    pkgs: List[PyodidePackageInfo],
-) -> List[HtmlDepItem]:
+    pkgs: list[PyodidePackageInfo],
+) -> list[HtmlDepItem]:
     return [_pyodide_pkg_info_to_quarto_html_dep_item(pkg) for pkg in pkgs]
 
 
@@ -121,7 +121,7 @@ def _pyodide_pkg_infos_to_quarto_html_dep_items(
 # =============================================================================
 def shinylive_base_deps_htmldep(
     sw_dir: Optional[str] = None,
-) -> List[QuartoHtmlDependency]:
+) -> list[QuartoHtmlDependency]:
     return [
         _serviceworker_dep(sw_dir),
         _shinylive_common_dep_htmldep(),
@@ -142,9 +142,9 @@ def _shinylive_common_dep_htmldep() -> QuartoHtmlDependency:
     base_files = shinylive_common_files()
 
     # Next, categorize the base files into scripts, stylesheets, and resources.
-    scripts: List[Union[str, HtmlDepItem]] = []
-    stylesheets: List[Union[str, HtmlDepItem]] = []
-    resources: List[HtmlDepItem] = []
+    scripts: list[str | HtmlDepItem] = []
+    stylesheets: list[str | HtmlDepItem] = []
+    resources: list[HtmlDepItem] = []
 
     for file in base_files:
         if os.path.basename(file) in [
@@ -186,7 +186,7 @@ def _shinylive_common_dep_htmldep() -> QuartoHtmlDependency:
 
     # Sort scripts so that load-serviceworker.js is first, and run-python-blocks.js is
     # last.
-    def scripts_sort_fun(x: Union[str, HtmlDepItem]) -> int:
+    def scripts_sort_fun(x: str | HtmlDepItem) -> int:
         if isinstance(x, str):
             filename = x
         else:
@@ -210,14 +210,14 @@ def _shinylive_common_dep_htmldep() -> QuartoHtmlDependency:
     }
 
 
-def shinylive_common_files() -> List[str]:
+def shinylive_common_files() -> list[str]:
     """
     Return a list of files that are base dependencies; in other words, the files that are
     always included in a Shinylive deployment.
     """
     ensure_shinylive_assets()
 
-    base_files: List[str] = []
+    base_files: list[str] = []
     for root, dirs, files in os.walk(shinylive_assets_dir()):
         root = Path(root)
         rel_root = root.relative_to(shinylive_assets_dir())
@@ -261,10 +261,10 @@ def _serviceworker_dep(sw_dir: Optional[str] = None) -> QuartoHtmlDependency:
 # Find which packages are used by a Shiny application
 # =============================================================================
 def package_deps_htmldepitems(
-    json_file: Optional[Union[str, Path]],
+    json_file: Optional[str | Path],
     json_content: Optional[str],
     verbose: bool = True,
-) -> List[HtmlDepItem]:
+) -> list[HtmlDepItem]:
     """
     Find package dependencies from an app.json file, and return as a list of
     QuartoHtmlDependency objects.
@@ -281,7 +281,7 @@ def package_deps_htmldepitems(
         if verbose:
             print(*args, file=sys.stderr)
 
-    file_contents: List[FileContentJson] = []
+    file_contents: list[FileContentJson] = []
 
     if json_file is not None:
         json_file = Path(json_file)
@@ -297,15 +297,15 @@ def package_deps_htmldepitems(
 
 
 def find_package_deps(
-    app_contents: List[FileContentJson],
+    app_contents: list[FileContentJson],
     verbose_print: Callable[..., None] = lambda *args: None,
-) -> List[PyodidePackageInfo]:
+) -> list[PyodidePackageInfo]:
     """
     Find package dependencies from the contents of an app.json file. The returned data
     structure is a list of PyodidePackageInfo objects.
     """
 
-    imports: Set[str] = _find_import_app_contents(app_contents)
+    imports: set[str] = _find_import_app_contents(app_contents)
 
     # TODO: Need to also add in requirements.txt, and find dependencies of those
     # packages, in case any of those dependencies are included as part of pyodide.
@@ -317,7 +317,7 @@ def find_package_deps(
     return pkg_infos
 
 
-def base_package_deps_htmldepitems() -> List[HtmlDepItem]:
+def base_package_deps_htmldepitems() -> list[HtmlDepItem]:
     """
     Return list of packages that should be included in all Shinylive deployments. The
     returned data structure is a list of PyodidePackageInfo objects.
@@ -329,7 +329,7 @@ def base_package_deps_htmldepitems() -> List[HtmlDepItem]:
     return deps
 
 
-def base_package_deps() -> List[PyodidePackageInfo]:
+def base_package_deps() -> list[PyodidePackageInfo]:
     """
     Return list of packages that should be included in all Shinylive deployments. The
     returned data structure is a list of PyodidePackageInfo objects.
@@ -346,7 +346,7 @@ def base_package_deps() -> List[PyodidePackageInfo]:
 def _find_recursive_deps(
     pkgs: Iterable[str],
     verbose_print: Callable[..., None] = lambda *args: None,
-) -> List[str]:
+) -> list[str]:
     """
     Given a list of packages, recursively find all dependencies that are contained in
     repodata.json. This returns a list of all dependencies, including the original
@@ -383,7 +383,7 @@ def _dep_name_to_dep_file(dep_name: str) -> str:
     return repodata["packages"][dep_name]["file_name"]
 
 
-def _dep_names_to_dep_files(dep_names: List[str]) -> List[str]:
+def _dep_names_to_dep_files(dep_names: list[str]) -> list[str]:
     """
     Given a list of dependency names, like ["pandas"], return a list with the names of
     corresponding .whl files (from data in repodata.json), like
@@ -394,11 +394,11 @@ def _dep_names_to_dep_files(dep_names: List[str]) -> List[str]:
     return dep_files
 
 
-def _find_import_app_contents(app_contents: List[FileContentJson]) -> Set[str]:
+def _find_import_app_contents(app_contents: list[FileContentJson]) -> set[str]:
     """
     Given an app.json file, find packages that are imported.
     """
-    imports: Set[str] = set()
+    imports: set[str] = set()
     for file_content in app_contents:
         if not file_content["name"].endswith(".py"):
             continue
@@ -420,7 +420,7 @@ def _pyodide_repodata() -> PyodideRepodataFile:
 
 
 # From pyodide._base.find_imports
-def _find_imports(source: str) -> List[str]:
+def _find_imports(source: str) -> list[str]:
     """
     Finds the imports in a Python source code string
 
@@ -431,7 +431,7 @@ def _find_imports(source: str) -> List[str]:
 
     Returns
     -------
-    ``List[str]``
+    ``list[str]``
         A list of module names that are imported in ``source``. If ``source`` is not
         syntactically correct Python code (after dedenting), returns an empty list.
 
@@ -449,7 +449,7 @@ def _find_imports(source: str) -> List[str]:
         mod = ast.parse(source)
     except SyntaxError:
         return []
-    imports: Set[str] = set()
+    imports: set[str] = set()
     for node in ast.walk(mod):
         if isinstance(node, ast.Import):
             for name in node.names:

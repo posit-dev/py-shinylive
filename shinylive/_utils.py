@@ -1,9 +1,11 @@
+from __future__ import annotations
+
 import filecmp
 import os
 import shutil
 import sys
 from pathlib import Path
-from typing import Callable, List, Union
+from typing import Callable
 
 
 def is_relative_to(path: Path, base: Path) -> bool:
@@ -20,7 +22,7 @@ def is_relative_to(path: Path, base: Path) -> bool:
             return False
 
 
-def path_length(path: Union[str, Path]) -> int:
+def path_length(path: str | Path) -> int:
     """Returns the number of elements in a path.
 
     For example 'a' has length 1, 'a/b' has length 2, etc.
@@ -42,9 +44,9 @@ def path_length(path: Union[str, Path]) -> int:
     return len(path.split("/"))
 
 
-def listdir_recursive(dir: Union[str, Path]) -> List[str]:
+def listdir_recursive(dir: str | Path) -> list[str]:
     dir = Path(dir)
-    all_files: List[str] = []
+    all_files: list[str] = []
 
     for root, _dirs, files in os.walk(dir):
         root = Path(root)
@@ -57,7 +59,7 @@ def listdir_recursive(dir: Union[str, Path]) -> List[str]:
 
 
 def copy_file_and_substitute(
-    src: Union[str, Path], dest: Union[str, Path], search_str: str, replace_str: str
+    src: str | Path, dest: str | Path, search_str: str, replace_str: str
 ) -> None:
     with open(src, "r") as fin:
         in_content = fin.read()
@@ -99,7 +101,7 @@ def create_copy_fn(
 
 
 # Wrapper for TarFile.extractall(), to avoid CVE-2007-4559.
-def tar_safe_extractall(file: Union[str, Path], destdir: Union[str, Path]) -> None:
+def tar_safe_extractall(file: str | Path, destdir: str | Path) -> None:
     import tarfile
 
     destdir = Path(destdir).resolve()
