@@ -3,7 +3,9 @@
 import os
 
 import pytest
+
 import shinylive._assets
+
 
 # Don't run this test in CI, unless we're triggered by a release event. In the future,
 # it would make sense to run this test when we're on an rc branch.
