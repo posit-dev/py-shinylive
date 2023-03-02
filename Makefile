@@ -49,8 +49,7 @@ clean-test: ## remove test and coverage artifacts
 	rm -rf typings/
 
 pyright: ## type check with pyright
-	pyright --pythonversion=3.7
-	pyright --pythonversion=3.11
+	pyright
 
 check: pyright lint ## check code quality with pyright, flake8, black and isort
 	echo "Checking code with black."
