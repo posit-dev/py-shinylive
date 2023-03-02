@@ -20,8 +20,8 @@ if sys.version_info >= (3, 11):
 else:
     from typing_extensions import NotRequired, TypedDict
 
-from ._assets import shinylive_assets_dir, repodata_json_file, ensure_shinylive_assets
 from ._app_json import FileContentJson
+from ._assets import ensure_shinylive_assets, repodata_json_file, shinylive_assets_dir
 from ._version import SHINYLIVE_ASSETS_VERSION
 
 # Files in Pyodide that should always be included.
