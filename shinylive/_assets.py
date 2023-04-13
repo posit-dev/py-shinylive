@@ -54,9 +54,9 @@ def shinylive_cache_dir() -> str:
     Returns the directory used for caching Shinylive assets. This directory can contain
     multiple versions of Shinylive assets.
     """
-    import appdirs
+    import appdirs  # pyright: ignore[reportMissingTypeStubs]
 
-    return appdirs.user_cache_dir("shinylive")
+    return appdirs.user_cache_dir("shinylive")  # pyright: ignore
 
 
 def shinylive_assets_dir(version: str = SHINYLIVE_ASSETS_VERSION) -> str:
