@@ -78,7 +78,7 @@ def create_copy_fn(
     If overwrite is False, the copy function will not overwrite files that already exist.
     """
 
-    def copy_fn(src: str, dst: str, **kwargs: object) -> None:
+    def copy_fn(src: str, dst: str, follow_symlinks: bool = True) -> None:
         if os.path.exists(dst):
             if filecmp.cmp(src, dst) is False:
                 print(
@@ -95,7 +95,7 @@ def create_copy_fn(
                 verbose_print(f"Skipping {dst}")
                 return
 
-        shutil.copy2(src, dst, **kwargs)
+        shutil.copy2(src, dst, follow_symlinks=follow_symlinks)
 
     return copy_fn
 
