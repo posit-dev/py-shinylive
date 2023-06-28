@@ -1,5 +1,3 @@
-# Needed for NotRequired with Python 3.7 - 3.9
-# See https://www.python.org/dev/peps/pep-0655/#usage-in-python-3-11
 from __future__ import annotations
 
 import ast
@@ -405,7 +403,42 @@ def _find_import_app_contents(app_contents: list[FileContentJson]) -> set[str]:
 
         imports = imports.union(_find_imports(file_content["content"]))
 
-    return imports
+    # Note that at this point, the imports are module names, like "cv2", but these can
+    # sometimes differ from the package names, like "opencv-python". We need to map from
+    # module names to package names.
+    packages = [module_to_package(x) for x in imports]
+    packages = [x for x in packages if x is not None]
+
+    return set(packages)
+
+
+def module_to_package(module: str) -> str | None:
+    """
+    Given a module name, like "cv2", return the corresponding package name, like
+    "opencv-python". If not found, return None.
+    """
+    module_to_package = _module_to_package_mappings()
+    if module in module_to_package:
+        return module_to_package[module]
+    else:
+        return None
+
+
+@functools.lru_cache
+def _module_to_package_mappings() -> dict[str, str]:
+    """
+    Return a dictionary that maps module names to package names. This is needed because
+    sometimes the module name and package name are different. For example, the module
+    name is "cv2", but the package name is "opencv-python".
+    """
+    repodata = _pyodide_repodata()
+    module_to_package: dict[str, str] = {}
+    for pkg_name, pkg_info in repodata["packages"].items():
+        modules = pkg_info["imports"]
+        for module in modules:
+            module_to_package[module] = pkg_name
+
+    return module_to_package
 
 
 @functools.lru_cache
