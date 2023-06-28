@@ -4,6 +4,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+
+## [UNRELEASED]
+
+### Bug fixes
+
+* Fixed a bug where, if a module name did not match the name of the package (e.g., "cv2" and "opencv-python"), then `shinylive export` would fail to copy the package. (#7)
+
+### Library updates
+
+
+
 ## [0.0.14] - 2023-06-27
 
 ### Library updates
