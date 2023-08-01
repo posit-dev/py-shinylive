@@ -7,14 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.0.15] - 2023-06-27
 
-### Bug fixes
+### Library updates
 
 * Updated to Shinylive web assets 0.1.4.
 
+### Bug fixes
+
 * Fixed a bug where, if a module name did not match the name of the package (e.g., "cv2" and "opencv-python"), then `shinylive export` would fail to copy the package. (#7)
-
-### Library updates
-
 
 
 ## [0.0.14] - 2023-06-27
