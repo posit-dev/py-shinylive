@@ -5,6 +5,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 
 
+## [0.0.16] - 2023-08-08
+
+### Library updates
+
+* Updated to Shinylive web assets 0.1.5.
+
+
 ## [0.0.15] - 2023-06-27
 
 ### Library updates
