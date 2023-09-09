@@ -44,7 +44,7 @@ def shinylive_bundle_url(version: str = SHINYLIVE_ASSETS_VERSION) -> str:
     Returns the URL for the Shinylive assets bundle.
     """
     return (
-        "https://github.com/rstudio/shinylive/releases/download/"
+        "https://github.com/posit-dev/shinylive/releases/download/"
         + f"v{version}/shinylive-{version}.tar.gz"
     )
 
