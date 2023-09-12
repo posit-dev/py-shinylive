@@ -101,7 +101,7 @@ def export(
       remove: Remove a specific version of local copies of assets. Must be used with --version.
       info: Print information about the local assets.
       install-from-local: Install shinylive assets from a local directory. Must be used with --source.
-      link-from-local: Create a symlink to shinylive assets from a local directory. Must be used with --source. This is useful when doing development on the Shinylive web assets.
+      link-from-local: Create a symlink to shinylive assets from a local shinylive build directory. Must be used with --source. This is useful when doing development on the Shinylive web assets.
 
 """,
     no_args_is_help=True,
