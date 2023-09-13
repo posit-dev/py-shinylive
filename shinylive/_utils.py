@@ -5,7 +5,7 @@ import os
 import shutil
 import sys
 from pathlib import Path
-from typing import Callable, Tuple
+from typing import Callable, Sequence, Tuple
 
 
 def is_relative_to(path: Path, base: Path) -> bool:
@@ -62,7 +62,7 @@ FromTo = Tuple[str, str]
 
 
 def copy_file_and_substitute(
-    src: str | Path, dest: str | Path, *, replacements: tuple[FromTo, ...]
+    src: str | Path, dest: str | Path, *, replacements: Sequence[FromTo]
 ) -> None:
     with open(src, "r") as fin:
         in_content = fin.read()
