@@ -5,7 +5,7 @@ import os
 import shutil
 import sys
 from pathlib import Path
-from typing import Callable
+from typing import Callable, Tuple
 
 
 def is_relative_to(path: Path, base: Path) -> bool:
@@ -57,7 +57,7 @@ def listdir_recursive(dir: str | Path) -> list[str]:
 
     return all_files
 
-FromTo=tuple[str, str]
+FromTo=Tuple[str, str]
 def copy_file_and_substitute(
     src: str | Path, dest: str | Path, *, replacements: tuple[FromTo, ...]
 ) -> None:
