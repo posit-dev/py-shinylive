@@ -57,7 +57,10 @@ def listdir_recursive(dir: str | Path) -> list[str]:
 
     return all_files
 
-FromTo=Tuple[str, str]
+
+FromTo = Tuple[str, str]
+
+
 def copy_file_and_substitute(
     src: str | Path, dest: str | Path, *, replacements: tuple[FromTo, ...]
 ) -> None:

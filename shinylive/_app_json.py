@@ -111,7 +111,7 @@ def write_app_json(app_info: AppInfo, destdir: Path, html_source_dir: Path) -> N
     _utils.copy_file_and_substitute(
         src=html_source_dir / "index.html",
         dest=app_destdir / "index.html",
-        replacements= (
+        replacements=(
             ("{{REL_PATH}}", subdir_inverse),
             ("{{APP_ENGINE}}", "python"),
         ),
