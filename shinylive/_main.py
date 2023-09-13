@@ -188,8 +188,18 @@ def assets(
     default=None,
     help="Directory where shinylive-sw.js is located, relative to the output directory.",
 )
-def base_deps(sw_dir: Optional[str]) -> None:
-    deps = _deps.shinylive_base_deps_htmldep(sw_dir)
+# @click.option(
+#     "--all-files",
+#     is_flag=True,
+#     default=False,
+#     show_default=False,
+#     # help="Include all language dependencies, not just the ones needed for the application.",
+# )
+def base_deps(
+    sw_dir: Optional[str],
+    # all_files: Optional[bool]
+) -> None:
+    deps = _deps.shinylive_base_deps_htmldep(sw_dir, all_files=True)
     print(json.dumps(deps, indent=2))
 
 

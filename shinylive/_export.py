@@ -51,7 +51,11 @@ def export(
         f"Copying base Shinylive files from {assets_dir}/ to {destdir}/",
         file=sys.stderr,
     )
-    base_files = _deps.shinylive_common_files()
+
+    base_files = _deps.shinylive_common_files(
+        # Do not include r-only support files
+        all_files=False,
+    )
     for file in base_files:
         src_path = assets_dir / file
         dest_path = destdir / Path(file)
