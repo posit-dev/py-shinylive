@@ -182,7 +182,7 @@ def _shinylive_common_dep_htmldep() -> QuartoHtmlDependency:
     # Add base python packages as resources
     resources.extend(base_package_deps_htmldepitems())
 
-    # Sort scripts so that load-serviceworker.js is first, and run-python-blocks.js is
+    # Sort scripts so that load-shinylive-sw.js is first, and run-python-blocks.js is
     # last.
     def scripts_sort_fun(x: str | HtmlDepItem) -> int:
         if isinstance(x, str):
