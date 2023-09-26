@@ -190,7 +190,7 @@ def _shinylive_common_dep_htmldep() -> QuartoHtmlDependency:
         else:
             filename = os.path.basename(x["name"])
 
-        if filename == "load-serviceworker.js":
+        if filename == "load-shinylive-sw.js":
             return 0
         elif filename == "run-python-blocks.js":
             return 2
