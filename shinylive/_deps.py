@@ -152,13 +152,8 @@ def _shinylive_common_dep_htmldep() -> QuartoHtmlDependency:
             script_item: HtmlDepItem = {
                 "name": file,
                 "path": os.path.join(assets_dir, file),
+                "attribs": {"type": "module"},
             }
-
-            if os.path.basename(file) in [
-                "load-shinylive-sw.js",
-                "run-python-blocks.js",
-            ]:
-                script_item["attribs"] = {"type": "module"}
 
             scripts.append(script_item)
 
