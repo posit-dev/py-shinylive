@@ -119,17 +119,19 @@ def _pyodide_pkg_infos_to_quarto_html_dep_items(
 # =============================================================================
 def shinylive_base_deps_htmldep(
     sw_dir: Optional[str] = None,
+    *,
+    all_files: bool = False,
 ) -> list[QuartoHtmlDependency]:
     return [
         _serviceworker_dep(sw_dir),
-        _shinylive_common_dep_htmldep(),
+        _shinylive_common_dep_htmldep(all_files=all_files),
     ]
 
 
 # =============================================================================
 # Common dependencies
 # =============================================================================
-def _shinylive_common_dep_htmldep() -> QuartoHtmlDependency:
+def _shinylive_common_dep_htmldep(*, all_files: bool = False) -> QuartoHtmlDependency:
     """
     Return an HTML dependency object consisting of files that are base dependencies; in
     other words, the files that are always included in a Shinylive deployment.
@@ -137,7 +139,7 @@ def _shinylive_common_dep_htmldep() -> QuartoHtmlDependency:
     assets_dir = shinylive_assets_dir()
 
     # First, get the list of base files.
-    base_files = shinylive_common_files()
+    base_files = shinylive_common_files(all_files=all_files)
 
     # Next, categorize the base files into scripts, stylesheets, and resources.
     scripts: list[str | HtmlDepItem] = []
@@ -203,7 +205,7 @@ def _shinylive_common_dep_htmldep() -> QuartoHtmlDependency:
     }
 
 
-def shinylive_common_files() -> list[str]:
+def shinylive_common_files(*, all_files: bool = False) -> list[str]:
     """
     Return a list of files that are base dependencies; in other words, the files that are
     always included in a Shinylive deployment.
@@ -219,6 +221,9 @@ def shinylive_common_files() -> list[str]:
             dirs.remove("export_template")
         elif rel_root == Path("shinylive"):
             files.remove("examples.json")
+            # Remove webr folder as it is only needed for R support
+            if not all_files:
+                dirs.remove("webr")
         elif rel_root == Path("shinylive/pyodide"):
             dirs.remove("fonts")
             files[:] = BASE_PYODIDE_FILES
