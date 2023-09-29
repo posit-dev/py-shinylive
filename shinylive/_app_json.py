@@ -111,8 +111,10 @@ def write_app_json(app_info: AppInfo, destdir: Path, html_source_dir: Path) -> N
     _utils.copy_file_and_substitute(
         src=html_source_dir / "index.html",
         dest=app_destdir / "index.html",
-        search_str="{{REL_PATH}}",
-        replace_str=subdir_inverse,
+        replacements=(
+            ("{{REL_PATH}}", subdir_inverse),
+            ("{{APP_ENGINE}}", "python"),
+        ),
     )
 
     editor_destdir = app_destdir / "edit"
@@ -121,8 +123,10 @@ def write_app_json(app_info: AppInfo, destdir: Path, html_source_dir: Path) -> N
     _utils.copy_file_and_substitute(
         src=html_source_dir / "edit" / "index.html",
         dest=(editor_destdir / "index.html"),
-        search_str="{{REL_PATH}}",
-        replace_str=subdir_inverse,
+        replacements=(
+            ("{{REL_PATH}}", subdir_inverse),
+            ("{{APP_ENGINE}}", "python"),
+        ),
     )
 
     app_json_output_file = app_destdir / "app.json"
