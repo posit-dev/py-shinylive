@@ -54,7 +54,7 @@ def export(
 
     base_files = _deps.shinylive_common_files(
         # Do not include r-only support files
-        all_files=False,
+        kind=c("base", "python"),
     )
     for file in base_files:
         src_path = assets_dir / file
