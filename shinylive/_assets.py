@@ -218,15 +218,20 @@ def _installed_shinylive_versions(shinylive_dir: Optional[Path] = None) -> list[
     return subdirs
 
 
-def print_shinylive_local_info() -> None:
+def print_shinylive_local_info(
+    destdir: Path | None = None,
+) -> None:
+    if destdir is None:
+        destdir = Path(shinylive_cache_dir())
+
     print(
         f"""    Local cached shinylive asset dir:
-    {shinylive_cache_dir()}
+    {str(destdir)}
     """
     )
-    if Path(shinylive_cache_dir()).exists():
+    if destdir.exists():
         print("""    Installed versions:""")
-        installed_versions = _installed_shinylive_versions()
+        installed_versions = _installed_shinylive_versions(destdir)
         if len(installed_versions) > 0:
             print("    " + "\n    ".join(installed_versions))
         else:
