@@ -73,6 +73,11 @@ def repodata_json_file(version: str = SHINYLIVE_ASSETS_VERSION) -> Path:
     )
 
 
+def codeblock_to_json_file() -> str:
+    p = Path(shinylive_assets_dir()) / "scripts" / "codeblock-to-json.js"
+    return str(p)
+
+
 def copy_shinylive_local(
     source_dir: str | Path,
     destdir: Optional[str | Path] = None,

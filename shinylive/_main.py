@@ -34,6 +34,19 @@ version_txt = f"""
 #         * link-from-local
 #             * Options: --version, --dir, --source (required)
 #         * version
+#     * extension
+#         * info
+#         * base-htmldeps
+#             * Options: --sw-dir (required)
+#         * language-resources
+#         * app-resources
+#             * Options: --json-file / stdin (required)
+
+
+# #############################################################################
+# ## Main
+# #############################################################################
+
 
 @click.group(
     invoke_without_command=True,
@@ -301,11 +314,55 @@ def link_from_local(
     _assets.link_shinylive_local(source_dir=source, destdir=dir, version=version)
 
 
-@main.command(
-    help="""Get a set of base dependencies for a Shinylive application.
+@assets.command(
+    help="Print the version of the Shinylive assets.",
+)
+def version() -> None:
+    print(_assets.SHINYLIVE_ASSETS_VERSION)
 
-    This is intended for use by the Shinylive Quarto extension.
+
+# #############################################################################
+# ## Extension
+# #############################################################################
+
+
+@main.group(
+    invoke_without_command=True,
+    no_args_is_help=True,
+    help=f"""Integrate with the Quarto shinylive extension.
+
+    All values are returned as JSON to stdout.
+    {version_txt}
 """,
+)
+def extension() -> None:
+    pass
+
+
+@extension.command(
+    name="info",
+    help="""Retrieve python package version, web assets version, and script locations.
+
+    \b
+    Scripts:
+        codeblock-to-json: The path to a codeblock-to-json.js file, to be executed by Deno.
+""",
+)
+def extension_info() -> None:
+    print_as_json(
+        {
+            "version": _version.SHINYLIVE_PACKAGE_VERSION,
+            "assets_version": _version.SHINYLIVE_ASSETS_VERSION,
+            "scripts": {
+                "codeblock-to-json": _assets.codeblock_to_json_file(),
+            },
+        }
+    )
+    return
+
+
+@extension.command(
+    help="""Retrieve the HTML dependencies for language agnostic shinylive assets."""
 )
 @click.option(
     "--sw-dir",
@@ -313,50 +370,74 @@ def link_from_local(
     default=None,
     help="Directory where shinylive-sw.js is located, relative to the output directory.",
 )
-# @click.option(
-#     "--all-files",
-#     is_flag=True,
-#     default=False,
-#     show_default=False,
-#     # help="Include all language dependencies, not just the ones needed for the application.",
-# )
-def base_deps(
-    sw_dir: Optional[str],
-    # all_files: Optional[bool]
+def base_htmldeps(
+    sw_dir: Optional[str] = None,
 ) -> None:
-    deps = _deps.shinylive_base_deps_htmldep(sw_dir, all_files=True)
-    print(json.dumps(deps, indent=2))
+    print_as_json(_deps.shinylive_base_deps_htmldep(sw_dir=sw_dir, file_type=("base",)))
+    return
 
 
-@main.command(
-    help="""Get a set of dependencies for a set of Python files packaged into a .json file.
-
-    If JSON_FILE is provided, read from that file. Otherwise, read from stdin.
-
-    This is intended for use by the Shinylive Quarto extension.
-"""
+@extension.command(
+    help="""Retrieve HTML dependency resources for python, specifically the pyodide and pyright support."""
 )
-@click.argument(
-    "json_file",
-    required=False,
+def language_resources() -> None:
+    print_as_json(_deps.shinylive_python_resources())
+    return
+
+
+@extension.command(
+    help="""Retrieve HTML dependency resources specific to a shiny app."""
+)
+@click.option(
+    "--json-file",
     type=str,
     default=None,
+    help="Path to a JSON file containing the app's contents. If not specified, the JSON will be read from stdin. The JSON should be an array of objects with the following keys: 'name', 'content', 'type'.",
+    show_default=True,
 )
-def package_deps(json_file: Optional[str]) -> None:
+def app_resources(
+    json_file: Optional[str] = None,
+) -> None:
     json_content: str | None = None
     if json_file is None:
         json_content = sys.stdin.read()
 
-    deps = _deps.package_deps_htmldepitems(json_file, json_content)
-    print(json.dumps(deps, indent=2))
+    print_as_json(_deps.shinylive_app_resources(json_file, json_content))
+    return
 
 
 @main.command(
-    help="""Return the path to a codeblock-to-json.js file, to be executed by Deno.
-
-    This is intended for use by the Shinylive Quarto extension.
-"""
+    help="""Please update your Quarto shinylive extension to the latest version.""",
+    hidden=True,
+    deprecated=True,
 )
-def codeblock_to_json_path() -> None:
-    p = Path(_assets.shinylive_assets_dir()) / "scripts" / "codeblock-to-json.js"
-    print(str(p))
+def base_deps() -> None:
+    raise RuntimeError(
+        "This command is deprecated. Please update your Quarto shinylive extension."
+    )
+
+
+@main.command(
+    help="""Please update your Quarto shinylive extension to the latest version.""",
+    hidden=True,
+    deprecated=True,
+)
+def package_deps() -> None:
+    raise RuntimeError(
+        "This command is deprecated. Please update your Quarto shinylive extension."
+    )
+
+
+@main.command(
+    help="""Please update your Quarto shinylive extension to the latest version.""",
+    hidden=True,
+    deprecated=True,
+)
+def codeblock_to_json() -> None:
+    raise RuntimeError(
+        "This command is deprecated. Please update your Quarto shinylive extension."
+    )
+
+
+def print_as_json(x: object) -> None:
+    print(json.dumps(x, indent=None))
