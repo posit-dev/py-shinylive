@@ -85,6 +85,7 @@ def main() -> None:
 
 
 @main.command(
+    short_help="Turn a Shiny app into a bundle that can be deployed to a static web host.",
     help="""
 Turn a Shiny app into a bundle that can be deployed to a static web host.
 
@@ -104,13 +105,6 @@ After writing the output files, you can serve them locally with the following co
 @click.argument("appdir", type=str)
 @click.argument("destdir", type=str)
 @click.option(
-    "--verbose",
-    is_flag=True,
-    default=False,
-    help="Print debugging information when copying files.",
-    show_default=True,
-)
-@click.option(
     "--subdir",
     type=str,
     default=None,
@@ -122,6 +116,13 @@ After writing the output files, you can serve them locally with the following co
     is_flag=True,
     default=False,
     help="Include the full Shinylive assets, including all Pyodide packages. Without this flag, only the packages needed to run the application are included.",
+    show_default=True,
+)
+@click.option(
+    "--verbose",
+    is_flag=True,
+    default=False,
+    help="Print debugging information when copying files.",
     show_default=True,
 )
 def export(
@@ -146,6 +147,7 @@ def export(
 
 
 @main.group(
+    short_help="Manage local copy of Shinylive web assets.",
     help=f"""Manage local copy of Shinylive web assets
     {version_txt}
 """,
@@ -163,7 +165,23 @@ def upgrade_dir(dir: str | Path | None) -> Path:
     return dir
 
 
-@assets.command(help="""Download assets from the remote server.""")
+@assets.command(
+    name="info",
+    help="Print information about the local assets.",
+)
+@click.option(
+    "--dir",
+    type=str,
+    default=None,
+    help="Directory where shinylive assets are stored (if not using the default).",
+)
+def assets_info(
+    dir: Optional[str | Path],
+) -> None:
+    _assets.print_shinylive_local_info(destdir=upgrade_dir(dir))
+
+
+@assets.command(help="""Download specific assets from the remote server.""")
 @click.option(
     "--version",
     type=str,
@@ -193,8 +211,12 @@ def download(
     _assets.download_shinylive(destdir=upgrade_dir(dir), version=version, url=url)
 
 
+cleanup_help = f"Remove all versions of local assets except the currently-used version, {_assets.SHINYLIVE_ASSETS_VERSION}."
+
+
 @assets.command(
-    help=f"Remove all versions of local assets except the currently-used version, {_assets.SHINYLIVE_ASSETS_VERSION}."
+    short_help=cleanup_help,
+    help=cleanup_help,
 )
 @click.option(
     "--dir",
@@ -235,22 +257,6 @@ def remove(
 
 
 @assets.command(
-    name="info",
-    help="Print information about the local assets.",
-)
-@click.option(
-    "--dir",
-    type=str,
-    default=None,
-    help="Directory where shinylive assets are stored (if not using the default).",
-)
-def assets_info(
-    dir: Optional[str | Path],
-) -> None:
-    _assets.print_shinylive_local_info(destdir=upgrade_dir(dir))
-
-
-@assets.command(
     help="Install shinylive assets from a local directory.",
     no_args_is_help=True,
 )
@@ -288,8 +294,14 @@ def install_from_local(
     _assets.copy_shinylive_local(source_dir=source, destdir=dir, version=version)
 
 
+link_from_local_help = (
+    "Create a symlink to shinylive assets from a local shinylive build directory."
+)
+
+
 @assets.command(
-    help="""Create a symlink to shinylive assets from a local shinylive build directory.""",
+    short_help=link_from_local_help,
+    help=link_from_local_help,
     no_args_is_help=True,
 )
 @click.option(
@@ -341,6 +353,7 @@ def version() -> None:
 @main.group(
     invoke_without_command=True,
     no_args_is_help=True,
+    short_help="Integrate with the Quarto shinylive extension.",
     help=f"""Integrate with the Quarto shinylive extension.
 
     All values are returned as JSON to stdout.
@@ -354,11 +367,15 @@ def extension() -> None:
 
 @extension.command(
     name="info",
-    help="""Retrieve python package version, web assets version, and script locations.
+    short_help="Return python package version, web assets version, and script locations.",
+    help="""Return python package version, web assets version, and script locations.
 
     \b
-    Scripts:
-        codeblock-to-json: The path to a codeblock-to-json.js file, to be executed by Deno.
+    Returns:
+        version: The version of the shinylive Python package.
+        assets_version: The version of the supported shinylive web assets.
+        scripts:
+            codeblock-to-json: The path to a codeblock-to-json.js file, to be executed by Deno.
 """,
 )
 def extension_info() -> None:
@@ -374,8 +391,14 @@ def extension_info() -> None:
     return
 
 
+base_htmldeps_help = (
+    "Return the HTML dependencies for language agnostic shinylive assets."
+)
+
+
 @extension.command(
-    help="""Retrieve the HTML dependencies for language agnostic shinylive assets."""
+    short_help=base_htmldeps_help,
+    help=base_htmldeps_help,
 )
 @click.option(
     "--sw-dir",
@@ -392,16 +415,24 @@ def base_htmldeps(
     return
 
 
+language_resources_help = "Return HTML dependency resources for python, specifically the pyodide and pyright support."
+
+
 @extension.command(
-    help="""Retrieve HTML dependency resources for python, specifically the pyodide and pyright support."""
+    short_help=language_resources_help,
+    help=language_resources_help,
 )
 def language_resources() -> None:
     print_as_json(_deps.shinylive_python_resources())
     return
 
 
+app_resources_help = "Return HTML dependency resources specific to a shiny app."
+
+
 @extension.command(
-    help="""Retrieve HTML dependency resources specific to a shiny app."""
+    short_help=app_resources_help,
+    help=app_resources_help,
 )
 @click.option(
     "--json-file",
