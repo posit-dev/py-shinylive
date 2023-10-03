@@ -153,7 +153,7 @@ def shinylive_r_resources() -> list[HtmlDepItem]:
 # =============================================================================
 def _shinylive_common_dep_htmldep(
     *,
-    asset_type: AssetType = (
+    asset_type: Tuple[AssetType, ...] = (
         "base",
         "python",
     ),
@@ -233,7 +233,7 @@ def _shinylive_common_dep_htmldep(
 
 def shinylive_common_files(
     *,
-    asset_type: AssetType,
+    asset_type: Tuple[AssetType, ...],
 ) -> list[str]:
     """
     Return a list of asset files for Python, and/or R, and/or language-agnostic (base) dependencies
