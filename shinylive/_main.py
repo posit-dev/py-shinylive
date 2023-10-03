@@ -1,13 +1,31 @@
 from __future__ import annotations
 
+import collections
 import json
 import sys
 from pathlib import Path
-from typing import Optional
+from typing import MutableMapping, Optional
 
 import click
 
 from . import _assets, _deps, _export, _version
+
+
+# Make sure commands are listed in the order they are added in the code.
+class OrderedGroup(click.Group):
+    def __init__(
+        self,
+        name: Optional[str] = None,
+        commands: Optional[MutableMapping[str, click.Command]] = None,
+        **kwargs: object,
+    ):
+        super(OrderedGroup, self).__init__(name, commands, **kwargs)
+        #: the registered subcommands by their exported names.
+        self.commands = commands or collections.OrderedDict()
+
+    def list_commands(self, ctx: click.Context) -> list[str]:
+        return list(self.commands.keys())
+
 
 version_txt = f"""
     \b
@@ -52,6 +70,7 @@ version_txt = f"""
     invoke_without_command=True,
     no_args_is_help=True,
     help=version_txt,
+    cls=OrderedGroup,
 )
 @click.option(
     "--version",
@@ -139,6 +158,7 @@ def export(
     {version_txt}
 """,
     no_args_is_help=True,
+    cls=OrderedGroup,
 )
 def assets() -> None:
     pass
@@ -334,6 +354,7 @@ def version() -> None:
     All values are returned as JSON to stdout.
     {version_txt}
 """,
+    cls=OrderedGroup,
 )
 def extension() -> None:
     pass
