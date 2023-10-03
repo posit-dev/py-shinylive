@@ -72,19 +72,11 @@ version_txt = f"""
     help=version_txt,
     cls=OrderedGroup,
 )
-@click.option(
-    "--version",
-    is_flag=True,
-    default=False,
-    help="Print version of shinylive python package.",
-    show_default=True,
-)
-def main(version: bool) -> None:
-    if version:
-        print(_version.SHINYLIVE_PACKAGE_VERSION)
-        # Quit early without error
-        # Prevents `shinylive --version assets` from executing `assets` command
-        click.get_current_context().exit(0)
+# > Add a --version option which immediately prints the version number and exits the
+# > program.
+@click.version_option(_version.SHINYLIVE_PACKAGE_VERSION, message="%(version)s")
+def main() -> None:
+    ...
 
 
 # #############################################################################
