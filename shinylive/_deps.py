@@ -237,8 +237,7 @@ def shinylive_common_files(
     file_type: AssetFileType,
 ) -> list[str]:
     """
-    Return a list of files that are base dependencies; in other words, the files that are
-    always included in a Shinylive deployment.
+    Return a list of asset files for Python, and/or R, and/or language-agnostic (base) dependencies
     """
     ensure_shinylive_assets()
 
