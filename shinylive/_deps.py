@@ -358,8 +358,9 @@ def find_package_deps(
 
 def base_package_deps_htmldepitems() -> list[HtmlDepItem]:
     """
-    Return list of packages that should be included in all Shinylive deployments. The
-    returned data structure is a list of PyodidePackageInfo objects.
+    Return list of python packages that should be included in all python Shinylive
+    deployments. The returned data structure is a list of HtmlDepItem objects
+    representing PyodidePackageInfo objects.
     """
     pkg_infos = base_package_deps()
     deps = _pyodide_pkg_infos_to_quarto_html_dep_items(pkg_infos)
@@ -369,8 +370,8 @@ def base_package_deps_htmldepitems() -> list[HtmlDepItem]:
 
 def base_package_deps() -> list[PyodidePackageInfo]:
     """
-    Return list of packages that should be included in all Shinylive deployments. The
-    returned data structure is a list of PyodidePackageInfo objects.
+    Return list of python packages that should be included in all python Shinylive
+    deployments. The returned data structure is a list of PyodidePackageInfo objects.
     """
     dep_names = _find_recursive_deps(BASE_PYODIDE_PACKAGES)
     pkg_infos = _dep_names_to_pyodide_pkg_infos(dep_names)
