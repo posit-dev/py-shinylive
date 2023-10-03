@@ -373,7 +373,9 @@ def extension_info() -> None:
 def base_htmldeps(
     sw_dir: Optional[str] = None,
 ) -> None:
-    print_as_json(_deps.shinylive_base_deps_htmldep(sw_dir=sw_dir, file_type=("base",)))
+    print_as_json(
+        _deps.shinylive_base_deps_htmldep(sw_dir=sw_dir, asset_type=("base",))
+    )
     return
 
 

@@ -33,8 +33,7 @@ BASE_PYODIDE_FILES = {
 
 # Packages that should always be included in a Shinylive deployment.
 BASE_PYODIDE_PACKAGES = {"distutils", "micropip", "ssl"}
-# Must use Tuple as function signatures are mutable
-AssetFileType = Tuple[Literal["base", "python", "r"], ...]
+AssetType = Literal["base", "python", "r"]
 
 
 # =============================================================================
@@ -122,16 +121,16 @@ def _pyodide_pkg_infos_to_quarto_html_dep_items(
 def shinylive_base_deps_htmldep(
     sw_dir: Optional[str] = None,
     *,
-    file_type: AssetFileType = ("base",),
+    asset_type: Tuple[AssetType] = ("base",),
 ) -> list[QuartoHtmlDependency]:
     return [
         _serviceworker_dep(sw_dir),
-        _shinylive_common_dep_htmldep(file_type=file_type),
+        _shinylive_common_dep_htmldep(asset_type=asset_type),
     ]
 
 
 def shinylive_python_resources() -> list[HtmlDepItem]:
-    rel_paths = shinylive_common_files(file_type=("python",))
+    rel_paths = shinylive_common_files(asset_type=("python",))
     assets_dir = shinylive_assets_dir()
     return [
         {"name": rel_path, "path": os.path.join(assets_dir, rel_path)}
@@ -141,7 +140,7 @@ def shinylive_python_resources() -> list[HtmlDepItem]:
 
 # Not used in practice!
 def shinylive_r_resources() -> list[HtmlDepItem]:
-    rel_paths = shinylive_common_files(file_type=("r",))
+    rel_paths = shinylive_common_files(asset_type=("r",))
     assets_dir = shinylive_assets_dir()
     return [
         {"name": rel_path, "path": os.path.join(assets_dir, rel_path)}
@@ -154,7 +153,7 @@ def shinylive_r_resources() -> list[HtmlDepItem]:
 # =============================================================================
 def _shinylive_common_dep_htmldep(
     *,
-    file_type: AssetFileType = (
+    asset_type: AssetType = (
         "base",
         "python",
     ),
@@ -166,7 +165,7 @@ def _shinylive_common_dep_htmldep(
     assets_dir = shinylive_assets_dir()
 
     # First, get the list of base files.
-    base_files = shinylive_common_files(file_type=file_type)
+    base_files = shinylive_common_files(asset_type=asset_type)
 
     # Next, categorize the base files into scripts, stylesheets, and resources.
     scripts: list[str | HtmlDepItem] = []
@@ -234,16 +233,16 @@ def _shinylive_common_dep_htmldep(
 
 def shinylive_common_files(
     *,
-    file_type: AssetFileType,
+    asset_type: AssetType,
 ) -> list[str]:
     """
     Return a list of asset files for Python, and/or R, and/or language-agnostic (base) dependencies
     """
     ensure_shinylive_assets()
 
-    has_base = "base" in file_type
-    has_python = "python" in file_type
-    has_r = "r" in file_type
+    has_base = "base" in asset_type
+    has_python = "python" in asset_type
+    has_r = "r" in asset_type
 
     base_files: list[str] = []
     for root, dirs, files in os.walk(shinylive_assets_dir()):
