@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import collections
-import json
 import sys
 from pathlib import Path
 from typing import MutableMapping, Optional
@@ -9,6 +8,7 @@ from typing import MutableMapping, Optional
 import click
 
 from . import _assets, _deps, _export, _version
+from ._utils import print_as_json
 
 
 # Make sure commands are listed in the order they are added in the code.
@@ -37,7 +37,7 @@ version_txt = f"""
 # * shinylive
 #     * --version
 #     * export
-#         * Options: --verbose, --subdir, --full-shinylive
+#         * Options: --subdir, --full-shinylive, --verbose
 #     * assets
 #         * download
 #             * Options: --version, --dir, --url
@@ -452,38 +452,38 @@ def app_resources(
     return
 
 
-@main.command(
-    help="""Please update your Quarto shinylive extension to the latest version.""",
-    hidden=True,
-    deprecated=True,
-)
+def defunct_help(cmd: str) -> str:
+    return f"""The shinylive CLI command `{cmd}` is defunct.
+
+You are using a newer version of the Python shinylive package ({ _version.SHINYLIVE_PACKAGE_VERSION }) with an older
+version of the Quarto shinylive extension, and these versions are not compatible.
+
+Please update your Quarto shinylive extension by running this command in the top level
+of your Quarto project:
+
+    quarto add quarto-ext/shinylive
+"""
+
+
+def defunct_error_txt(cmd: str) -> str:
+    return f"Error: { defunct_help(cmd) }"
+
+
+def raise_defunct(cmd: str) -> None:
+    # By raising a `SystemExit()`, we avoid printing the traceback.
+    raise SystemExit(defunct_error_txt(cmd))
+
+
+@main.command(help=defunct_help("base-deps"), hidden=True)
 def base_deps() -> None:
-    raise RuntimeError(
-        "This command is deprecated. Please update your Quarto shinylive extension."
-    )
+    raise_defunct("base-deps")
 
 
-@main.command(
-    help="""Please update your Quarto shinylive extension to the latest version.""",
-    hidden=True,
-    deprecated=True,
-)
+@main.command(help=defunct_help("package-deps"), hidden=True)
 def package_deps() -> None:
-    raise RuntimeError(
-        "This command is deprecated. Please update your Quarto shinylive extension."
-    )
+    raise_defunct("package-deps")
 
 
-@main.command(
-    help="""Please update your Quarto shinylive extension to the latest version.""",
-    hidden=True,
-    deprecated=True,
-)
+@main.command(help=defunct_help("codeblock-to-json"), hidden=True)
 def codeblock_to_json() -> None:
-    raise RuntimeError(
-        "This command is deprecated. Please update your Quarto shinylive extension."
-    )
-
-
-def print_as_json(x: object) -> None:
-    print(json.dumps(x, indent=None))
+    raise_defunct("codeblock-to-json")

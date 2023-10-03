@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import filecmp
+import json
 import os
 import shutil
 import sys
@@ -117,3 +118,7 @@ def tar_safe_extractall(file: str | Path, destdir: str | Path) -> None:
                 raise RuntimeError("Attempted path traversal in tar file.")
 
         tar.extractall(destdir)
+
+
+def print_as_json(x: object) -> None:
+    print(json.dumps(x, indent=None))
