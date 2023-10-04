@@ -43,14 +43,14 @@ version_txt = f"""
 #             * Options: --version, --dir, --url
 #         * cleanup
 #             * Options: --dir
-#         * remove
-#             * Options: --version (required), --dir
+#         * remove VERSION
+#             * Options: --dir
 #         * info
 #             * Options: --dir
-#         * install-from-local
-#             * Options: --version, --dir, --source (required)
-#         * link-from-local
-#             * Options: --version, --dir, --source (required)
+#         * install-from-local BUILD
+#             * Options: --version, --dir
+#         * link-from-local BUILD
+#             * Options: --version, --dir
 #         * version
 #     * extension
 #         * info
@@ -231,13 +231,16 @@ def cleanup(
 
 
 @assets.command(
-    help="Remove a specific version of local copies of assets.",
+    short_help="Remove a specific version of local copies of assets.",
+    help=f"""Remove a specific version (`VERSION`) of local copies of assets."
+
+    For example, `VERSION` might be `{ _version.SHINYLIVE_ASSETS_VERSION }`.
+    """,
     no_args_is_help=True,
 )
-@click.option(
-    "--version",
+@click.argument(
+    "version",
     type=str,
-    help="Shinylive version to remove.",
     required=True,
 )
 @click.option(
@@ -256,14 +259,12 @@ def remove(
     _assets.remove_shinylive_assets(shinylive_dir=dir, version=version)
 
 
-install_from_local_help = (
-    "Install shinylive assets from a local shinylive build directory."
-)
-
-
 @assets.command(
-    short_help=install_from_local_help,
-    help=install_from_local_help,
+    short_help="Install shinylive assets from a local shinylive build directory.",
+    help="""Install shinylive assets from a local shinylive build directory (`BUILD`).
+
+    For example, `BUILD` might be the `./build` directory of a local shinylive repository.
+    """,
     no_args_is_help=True,
 )
 @click.option(
@@ -279,11 +280,9 @@ install_from_local_help = (
     default=None,
     help="Directory to store shinylive assets (if not using the default).",
 )
-@click.option(
-    "--source",
+@click.argument(
+    "BUILD",
     type=str,
-    default=None,
-    help="Directory where shinylive assets will be copied from (for example, shinylive build directory).",
     required=True,
 )
 def install_from_local(
@@ -306,8 +305,11 @@ link_from_local_help = (
 
 
 @assets.command(
-    short_help=link_from_local_help,
-    help=link_from_local_help,
+    short_help="Create a symlink to shinylive assets from a local shinylive build directory.",
+    help="""Create a symlink to shinylive assets from a local shinylive build directory (`BUILD`).
+
+    For example, `BUILD` might be the `./build` directory of a local shinylive repository.
+    """,
     no_args_is_help=True,
 )
 @click.option(
@@ -323,25 +325,23 @@ link_from_local_help = (
     default=None,
     help="Directory to store shinylive assets (if not using the default).",
 )
-@click.option(
-    "--source",
+@click.argument(
+    "build",
     type=str,
-    default=None,
-    help="Directory where shinylive assets will be linked from (for example, shinylive build directory).",
     required=True,
 )
 def link_from_local(
-    source: str,
+    build: str,
     version: str,
     dir: Optional[str | Path],
 ) -> None:
-    if source is None:  # pyright: ignore[reportUnnecessaryComparison]
-        raise click.UsageError("Must specify --source")
+    if build is None:  # pyright: ignore[reportUnnecessaryComparison]
+        raise click.UsageError("Must specify BUILD")
     dir = upgrade_dir(dir)
     if version is None:  # pyright: ignore[reportUnnecessaryComparison]
         version = _version.SHINYLIVE_ASSETS_VERSION
-    print(f"Creating symlink for shinylive-{version} from {source} to {dir}")
-    _assets.link_shinylive_local(source_dir=source, destdir=dir, version=version)
+    print(f"Creating symlink for shinylive-{version} from {build} to {dir}")
+    _assets.link_shinylive_local(source_dir=build, destdir=dir, version=version)
 
 
 @assets.command(

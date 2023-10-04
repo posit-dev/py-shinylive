@@ -60,8 +60,8 @@ To see which version of this Python package you have, and which version of the w
 $ shinylive
 Usage: shinylive [OPTIONS] COMMAND [ARGS]...
 
-  shinylive Python package version: 0.0.1
-  shinylive web assets version:     0.0.6
+  shinylive Python package version: 0.1.0
+  shinylive web assets version:     0.2.1
 ...
 ```
 
@@ -69,7 +69,7 @@ The web assets will be downloaded and cached the first time you run `shinylive e
 
 ```
 $ shinylive assets download
-Downloading https://github.com/posit-dev/shinylive/releases/download/v0.0.6/shinylive-0.0.6.tar.gz...
+Downloading https://github.com/posit-dev/shinylive/releases/download/v0.2.1/shinylive-0.2.1.tar.gz...
 Unzipping to /Users/username/Library/Caches/shinylive/
 ```
 
@@ -81,21 +81,21 @@ $ shinylive assets info
     /Users/username/Library/Caches/shinylive
 
     Installed versions:
+    /Users/username/Library/Caches/shinylive/shinylive-0.2.1
     /Users/username/Library/Caches/shinylive/shinylive-0.0.6
-    /Users/username/Library/Caches/shinylive/shinylive-0.0.5
 ```
 
 You can remove old versions with `shinylive assets cleanup`. This will remove all versions except the one that the Python package wants to use:
 
 ```
 $ shinylive assets cleanup
-Keeping version 0.0.6
-Removing /Users/username/Library/Caches/shinylive/shinylive-0.0.5
-```
-
-If you want to force it to remove a specific version, use the `shinylive assets remove --version xxx`:
-
-```
-$ shinylive assets remove --version 0.0.6
+Keeping version 0.2.1
 Removing /Users/username/Library/Caches/shinylive/shinylive-0.0.6
+```
+
+If you want to force it to remove a specific version, use the `shinylive assets remove xxx`:
+
+```
+$ shinylive assets remove 0.2.1
+Removing /Users/username/Library/Caches/shinylive/shinylive-0.2.1
 ```
