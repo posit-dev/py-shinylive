@@ -256,8 +256,14 @@ def remove(
     _assets.remove_shinylive_assets(shinylive_dir=dir, version=version)
 
 
+install_from_local_help = (
+    "Install shinylive assets from a local shinylive build directory."
+)
+
+
 @assets.command(
-    help="Install shinylive assets from a local directory.",
+    short_help=install_from_local_help,
+    help=install_from_local_help,
     no_args_is_help=True,
 )
 @click.option(
@@ -277,7 +283,7 @@ def remove(
     "--source",
     type=str,
     default=None,
-    help="Directory where shinylive assets will be copied from.",
+    help="Directory where shinylive assets will be copied from (for example, shinylive build directory).",
     required=True,
 )
 def install_from_local(
@@ -321,7 +327,7 @@ link_from_local_help = (
     "--source",
     type=str,
     default=None,
-    help="Directory where shinylive assets will be linked from.",
+    help="Directory where shinylive assets will be linked from (for example, shinylive build directory).",
     required=True,
 )
 def link_from_local(
