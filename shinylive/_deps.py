@@ -130,12 +130,22 @@ def shinylive_base_deps_htmldep(
 
 
 def shinylive_python_resources() -> list[HtmlDepItem]:
+    ret: list[HtmlDepItem] = []
+
+    # Add python support file
     rel_paths = shinylive_common_files(asset_type=("python",))
     assets_dir = shinylive_assets_dir()
-    return [
-        {"name": rel_path, "path": os.path.join(assets_dir, rel_path)}
-        for rel_path in rel_paths
-    ]
+    ret.extend(
+        [
+            {"name": rel_path, "path": os.path.join(assets_dir, rel_path)}
+            for rel_path in rel_paths
+        ]
+    )
+
+    # Add base python packages as resources
+    ret.extend(base_package_deps_htmldepitems())
+
+    return ret
 
 
 # Not used in practice!
@@ -201,9 +211,6 @@ def _shinylive_common_dep_htmldep(
                     "path": os.path.join(assets_dir, file),
                 }
             )
-
-    # Add base python packages as resources
-    resources.extend(base_package_deps_htmldepitems())
 
     # Sort scripts so that load-shinylive-sw.js is first, and run-python-blocks.js is
     # last.
@@ -302,7 +309,6 @@ def _serviceworker_dep(sw_dir: Optional[str] = None) -> QuartoHtmlDependency:
 def shinylive_app_resources(
     json_file: Optional[str | Path],
     json_content: Optional[str],
-    verbose: bool = True,
 ) -> list[HtmlDepItem]:
     """
     Find package dependencies from an app.json file, and return as a list of
@@ -315,10 +321,6 @@ def shinylive_app_resources(
         json_file is not None and json_content is not None
     ):
         raise RuntimeError("Must provide either `json_file` or `json_content`.")
-
-    def verbose_print(*args: object) -> None:
-        if verbose:
-            print(*args, file=sys.stderr)
 
     file_contents: list[FileContentJson] = []
 
