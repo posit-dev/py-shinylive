@@ -164,13 +164,15 @@ def cleanup_shinylive_assets(
 
     shinylive_dir = Path(shinylive_dir)
 
-    version = _installed_shinylive_versions(shinylive_dir)
-    version = [re.sub("^shinylive-", "", os.path.basename(v)) for v in version]
-    if SHINYLIVE_ASSETS_VERSION in version:
+    version_paths = _installed_shinylive_version_paths(shinylive_dir)
+    version_names = [
+        re.sub("^shinylive-", "", os.path.basename(v)) for v in version_paths
+    ]
+    if SHINYLIVE_ASSETS_VERSION in version_names:
         print("Keeping version " + SHINYLIVE_ASSETS_VERSION)
-        version.remove(SHINYLIVE_ASSETS_VERSION)
+        version_names.remove(SHINYLIVE_ASSETS_VERSION)
 
-    remove_shinylive_assets(shinylive_dir, version)
+    remove_shinylive_assets(shinylive_dir, version_names)
 
 
 def remove_shinylive_assets(
@@ -213,14 +215,23 @@ def remove_shinylive_assets(
             print(f"{target_dir} does not exist.")
 
 
-def _installed_shinylive_versions(shinylive_dir: Optional[Path] = None) -> list[str]:
+def _installed_shinylive_version_paths(
+    shinylive_dir: Optional[Path] = None,
+) -> list[Path]:
     if shinylive_dir is None:
         shinylive_dir = Path(shinylive_cache_dir())
 
     shinylive_dir = Path(shinylive_dir)
     subdirs = shinylive_dir.iterdir()
-    subdirs = [re.sub("^shinylive-", "", str(s)) for s in subdirs]
-    return subdirs
+    # print(", ".join([str(s.name) for s in subdirs]))
+    return [s for s in subdirs if not s.name.startswith(".")]
+    subdir_names = [str(s.name) for s in subdirs]
+    versions = [
+        re.sub("^shinylive-", "", subdir_name)
+        for subdir_name in subdir_names
+        if not subdir_name.startswith(".")
+    ]
+    return versions
 
 
 def print_shinylive_local_info(
@@ -236,9 +247,9 @@ def print_shinylive_local_info(
     )
     if destdir.exists():
         print("""    Installed versions:""")
-        installed_versions = _installed_shinylive_versions(destdir)
-        if len(installed_versions) > 0:
-            print("    " + "\n    ".join(installed_versions))
+        installed_version_paths = _installed_shinylive_version_paths(destdir)
+        if len(installed_version_paths) > 0:
+            print("    " + "\n    ".join([str(v) for v in installed_version_paths]))
         else:
             print("    (None)")
     else:
