@@ -8,7 +8,7 @@ import os
 import sys
 from pathlib import Path
 from textwrap import dedent
-from typing import Callable, Iterable, Literal, Optional
+from typing import Callable, Iterable, Literal, Optional, Tuple
 
 # Even though TypedDict is available in Python 3.8, because it's used with NotRequired,
 # they should both come from the same typing module.
@@ -33,6 +33,7 @@ BASE_PYODIDE_FILES = {
 
 # Packages that should always be included in a Shinylive deployment.
 BASE_PYODIDE_PACKAGES = {"distutils", "micropip", "ssl"}
+AssetType = Literal["base", "python", "r"]
 
 
 # =============================================================================
@@ -120,18 +121,53 @@ def _pyodide_pkg_infos_to_quarto_html_dep_items(
 def shinylive_base_deps_htmldep(
     sw_dir: Optional[str] = None,
     *,
-    all_files: bool = False,
+    asset_type: Tuple[AssetType] = ("base",),
 ) -> list[QuartoHtmlDependency]:
     return [
         _serviceworker_dep(sw_dir),
-        _shinylive_common_dep_htmldep(all_files=all_files),
+        _shinylive_common_dep_htmldep(asset_type=asset_type),
+    ]
+
+
+def shinylive_python_resources() -> list[HtmlDepItem]:
+    ret: list[HtmlDepItem] = []
+
+    # Add python support file
+    rel_paths = shinylive_common_files(asset_type=("python",))
+    assets_dir = shinylive_assets_dir()
+    ret.extend(
+        [
+            {"name": rel_path, "path": os.path.join(assets_dir, rel_path)}
+            for rel_path in rel_paths
+        ]
+    )
+
+    # Add base python packages as resources
+    ret.extend(base_package_deps_htmldepitems())
+
+    return ret
+
+
+# Not used in practice!
+def shinylive_r_resources() -> list[HtmlDepItem]:
+    rel_paths = shinylive_common_files(asset_type=("r",))
+    assets_dir = shinylive_assets_dir()
+    return [
+        {"name": rel_path, "path": os.path.join(assets_dir, rel_path)}
+        for rel_path in rel_paths
     ]
 
 
 # =============================================================================
 # Common dependencies
 # =============================================================================
-def _shinylive_common_dep_htmldep(*, all_files: bool = False) -> QuartoHtmlDependency:
+def _shinylive_common_dep_htmldep(
+    *,
+    asset_type: Tuple[AssetType, ...] = (
+        "base",
+        "python",
+    ),
+) -> QuartoHtmlDependency:
     """
     Return an HTML dependency object consisting of files that are base dependencies; in
     other words, the files that are always included in a Shinylive deployment.
@@ -139,7 +175,7 @@ def _shinylive_common_dep_htmldep(*, all_files: bool = False) -> QuartoHtmlDepen
     assets_dir = shinylive_assets_dir()
 
     # First, get the list of base files.
-    base_files = shinylive_common_files(all_files=all_files)
+    base_files = shinylive_common_files(asset_type=asset_type)
 
     # Next, categorize the base files into scripts, stylesheets, and resources.
     scripts: list[str | HtmlDepItem] = []
@@ -176,9 +212,6 @@ def _shinylive_common_dep_htmldep(*, all_files: bool = False) -> QuartoHtmlDepen
                 }
             )
 
-    # Add base python packages as resources
-    resources.extend(base_package_deps_htmldepitems())
-
     # Sort scripts so that load-shinylive-sw.js is first, and run-python-blocks.js is
     # last.
     def scripts_sort_fun(x: str | HtmlDepItem) -> int:
@@ -205,12 +238,18 @@ def _shinylive_common_dep_htmldep(*, all_files: bool = False) -> QuartoHtmlDepen
     }
 
 
-def shinylive_common_files(*, all_files: bool = False) -> list[str]:
+def shinylive_common_files(
+    *,
+    asset_type: Tuple[AssetType, ...],
+) -> list[str]:
     """
-    Return a list of files that are base dependencies; in other words, the files that are
-    always included in a Shinylive deployment.
+    Return a list of asset files for Python, and/or R, and/or language-agnostic (base) dependencies
     """
     ensure_shinylive_assets()
+
+    has_base = "base" in asset_type
+    has_python = "python" in asset_type
+    has_r = "r" in asset_type
 
     base_files: list[str] = []
     for root, dirs, files in os.walk(shinylive_assets_dir()):
@@ -219,11 +258,20 @@ def shinylive_common_files(*, all_files: bool = False) -> list[str]:
         if rel_root == Path("."):
             dirs.remove("scripts")
             dirs.remove("export_template")
+            if not has_base:
+                # No files to add here
+                files = []
         elif rel_root == Path("shinylive"):
             files.remove("examples.json")
             # Remove webr folder as it is only needed for R support
-            if not all_files:
+            if not has_r:
                 dirs.remove("webr")
+            if not has_python:
+                dirs.remove("pyodide")
+                dirs.remove("pyright")
+            if not has_base:
+                # No files to add here
+                files = []
         elif rel_root == Path("shinylive/pyodide"):
             dirs.remove("fonts")
             files[:] = BASE_PYODIDE_FILES
@@ -258,10 +306,9 @@ def _serviceworker_dep(sw_dir: Optional[str] = None) -> QuartoHtmlDependency:
 # =============================================================================
 # Find which packages are used by a Shiny application
 # =============================================================================
-def package_deps_htmldepitems(
+def shinylive_app_resources(
     json_file: Optional[str | Path],
     json_content: Optional[str],
-    verbose: bool = True,
 ) -> list[HtmlDepItem]:
     """
     Find package dependencies from an app.json file, and return as a list of
@@ -274,10 +321,6 @@ def package_deps_htmldepitems(
         json_file is not None and json_content is not None
     ):
         raise RuntimeError("Must provide either `json_file` or `json_content`.")
-
-    def verbose_print(*args: object) -> None:
-        if verbose:
-            print(*args, file=sys.stderr)
 
     file_contents: list[FileContentJson] = []
 
@@ -317,11 +360,11 @@ def find_package_deps(
 
 def base_package_deps_htmldepitems() -> list[HtmlDepItem]:
     """
-    Return list of packages that should be included in all Shinylive deployments. The
-    returned data structure is a list of PyodidePackageInfo objects.
+    Return list of python packages that should be included in all python Shinylive
+    deployments. The returned data structure is a list of HtmlDepItem objects
+    representing PyodidePackageInfo objects.
     """
-    dep_names = _find_recursive_deps(BASE_PYODIDE_PACKAGES)
-    pkg_infos = _dep_names_to_pyodide_pkg_infos(dep_names)
+    pkg_infos = base_package_deps()
     deps = _pyodide_pkg_infos_to_quarto_html_dep_items(pkg_infos)
 
     return deps
@@ -329,8 +372,8 @@ def base_package_deps_htmldepitems() -> list[HtmlDepItem]:
 
 def base_package_deps() -> list[PyodidePackageInfo]:
     """
-    Return list of packages that should be included in all Shinylive deployments. The
-    returned data structure is a list of PyodidePackageInfo objects.
+    Return list of python packages that should be included in all python Shinylive
+    deployments. The returned data structure is a list of PyodidePackageInfo objects.
     """
     dep_names = _find_recursive_deps(BASE_PYODIDE_PACKAGES)
     pkg_infos = _dep_names_to_pyodide_pkg_infos(dep_names)
