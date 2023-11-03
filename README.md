@@ -4,7 +4,7 @@ Shinylive Python package
 [![Build and test](https://github.com/posit-dev/py-shinylive/actions/workflows/build.yml/badge.svg)](https://github.com/posit-dev/py-shinylive/actions/)
 [![PyPI Latest Release](https://img.shields.io/pypi/v/shinylive.svg)](https://pypi.org/project/shinylive/)
 
-[Documentation site](https://shiny.rstudio.com/py/docs/shinylive.html)
+[Documentation site](https://github.com/posit-dev/py-shinylive)
 
 This repository contains a Python package for exporting Shiny applications as Shinylive applications.
 
