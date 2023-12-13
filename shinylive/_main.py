@@ -286,17 +286,15 @@ def remove(
     required=True,
 )
 def install_from_local(
-    source: str,
+    build: str,
     version: str,
     dir: Optional[str | Path],
 ) -> None:
-    if source is None:  # pyright: ignore[reportUnnecessaryComparison]
-        raise click.UsageError("Must specify --source")
     dir = upgrade_dir(dir)
     if version is None:  # pyright: ignore[reportUnnecessaryComparison]
         version = _version.SHINYLIVE_ASSETS_VERSION
-    print(f"Copying shinylive-{version} from {source} to {dir}")
-    _assets.copy_shinylive_local(source_dir=source, destdir=dir, version=version)
+    print(f"Copying shinylive-{version} from {build} to {dir}")
+    _assets.copy_shinylive_local(source_dir=build, destdir=dir, version=version)
 
 
 link_from_local_help = (
