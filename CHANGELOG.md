@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * Fixed `shinylive assets install-from-local`.
 
+* Updated to Shinylive web assets 0.2.4.
+
 ## [0.1.2] - 2023-11-30
 
 ### Library updates
