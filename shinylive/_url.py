@@ -1,17 +1,23 @@
+from __future__ import annotations
+
 import base64
 import json
 from pathlib import Path
 from typing import List, Literal, Optional, TypedDict, cast
 
-from lzstring import LZString  # type: ignore[reportMissingTypeStubs]
+
+class FileContentJson(TypedDict):
+    name: str
+    content: str
+    type: Literal["text", "binary"]
 
 
-def make_shinylive_url(
+def encode_shinylive_url(
     app: str | Path,
     files: Optional[tuple[str | Path, ...]] = None,
     mode: str = "editor",
     language: Optional[str] = None,
-    no_header: bool = False,
+    header: bool = True,
 ) -> str:
     """
     Generate a URL for a [ShinyLive application](https://shinylive.io).
@@ -29,8 +35,8 @@ def make_shinylive_url(
         The mode of the application. Defaults to "editor".
     language
         The language of the application. Defaults to None.
-    no_header
-        Whether to include a header. Defaults to False.
+    header
+        Whether to include a header. Defaults to True.
 
     Returns
     -------
@@ -55,13 +61,19 @@ def make_shinylive_url(
 
     base = "https://shinylive.io"
 
-    return f"{base}/{language}/{mode}/#{'h=0&' if no_header else ''}code={file_lz}"
+    return f"{base}/{language}/{mode}/#{'h=0&' if not header else ''}code={file_lz}"
 
 
-class FileContentJson(TypedDict):
-    name: str
-    content: str
-    type: Literal["text", "binary"]
+def decode_shinylive_url(url: str) -> FileContentJson:
+    from lzstring import LZString  # type: ignore[reportMissingTypeStubs]
+
+    bundle_json = cast(
+        str,
+        LZString.decompressFromEncodedURIComponent(  # type: ignore
+            url.split("code=")[1]
+        ),
+    )
+    return cast(FileContentJson, json.loads(bundle_json))
 
 
 def read_file(file: str | Path, root_dir: str | Path | None = None) -> FileContentJson:
@@ -91,6 +103,8 @@ def read_file(file: str | Path, root_dir: str | Path | None = None) -> FileConte
 
 
 def lzstring_file_bundle(file_bundle: List[FileContentJson]) -> str:
+    from lzstring import LZString  # type: ignore[reportMissingTypeStubs]
+
     file_json = json.dumps(file_bundle)
     file_lz = LZString.compressToEncodedURIComponent(file_json)  # type: ignore[reportUnknownMemberType]
     return cast(str, file_lz)

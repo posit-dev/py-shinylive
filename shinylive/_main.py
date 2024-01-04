@@ -8,7 +8,7 @@ from typing import MutableMapping, Optional
 import click
 
 from . import _assets, _deps, _export, _version
-from ._url import make_shinylive_url
+from ._url import decode_shinylive_url, encode_shinylive_url
 from ._utils import print_as_json
 
 
@@ -472,11 +472,21 @@ of your Quarto project:
 
 
 # #############################################################################
-# ## shinylive.io link
+# ## shinylive.io url
 # #############################################################################
 
 
-@main.command(
+@main.group(
+    short_help="Create or decode a shinylive.io URL.",
+    help=f"Create or decode a shinylive.io URL.",
+    no_args_is_help=True,
+    cls=OrderedGroup,
+)
+def url() -> None:
+    pass
+
+
+@url.command(
     short_help="Create a shinylive.io URL from local files.",
     help="""
 Create a shinylive.io URL for a Shiny app from local files.
@@ -511,7 +521,7 @@ FILES are additional supporting files for the app.
 )
 @click.argument("app", type=str, nargs=1, required=True)
 @click.argument("files", type=str, nargs=-1, required=False)
-def url(
+def encode(
     app: str,
     files: Optional[tuple[str, ...]] = None,
     mode: str = "editor",
@@ -519,12 +529,12 @@ def url(
     no_header: bool = False,
     view: bool = False,
 ) -> None:
-    url = make_shinylive_url(
+    url = encode_shinylive_url(
         app=app,
         files=files,
         mode=mode,
         language=language,
-        no_header=no_header,
+        header=not no_header,
     )
 
     print(url)
@@ -533,6 +543,45 @@ def url(
         import webbrowser
 
         webbrowser.open(url)
+    return
+
+
+@url.command(
+    short_help="Decode a shinylive.io URL.",
+)
+@click.option("--out", type=str, default=None, help="Output directory.")
+@click.option("--json", is_flag=True, default=False, help="Output as JSON.")
+@click.argument("url", type=str, nargs=1, required=False)
+def decode(url: Optional[str], out: Optional[str], json: bool = False) -> None:
+    # if `url` is None, read the contents of the clipboard
+    if url is None:
+        import pyperclip
+
+        url = pyperclip.paste()
+
+    bundle = decode_shinylive_url(url.strip())
+
+    if json:
+        print_as_json(bundle)
+        return
+
+    if out is not None:
+        import os
+
+        out_dir = Path(out)
+        os.makedirs(out_dir, exist_ok=True)
+        for file in bundle:
+            with open(out_dir / file["name"], "w") as f_out:
+                f_out.write(file["content"])
+    else:
+        print("\n---- shinylive.io bundle ----")
+        for file in bundle:
+            print(f"## file: {file['name']}")
+            if "type" in file and file["type"] == "binary":
+                print("## type: binary")
+            print("")
+            print(file["content"])
+
     return
 
 
