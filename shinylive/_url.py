@@ -7,8 +7,8 @@ from lzstring import LZString  # type: ignore[reportMissingTypeStubs]
 
 
 def make_shinylive_url(
-    app: str,
-    files: Optional[tuple[str, ...]] = None,
+    app: str | Path,
+    files: Optional[tuple[str | Path, ...]] = None,
     mode: str = "editor",
     language: Optional[str] = None,
     no_header: bool = False,
