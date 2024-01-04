@@ -8,6 +8,7 @@ from typing import MutableMapping, Optional
 import click
 
 from . import _assets, _deps, _export, _version
+from ._url import make_shinylive_url
 from ._utils import print_as_json
 
 
@@ -59,6 +60,7 @@ version_txt = f"""
 #         * language-resources
 #         * app-resources
 #             * Options: --json-file / stdin (required)
+#     * url
 
 
 # #############################################################################
@@ -467,6 +469,76 @@ of your Quarto project:
 
     quarto add quarto-ext/shinylive
 """
+
+
+# #############################################################################
+# ## shinylive.io link
+# #############################################################################
+
+
+@main.command(
+    short_help="Create a shinylive.io URL from local files.",
+    help="""
+Create a shinylive.io URL for a Shiny app from local files.
+
+APP is the path to the primary Shiny app file.
+
+FILES are additional supporting files for the app.
+""",
+    no_args_is_help=True,
+)
+@click.option(
+    "-m",
+    "--mode",
+    type=click.Choice(["editor", "app"]),
+    required=True,
+    default="editor",
+    help="The shinylive mode: include the editor or show only the app.",
+)
+@click.option(
+    "-l",
+    "--language",
+    type=click.Choice(["python", "py", "R", "r"]),
+    required=False,
+    default=None,
+    help="The primary language used to run the app, by default inferred from the app file.",
+)
+@click.option(
+    "-v", "--view", is_flag=True, default=False, help="Open the link in a browser."
+)
+@click.option(
+    "--no-header", is_flag=True, default=False, help="Hide the Shinylive header."
+)
+@click.argument("app", type=str, nargs=1, required=True)
+@click.argument("files", type=str, nargs=-1, required=False)
+def url(
+    app: str,
+    files: Optional[tuple[str, ...]] = None,
+    mode: str = "editor",
+    language: Optional[str] = None,
+    no_header: bool = False,
+    view: bool = False,
+) -> None:
+    url = make_shinylive_url(
+        app=app,
+        files=files,
+        mode=mode,
+        language=language,
+        no_header=no_header,
+    )
+
+    print(url)
+
+    if view:
+        import webbrowser
+
+        webbrowser.open(url)
+    return
+
+
+# #############################################################################
+# ## Deprecated commands
+# #############################################################################
 
 
 def defunct_error_txt(cmd: str) -> str:
