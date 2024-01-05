@@ -568,7 +568,7 @@ On macOS, you can read the URL from the clipboard with:
 """,
 )
 @click.option(
-    "--out",
+    "--dir",
     type=str,
     default=None,
     help="Output directory into which the app's files will be written. The directory is created if it does not exist. ",
@@ -580,7 +580,7 @@ On macOS, you can read the URL from the clipboard with:
     help="Prints the decoded shinylive bundle as JSON to stdout, ignoring --out.",
 )
 @click.argument("url", type=str, nargs=1, default="-")
-def decode(url: str, out: Optional[str] = None, json: bool = False) -> None:
+def decode(url: str, dir: Optional[str] = None, json: bool = False) -> None:
     if url == "-":
         url_in = sys.stdin.read()
     else:
@@ -591,10 +591,10 @@ def decode(url: str, out: Optional[str] = None, json: bool = False) -> None:
         print_as_json(bundle)
         return
 
-    if out is not None:
+    if dir is not None:
         import os
 
-        out_dir = Path(out)
+        out_dir = Path(dir)
         os.makedirs(out_dir, exist_ok=True)
         for file in bundle:
             with open(out_dir / file["name"], "w") as f_out:
