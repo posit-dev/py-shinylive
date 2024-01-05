@@ -499,7 +499,6 @@ On macOS, you can copy the URL to the clipboard with:
 
     shinylive url encode app.py | pbcopy
 """,
-    no_args_is_help=True,
 )
 @click.option(
     "-m",
