@@ -568,7 +568,12 @@ On macOS, you can read the URL from the clipboard with:
     pbpaste | shinylive url decode
 """,
 )
-@click.option("--out", type=str, default=None, help="Output directory.")
+@click.option(
+    "--out",
+    type=str,
+    default=None,
+    help="Output directory into which the app's files will be written. The directory is created if it does not exist. ",
+)
 @click.option(
     "--json",
     is_flag=True,
