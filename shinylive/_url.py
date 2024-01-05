@@ -64,16 +64,49 @@ def encode_shinylive_url(
     return f"{base}/{language}/{mode}/#{'h=0&' if not header else ''}code={file_lz}"
 
 
-def decode_shinylive_url(url: str) -> FileContentJson:
+def decode_shinylive_url(url: str) -> List[FileContentJson]:
     from lzstring import LZString  # type: ignore[reportMissingTypeStubs]
 
-    bundle_json = cast(
-        str,
-        LZString.decompressFromEncodedURIComponent(  # type: ignore
-            url.split("code=")[1]
-        ),
-    )
-    return cast(FileContentJson, json.loads(bundle_json))
+    url = url.strip()
+
+    try:
+        bundle_json = cast(
+            str,
+            LZString.decompressFromEncodedURIComponent(  # type: ignore
+                url.split("code=")[1]
+            ),
+        )
+        bundle = json.loads(bundle_json)
+    except Exception:
+        raise ValueError("Could not parse and decode the shinylive URL code payload.")
+
+    # bundle should be an array of FileContentJson objects, otherwise raise an error
+    if not isinstance(bundle, list):
+        raise ValueError(
+            "The shinylive URL was not formatted correctly: `code` did not decode to a list."
+        )
+
+    for file in bundle:
+        if not isinstance(file, dict):
+            raise ValueError(
+                "Invalid shinylive URL: `code` did not decode to a list of dictionaries."
+            )
+        if not all(key in file for key in ["name", "content"]):
+            raise ValueError(
+                "Invalid shinylive URL: `code` included an object that was missing required fields `name` or `content`."
+            )
+        if "type" in file and file["type"] not in ["text", "binary"]:
+            raise ValueError(
+                f"Invalid shinylive URL: unexpected file type '{file['type']}' in '{file['name']}'."
+            )
+        elif "type" not in file:
+            file["type"] = "text"
+        if not all(isinstance(value, str) for value in file.values()):
+            raise ValueError(
+                f"Invalid shinylive URL: not all items in '{file['name']}' were strings."
+            )
+
+    return cast(List[FileContentJson], bundle)
 
 
 def read_file(file: str | Path, root_dir: str | Path | None = None) -> FileContentJson:

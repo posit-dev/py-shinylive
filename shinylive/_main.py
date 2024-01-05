@@ -494,6 +494,10 @@ Create a shinylive.io URL for a Shiny app from local files.
 APP is the path to the primary Shiny app file.
 
 FILES are additional supporting files for the app.
+
+On macOS, you can copy the URL to the clipboard with:
+
+    shinylive url encode app.py | pbcopy
 """,
     no_args_is_help=True,
 )
@@ -548,18 +552,31 @@ def encode(
 
 @url.command(
     short_help="Decode a shinylive.io URL.",
+    help="""
+Decode a shinylive.io URL.
+
+URL is the shinylive editor or app URL. If not specified, the URL will be read from
+stdin, allowing you to read the URL from a file or the clipboard.
+
+On macOS, you can read the URL from the clipboard with:
+
+    pbpaste | shinylive url decode
+""",
 )
 @click.option("--out", type=str, default=None, help="Output directory.")
-@click.option("--json", is_flag=True, default=False, help="Output as JSON.")
-@click.argument("url", type=str, nargs=1, required=False)
-def decode(url: Optional[str], out: Optional[str], json: bool = False) -> None:
-    # if `url` is None, read the contents of the clipboard
-    if url is None:
-        import pyperclip
-
-        url = pyperclip.paste()
-
-    bundle = decode_shinylive_url(url.strip())
+@click.option(
+    "--json",
+    is_flag=True,
+    default=False,
+    help="Prints the decoded shinylive bundle as JSON to stdout, ignoring --out.",
+)
+@click.argument("url", type=str, nargs=1, default="-")
+def decode(url: str, out: Optional[str] = None, json: bool = False) -> None:
+    if url == "-":
+        url_in = sys.stdin.read()
+    else:
+        url_in = url
+    bundle = decode_shinylive_url(str(url_in))
 
     if json:
         print_as_json(bundle)
@@ -572,15 +589,17 @@ def decode(url: Optional[str], out: Optional[str], json: bool = False) -> None:
         os.makedirs(out_dir, exist_ok=True)
         for file in bundle:
             with open(out_dir / file["name"], "w") as f_out:
-                f_out.write(file["content"])
+                f_out.write(
+                    file["content"].encode("utf-8", errors="ignore").decode("utf-8")
+                )
     else:
-        print("\n---- shinylive.io bundle ----")
+        print("")
         for file in bundle:
             print(f"## file: {file['name']}")
             if "type" in file and file["type"] == "binary":
                 print("## type: binary")
             print("")
-            print(file["content"])
+            print(file["content"].encode("utf-8", errors="ignore").decode("utf-8"))
 
     return
 
