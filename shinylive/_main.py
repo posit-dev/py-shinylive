@@ -478,7 +478,7 @@ of your Quarto project:
 
 @main.group(
     short_help="Create or decode a shinylive.io URL.",
-    help=f"Create or decode a shinylive.io URL.",
+    help="Create or decode a shinylive.io URL.",
     no_args_is_help=True,
     cls=OrderedGroup,
 )
