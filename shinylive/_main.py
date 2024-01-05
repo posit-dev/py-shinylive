@@ -523,7 +523,7 @@ On macOS, you can copy the URL to the clipboard with:
 @click.option(
     "--no-header", is_flag=True, default=False, help="Hide the Shinylive header."
 )
-@click.argument("app", type=str, nargs=1, required=True)
+@click.argument("app", type=str, nargs=1, required=True, default="-")
 @click.argument("files", type=str, nargs=-1, required=False)
 def encode(
     app: str,
@@ -533,8 +533,13 @@ def encode(
     no_header: bool = False,
     view: bool = False,
 ) -> None:
+    if app == "-":
+        app_in = sys.stdin.read()
+    else:
+        app_in = app
+
     url = encode_shinylive_url(
-        app=app,
+        app=app_in,
         files=files,
         mode=mode,
         language=language,

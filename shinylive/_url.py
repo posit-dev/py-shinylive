@@ -43,7 +43,21 @@ def encode_shinylive_url(
         The generated URL for the ShinyLive application.
     """
     root_dir = Path(app).parent
-    file_bundle = [read_file(app, root_dir)]
+
+    # if app has a newline, then it's app content, not a path
+    if isinstance(app, str) and "\n" in app:
+        # now language is required
+        if language is None:
+            raise ValueError("If `app` is a string, then `language` must be specified.")
+        file_bundle = [
+            {
+                "name": f"app.{'py' if language == 'py' else 'R'}",
+                "content": app,
+                "type": "text",
+            }
+        ]
+    else:
+        file_bundle = [read_file(app, root_dir)]
 
     if files is not None:
         file_bundle = file_bundle + [read_file(file, root_dir) for file in files]
