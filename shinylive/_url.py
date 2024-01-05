@@ -123,6 +123,8 @@ def decode_shinylive_url(url: str) -> List[FileContentJson]:
     except Exception:
         raise ValueError("Could not parse and decode the shinylive URL code payload.")
 
+    ret: List[FileContentJson] = []
+
     # bundle should be an array of FileContentJson objects, otherwise raise an error
     if not isinstance(bundle, list):
         raise ValueError(
@@ -148,8 +150,9 @@ def decode_shinylive_url(url: str) -> List[FileContentJson]:
             raise ValueError(
                 f"Invalid shinylive URL: not all items in '{file['name']}' were strings."
             )
+        ret.append(FileContentJson(file))  # pyright: ignore
 
-    return cast(List[FileContentJson], bundle)
+    return ret
 
 
 # Copied from https://github.com/posit-dev/py-shiny/blob/main/docs/_renderer.py#L231
