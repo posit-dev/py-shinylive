@@ -123,6 +123,7 @@ def decode_shinylive_url(url: str) -> List[FileContentJson]:
     return cast(List[FileContentJson], bundle)
 
 
+# Copied from https://github.com/posit-dev/py-shiny/blob/main/docs/_renderer.py#L231
 def read_file(file: str | Path, root_dir: str | Path | None = None) -> FileContentJson:
     file = Path(file)
     if root_dir is None:
