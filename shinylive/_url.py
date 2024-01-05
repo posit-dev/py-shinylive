@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+import re
 from pathlib import Path
 from typing import List, Literal, Optional, TypedDict, cast
 
@@ -45,12 +46,11 @@ def encode_shinylive_url(
         The generated URL for the ShinyLive application.
     """
 
+    if language is None:
+        language = detect_app_language(app)
+
     # if app has a newline, then it's app content, not a path
     if isinstance(app, str) and "\n" in app:
-        # now language is required
-        if language is None:
-            raise ValueError("If `app` is a string, then `language` must be specified.")
-
         app_path = ""
         root_dir = Path(".")
         file_bundle = [
@@ -78,10 +78,14 @@ def encode_shinylive_url(
             read_file(file, root_dir) for file in file_list if Path(file) != app_path
         ]
 
-    if language is None:
-        language = file_bundle[0]["name"].split(".")[-1].lower()
+    if language in ["py", "python"]:
+        language = "py"
+    elif language in ["r", "R"]:
+        language = "r"
     else:
-        language = "py" if language.lower() in ["py", "python"] else "r"
+        raise ValueError(
+            f"Language '{language}' is not supported. Please specify one of 'py' or 'r'."
+        )
 
     # if first file is not named either `ui.R` or `server.R`, then make it app.{language}
     if file_bundle[0]["name"] not in ["ui.R", "server.R"]:
@@ -92,6 +96,29 @@ def encode_shinylive_url(
     base = "https://shinylive.io"
 
     return f"{base}/{language}/{mode}/#{'h=0&' if not header else ''}code={file_lz}"
+
+
+def detect_app_language(app: str | Path) -> str:
+    err_not_detected = """
+    Could not automatically detect the language of the app. Please specify `language`."""
+
+    if isinstance(app, str) and "\n" in app:
+        if re.search(r"^(import|from) shiny", app, re.MULTILINE):
+            return "py"
+        elif re.search(r"^library\(shiny\)", app, re.MULTILINE):
+            return "r"
+        else:
+            raise ValueError(err_not_detected)
+
+    if not isinstance(app, Path):
+        app = Path(app)
+
+    if app.suffix.lower() == ".py":
+        return "py"
+    elif app.suffix.lower() == ".r":
+        return "r"
+    else:
+        raise ValueError(err_not_detected)
 
 
 def listdir_recursive(dir: str | Path) -> list[str]:
