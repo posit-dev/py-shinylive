@@ -493,7 +493,7 @@ Create a shinylive.io URL for a Shiny app from local files.
 
 APP is the path to the primary Shiny app file.
 
-FILES are additional supporting files for the app.
+FILES are additional supporting files or directories for the app.
 
 On macOS, you can copy the URL to the clipboard with:
 

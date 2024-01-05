@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import base64
 import json
+import os
 from pathlib import Path
 from typing import List, Literal, Optional, TypedDict, cast
 
@@ -29,8 +30,9 @@ def encode_shinylive_url(
         `app.py` or an R `app.R`, `ui.R`, or `server.R` file. This file will be renamed
          `app.py` or `app.R` for shinylive, unless it's named `ui.R` or `server.R`.
     files
-        A tuple of file paths to include in the application. On shinylive, these files
-        will be given stored relative to the main `app` file.
+        A tuple of file or directory paths to include in the application. On shinylive,
+        these files will be stored relative to the main `app` file. If an entry in files
+        is a directory, then all files in that directory will be included, recursively.
     mode
         The mode of the application. Defaults to "editor".
     language
@@ -42,13 +44,15 @@ def encode_shinylive_url(
     -------
         The generated URL for the ShinyLive application.
     """
-    root_dir = Path(app).parent
 
     # if app has a newline, then it's app content, not a path
     if isinstance(app, str) and "\n" in app:
         # now language is required
         if language is None:
             raise ValueError("If `app` is a string, then `language` must be specified.")
+
+        app_path = ""
+        root_dir = Path(".")
         file_bundle = [
             {
                 "name": f"app.{'py' if language == 'py' else 'R'}",
@@ -57,10 +61,22 @@ def encode_shinylive_url(
             }
         ]
     else:
+        app_path = Path(app)
+        root_dir = app_path.parent
         file_bundle = [read_file(app, root_dir)]
 
     if files is not None:
-        file_bundle = file_bundle + [read_file(file, root_dir) for file in files]
+        file_list: list[str | Path] = []
+
+        for file in files:
+            if Path(file).is_dir():
+                file_list.extend(listdir_recursive(file))
+            else:
+                file_list.append(file)
+
+        file_bundle = file_bundle + [
+            read_file(file, root_dir) for file in file_list if Path(file) != app_path
+        ]
 
     if language is None:
         language = file_bundle[0]["name"].split(".")[-1].lower()
@@ -76,6 +92,19 @@ def encode_shinylive_url(
     base = "https://shinylive.io"
 
     return f"{base}/{language}/{mode}/#{'h=0&' if not header else ''}code={file_lz}"
+
+
+def listdir_recursive(dir: str | Path) -> list[str]:
+    dir = Path(dir)
+    all_files: list[str] = []
+
+    for root, dirs, files in os.walk(dir):
+        for file in files:
+            all_files.append(os.path.join(root, file))
+        for dir in dirs:
+            all_files.extend(listdir_recursive(dir))
+
+    return all_files
 
 
 def decode_shinylive_url(url: str) -> List[FileContentJson]:
