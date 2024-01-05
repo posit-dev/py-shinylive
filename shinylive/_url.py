@@ -71,7 +71,7 @@ def encode_shinylive_url(
     if file_bundle[0]["name"] not in ["ui.R", "server.R"]:
         file_bundle[0]["name"] = f"app.{'py' if language == 'py' else 'R'}"
 
-    file_lz = lzstring_file_bundle(file_bundle)
+    file_lz = lzstring_file_bundle(cast(List[FileContentJson], file_bundle))
 
     base = "https://shinylive.io"
 
@@ -100,7 +100,7 @@ def decode_shinylive_url(url: str) -> List[FileContentJson]:
             "The shinylive URL was not formatted correctly: `code` did not decode to a list."
         )
 
-    for file in bundle:
+    for file in bundle:  # type: ignore
         if not isinstance(file, dict):
             raise ValueError(
                 "Invalid shinylive URL: `code` did not decode to a list of dictionaries."
@@ -115,7 +115,7 @@ def decode_shinylive_url(url: str) -> List[FileContentJson]:
             )
         elif "type" not in file:
             file["type"] = "text"
-        if not all(isinstance(value, str) for value in file.values()):
+        if not all(isinstance(value, str) for value in file.values()):  # type: ignore
             raise ValueError(
                 f"Invalid shinylive URL: not all items in '{file['name']}' were strings."
             )
