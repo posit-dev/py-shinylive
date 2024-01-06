@@ -62,14 +62,11 @@ def encode_shinylive_url(
     if isinstance(app, str) and "\n" in app:
         app_path = ""
         root_dir = Path(".")
-        file_bundle = [
-            FileContentJson(
-                {
-                    "name": f"app.{'py' if language == 'py' else 'R'}",
-                    "content": app,
-                }
-            )
-        ]
+        app_fc: FileContentJson = {
+            "name": f"app.{'py' if language == 'py' else 'R'}",
+            "content": app,
+        }
+        file_bundle = [app_fc]
     else:
         app_path = Path(app)
         root_dir = app_path.parent
@@ -100,7 +97,7 @@ def encode_shinylive_url(
     if file_bundle[0]["name"] not in ["ui.R", "server.R"]:
         file_bundle[0]["name"] = f"app.{'py' if language == 'py' else 'R'}"
 
-    file_lz = lzstring_file_bundle([FileContentJson(f) for f in file_bundle])
+    file_lz = lzstring_file_bundle(file_bundle)
 
     base = "https://shinylive.io"
     h = "h=0&" if not header and mode == "app" else ""
@@ -202,7 +199,7 @@ def decode_shinylive_url(url: str) -> list[FileContentJson]:
             raise ValueError(
                 f"Invalid shinylive URL: not all items in '{file['name']}' were strings."
             )
-        ret.append(FileContentJson(fc))
+        ret.append(fc)
 
     return ret
 
