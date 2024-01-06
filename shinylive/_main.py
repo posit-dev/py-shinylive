@@ -3,7 +3,7 @@ from __future__ import annotations
 import collections
 import sys
 from pathlib import Path
-from typing import MutableMapping, Optional
+from typing import Literal, MutableMapping, Optional
 
 import click
 
