@@ -573,6 +573,9 @@ Decode a shinylive.io URL.
 URL is the shinylive editor or app URL. If not specified, the URL will be read from
 stdin, allowing you to read the URL from a file or the clipboard.
 
+When `--dir` is provided, the decoded files will be written to the specified directory.
+Otherwise, the contents of the shinylive app will be printed to stdout.
+
 On macOS, you can read the URL from the clipboard with:
 
     pbpaste | shinylive url decode
