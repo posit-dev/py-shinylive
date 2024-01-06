@@ -609,10 +609,16 @@ def decode(url: str, dir: Optional[str] = None, json: bool = False) -> None:
         out_dir = Path(dir)
         out_dir.mkdir(parents=True, exist_ok=True)
         for file in bundle:
-            with open(out_dir / file["name"], "w") as f_out:
-                f_out.write(
-                    file["content"].encode("utf-8", errors="ignore").decode("utf-8")
-                )
+            if "type" in file and file["type"] == "binary":
+                import base64
+
+                with open(out_dir / file["name"], "wb") as f_out:
+                    f_out.write(base64.b64decode(file["content"]))
+            else:
+                with open(out_dir / file["name"], "w") as f_out:
+                    f_out.write(
+                        file["content"].encode("utf-8", errors="ignore").decode("utf-8")
+                    )
     else:
         print("")
         for file in bundle:
