@@ -63,10 +63,12 @@ def encode_shinylive_url(
         app_path = ""
         root_dir = Path(".")
         file_bundle = [
-            {
-                "name": f"app.{'py' if language == 'py' else 'R'}",
-                "content": app,
-            }
+            FileContentJson(
+                {
+                    "name": f"app.{'py' if language == 'py' else 'R'}",
+                    "content": app,
+                }
+            )
         ]
     else:
         app_path = Path(app)
@@ -98,7 +100,7 @@ def encode_shinylive_url(
     if file_bundle[0]["name"] not in ["ui.R", "server.R"]:
         file_bundle[0]["name"] = f"app.{'py' if language == 'py' else 'R'}"
 
-    file_lz = lzstring_file_bundle(cast(List[FileContentJson], file_bundle))
+    file_lz = lzstring_file_bundle([FileContentJson(f) for f in file_bundle])
 
     base = "https://shinylive.io"
     h = "h=0&" if not header and mode == "app" else ""
@@ -141,7 +143,7 @@ def listdir_recursive(dir: str | Path) -> list[str]:
     return all_files
 
 
-def decode_shinylive_url(url: str) -> List[FileContentJson]:
+def decode_shinylive_url(url: str) -> list[FileContentJson]:
     from lzstring import LZString  # type: ignore[reportMissingTypeStubs]
 
     url = url.strip()
@@ -157,7 +159,7 @@ def decode_shinylive_url(url: str) -> List[FileContentJson]:
     except Exception:
         raise ValueError("Could not parse and decode the shinylive URL code payload.")
 
-    ret: List[FileContentJson] = []
+    ret: list[FileContentJson] = []
 
     # bundle should be an array of FileContentJson objects, otherwise raise an error
     if not isinstance(bundle, list):
@@ -174,15 +176,33 @@ def decode_shinylive_url(url: str) -> List[FileContentJson]:
             raise ValueError(
                 "Invalid shinylive URL: `code` included an object that was missing required fields `name` or `content`."
             )
-        if "type" in file and file["type"] not in ["text", "binary"]:
-            raise ValueError(
-                f"Invalid shinylive URL: unexpected file type '{file['type']}' in '{file['name']}'."
-            )
+
+        for key in ["name", "content"]:
+            if not isinstance(file[key], str):
+                raise ValueError(
+                    f"Invalid shinylive URL: encoded file bundle contains an file where `{key}` was not a string."
+                )
+
+        fc: FileContentJson = {
+            "name": file["name"],
+            "content": file["content"],
+        }
+
+        if "type" in file:
+            if file["type"] == "binary":
+                fc["type"] = "binary"
+            elif file["type"] == "text":
+                pass
+            else:
+                raise ValueError(
+                    f"Invalid shinylive URL: unexpected file type '{file['type']}' in '{file['name']}'."
+                )
+
         if not all(isinstance(value, str) for value in file.values()):  # type: ignore
             raise ValueError(
                 f"Invalid shinylive URL: not all items in '{file['name']}' were strings."
             )
-        ret.append(FileContentJson(file))  # pyright: ignore
+        ret.append(FileContentJson(fc))
 
     return ret
 
@@ -214,7 +234,7 @@ def read_file(file: str | Path, root_dir: str | Path | None = None) -> FileConte
     }
 
 
-def lzstring_file_bundle(file_bundle: List[FileContentJson]) -> str:
+def lzstring_file_bundle(file_bundle: list[FileContentJson]) -> str:
     from lzstring import LZString  # type: ignore[reportMissingTypeStubs]
 
     file_json = json.dumps(file_bundle)
