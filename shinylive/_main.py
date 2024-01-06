@@ -537,11 +537,23 @@ def encode(
     else:
         app_in = app
 
+    if language is not None:
+        if language in ["py", "python"]:
+            lang = "py"
+        elif language in ["r", "R"]:
+            lang = "r"
+        else:
+            raise click.UsageError(
+                f"Invalid language '{language}', must be one of 'py', 'python', 'r', 'R'."
+            )
+    else:
+        lang = None
+
     url = encode_shinylive_url(
         app=app_in,
         files=files,
         mode=mode,
-        language=language,
+        language=lang,
         header=not no_header,
     )
 
