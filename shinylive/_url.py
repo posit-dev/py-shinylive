@@ -23,13 +23,55 @@ class FileContentJson(TypedDict):
     type: NotRequired[Literal["text", "binary"]]
 
 
-def encode_shinylive_url(
-    app: str | Path,
-    files: Optional[str | Path | Sequence[str | Path]] = None,
+class AppBundle(TypedDict):
+    language: Literal["py", "r"]
+    files: list[FileContentJson]
+
+
+def create_shinylive_url(
+    bundle: AppBundle,
     mode: Literal["editor", "app"] = "editor",
-    language: Optional[Literal["py", "r"]] = None,
     header: bool = True,
 ) -> str:
+    """ """
+
+    file_lz = lzstring_file_bundle(bundle["files"])
+
+    base = "https://shinylive.io"
+    h = "h=0&" if not header and mode == "app" else ""
+
+    return f"{base}/{bundle['language']}/{mode}/#{h}code={file_lz}"
+
+
+def create_shinylive_bundle_text(
+    app: str,
+    files: Optional[str | Path | Sequence[str | Path]] = None,
+    language: Optional[Literal["py", "r"]] = None,
+    root_dir: str | Path = ".",
+) -> AppBundle:
+    if language is None:
+        language = detect_app_language(app)
+    elif language not in ["py", "r"]:
+        raise ValueError(
+            f"Language '{language}' is not supported. Please specify one of 'py' or 'r'."
+        )
+
+    app_fc: FileContentJson = {
+        "name": f"app.{'py' if language == 'py' else 'R'}",
+        "content": app,
+    }
+
+    return {
+        "language": language,
+        "files": add_supporting_files_to_bundle(app_fc, files, root_dir),
+    }
+
+
+def create_shinylive_bundle_file(
+    app: str | Path,
+    files: Optional[str | Path | Sequence[str | Path]] = None,
+    language: Optional[Literal["py", "r"]] = None,
+) -> AppBundle:
     """
     Generate a URL for a [ShinyLive application](https://shinylive.io).
 
@@ -57,20 +99,34 @@ def encode_shinylive_url(
 
     if language is None:
         language = detect_app_language(app)
+    elif language not in ["py", "r"]:
+        raise ValueError(
+            f"Language '{language}' is not supported. Please specify one of 'py' or 'r'."
+        )
 
-    # if app has a newline, then it's app content, not a path
-    if isinstance(app, str) and "\n" in app:
-        app_path = ""
-        root_dir = Path(".")
-        app_fc: FileContentJson = {
-            "name": f"app.{'py' if language == 'py' else 'R'}",
-            "content": app,
-        }
-        file_bundle = [app_fc]
-    else:
-        app_path = Path(app)
-        root_dir = app_path.parent
-        file_bundle = [read_file(app, root_dir)]
+    app_path = Path(app)
+    root_dir = app_path.parent
+    app_fc = read_file(app, root_dir)
+
+    # if the app is not named either `ui.R` or `server.R`, then make it app.py or app.R
+    if app_fc["name"] not in ["ui.R", "server.R"]:
+        app_fc["name"] = f"app.{'py' if language == 'py' else 'R'}"
+
+    return {
+        "language": language,
+        "files": add_supporting_files_to_bundle(app_fc, files, root_dir, app_path),
+    }
+
+
+def add_supporting_files_to_bundle(
+    app: FileContentJson,
+    files: Optional[str | Path | Sequence[str | Path]] = None,
+    root_dir: str | Path = ".",
+    app_path: str | Path = "",
+) -> list[FileContentJson]:
+    app_path = Path(app_path)
+
+    file_bundle = [app]
 
     if isinstance(files, (str, Path)):
         files = [files]
@@ -88,21 +144,7 @@ def encode_shinylive_url(
             read_file(file, root_dir) for file in file_list if Path(file) != app_path
         ]
 
-    if language not in ["py", "r"]:
-        raise ValueError(
-            f"Language '{language}' is not supported. Please specify one of 'py' or 'r'."
-        )
-
-    # if first file is not named either `ui.R` or `server.R`, then make it app.{language}
-    if file_bundle[0]["name"] not in ["ui.R", "server.R"]:
-        file_bundle[0]["name"] = f"app.{'py' if language == 'py' else 'R'}"
-
-    file_lz = lzstring_file_bundle(file_bundle)
-
-    base = "https://shinylive.io"
-    h = "h=0&" if not header and mode == "app" else ""
-
-    return f"{base}/{language}/{mode}/#{h}code={file_lz}"
+    return file_bundle
 
 
 def detect_app_language(app: str | Path) -> Literal["py", "r"]:

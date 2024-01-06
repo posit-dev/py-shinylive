@@ -8,7 +8,12 @@ from typing import Literal, MutableMapping, Optional
 import click
 
 from . import _assets, _deps, _export, _version
-from ._url import decode_shinylive_url, encode_shinylive_url
+from ._url import (
+    create_shinylive_bundle_file,
+    create_shinylive_bundle_text,
+    create_shinylive_url,
+    decode_shinylive_url,
+)
 from ._utils import print_as_json
 
 
@@ -520,6 +525,9 @@ On macOS, you can copy the URL to the clipboard with:
     "-v", "--view", is_flag=True, default=False, help="Open the link in a browser."
 )
 @click.option(
+    "--json", is_flag=True, default=False, help="Print the bundle as JSON to stdout."
+)
+@click.option(
     "--no-header", is_flag=True, default=False, help="Hide the Shinylive header."
 )
 @click.argument("app", type=str, nargs=1, required=True, default="-")
@@ -529,6 +537,7 @@ def encode(
     files: Optional[tuple[str, ...]] = None,
     mode: Literal["editor", "app"] = "editor",
     language: Optional[str] = None,
+    json: bool = False,
     no_header: bool = False,
     view: bool = False,
 ) -> None:
@@ -549,15 +558,24 @@ def encode(
     else:
         lang = None
 
-    url = encode_shinylive_url(
-        app=app_in,
-        files=files,
+    if "\n" in app_in:
+        bundle = create_shinylive_bundle_text(app_in, files, lang)
+    else:
+        bundle = create_shinylive_bundle_file(app_in, files, lang)
+
+    if json:
+        print_as_json(bundle["files"])
+        if not view:
+            return
+
+    url = create_shinylive_url(
+        bundle,
         mode=mode,
-        language=lang,
         header=not no_header,
     )
 
-    print(url)
+    if not json:
+        print(url)
 
     if view:
         import webbrowser
