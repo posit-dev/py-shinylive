@@ -603,8 +603,6 @@ def decode(url: str, dir: Optional[str] = None, json: bool = False) -> None:
         return
 
     if dir is not None:
-        import os
-
         out_dir = Path(dir)
         out_dir.mkdir(parents=True, exist_ok=True)
         for file in bundle:
