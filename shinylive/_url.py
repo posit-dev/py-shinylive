@@ -4,14 +4,23 @@ import base64
 import json
 import os
 import re
+import sys
 from pathlib import Path
-from typing import Literal, Optional, TypedDict, cast
+from typing import Literal, Optional, Sequence, cast
+
+# Even though TypedDict is available in Python 3.8, because it's used with NotRequired,
+# they should both come from the same typing module.
+# https://peps.python.org/pep-0655/#usage-in-python-3-11
+if sys.version_info >= (3, 11):
+    from typing import NotRequired, TypedDict
+else:
+    from typing_extensions import NotRequired, TypedDict
 
 
 class FileContentJson(TypedDict):
     name: str
     content: str
-    type: Literal["text", "binary"]
+    type: NotRequired[Literal["text", "binary"]]
 
 
 def encode_shinylive_url(
