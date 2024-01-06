@@ -73,6 +73,9 @@ def encode_shinylive_url(
         root_dir = app_path.parent
         file_bundle = [read_file(app, root_dir)]
 
+    if isinstance(files, (str, Path)):
+        files = [files]
+
     if files is not None:
         file_list: list[str | Path] = []
 
