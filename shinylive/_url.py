@@ -98,8 +98,9 @@ def encode_shinylive_url(
     file_lz = lzstring_file_bundle(cast(List[FileContentJson], file_bundle))
 
     base = "https://shinylive.io"
+    h = "h=0&" if not header and mode == "app" else ""
 
-    return f"{base}/{language}/{mode}/#{'h=0&' if not header else ''}code={file_lz}"
+    return f"{base}/{language}/{mode}/#{h}code={file_lz}"
 
 
 def detect_app_language(app: str | Path) -> Literal["py", "r"]:
