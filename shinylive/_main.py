@@ -527,7 +527,7 @@ On macOS, you can copy the URL to the clipboard with:
 def encode(
     app: str,
     files: Optional[tuple[str, ...]] = None,
-    mode: str = "editor",
+    mode: Literal["editor", "app"] = "editor",
     language: Optional[str] = None,
     no_header: bool = False,
     view: bool = False,
@@ -551,7 +551,6 @@ def encode(
         import webbrowser
 
         webbrowser.open(url)
-    return
 
 
 @url.command(
@@ -577,7 +576,7 @@ On macOS, you can read the URL from the clipboard with:
     "--json",
     is_flag=True,
     default=False,
-    help="Prints the decoded shinylive bundle as JSON to stdout, ignoring --out.",
+    help="Prints the decoded shinylive bundle as JSON to stdout, ignoring --dir.",
 )
 @click.argument("url", type=str, nargs=1, default="-")
 def decode(url: str, dir: Optional[str] = None, json: bool = False) -> None:
@@ -595,7 +594,7 @@ def decode(url: str, dir: Optional[str] = None, json: bool = False) -> None:
         import os
 
         out_dir = Path(dir)
-        os.makedirs(out_dir, exist_ok=True)
+        out_dir.mkdir(parents=True, exist_ok=True)
         for file in bundle:
             with open(out_dir / file["name"], "w") as f_out:
                 f_out.write(
@@ -609,8 +608,6 @@ def decode(url: str, dir: Optional[str] = None, json: bool = False) -> None:
                 print("## type: binary")
             print("")
             print(file["content"].encode("utf-8", errors="ignore").decode("utf-8"))
-
-    return
 
 
 # #############################################################################

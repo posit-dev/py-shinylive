@@ -5,7 +5,7 @@ import json
 import os
 import re
 from pathlib import Path
-from typing import List, Literal, Optional, TypedDict, cast
+from typing import Literal, Optional, TypedDict, cast
 
 
 class FileContentJson(TypedDict):
@@ -16,9 +16,9 @@ class FileContentJson(TypedDict):
 
 def encode_shinylive_url(
     app: str | Path,
-    files: Optional[tuple[str | Path, ...]] = None,
-    mode: str = "editor",
-    language: Optional[str] = None,
+    files: Optional[str | Path | Sequence[str | Path]] = None,
+    mode: Literal["editor", "app"] = "editor",
+    language: Optional[Literal["py", "r"]] = None,
     header: bool = True,
 ) -> str:
     """
@@ -35,11 +35,11 @@ def encode_shinylive_url(
         these files will be stored relative to the main `app` file. If an entry in files
         is a directory, then all files in that directory will be included, recursively.
     mode
-        The mode of the application. Defaults to "editor".
+        The mode of the application, either "editor" or "app". Defaults to "editor".
     language
-        The language of the application. Defaults to None.
+        The language of the application, or None to autodetect the language. Defaults to None.
     header
-        Whether to include a header. Defaults to True.
+        Whether to include a header bar in the UI. This is used only if ``mode`` is "app". Defaults to True.
 
     Returns
     -------
@@ -57,7 +57,6 @@ def encode_shinylive_url(
             {
                 "name": f"app.{'py' if language == 'py' else 'R'}",
                 "content": app,
-                "type": "text",
             }
         ]
     else:
@@ -78,11 +77,7 @@ def encode_shinylive_url(
             read_file(file, root_dir) for file in file_list if Path(file) != app_path
         ]
 
-    if language in ["py", "python"]:
-        language = "py"
-    elif language in ["r", "R"]:
-        language = "r"
-    else:
+    if language not in ["py", "r"]:
         raise ValueError(
             f"Language '{language}' is not supported. Please specify one of 'py' or 'r'."
         )
@@ -110,8 +105,7 @@ def detect_app_language(app: str | Path) -> str:
         else:
             raise ValueError(err_not_detected)
 
-    if not isinstance(app, Path):
-        app = Path(app)
+    app = Path(app)
 
     if app.suffix.lower() == ".py":
         return "py"
@@ -171,8 +165,6 @@ def decode_shinylive_url(url: str) -> List[FileContentJson]:
             raise ValueError(
                 f"Invalid shinylive URL: unexpected file type '{file['type']}' in '{file['name']}'."
             )
-        elif "type" not in file:
-            file["type"] = "text"
         if not all(isinstance(value, str) for value in file.values()):  # type: ignore
             raise ValueError(
                 f"Invalid shinylive URL: not all items in '{file['name']}' were strings."
