@@ -93,7 +93,7 @@ def encode_shinylive_url(
     return f"{base}/{language}/{mode}/#{'h=0&' if not header else ''}code={file_lz}"
 
 
-def detect_app_language(app: str | Path) -> str:
+def detect_app_language(app: str | Path) -> Literal["py", "r"]:
     err_not_detected = """
     Could not automatically detect the language of the app. Please specify `language`."""
 
