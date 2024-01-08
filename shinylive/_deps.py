@@ -20,7 +20,7 @@ else:
 
 from ._app_json import FileContentJson
 from ._assets import ensure_shinylive_assets, repodata_json_file, shinylive_assets_dir
-from ._version import SHINYLIVE_ASSETS_VERSION
+from .version import SHINYLIVE_ASSETS_VERSION
 
 # Files in Pyodide that should always be included.
 BASE_PYODIDE_FILES = {

@@ -9,7 +9,7 @@ from pathlib import Path
 from typing import Optional
 
 from ._utils import tar_safe_extractall
-from ._version import SHINYLIVE_ASSETS_VERSION
+from .version import SHINYLIVE_ASSETS_VERSION
 
 
 def download_shinylive(

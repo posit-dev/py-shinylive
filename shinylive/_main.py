@@ -7,7 +7,7 @@ from typing import Literal, MutableMapping, Optional
 
 import click
 
-from . import _assets, _deps, _export, _version
+from . import _assets, _deps, _export
 from ._url import (
     create_shinylive_bundle_file,
     create_shinylive_bundle_text,
@@ -16,6 +16,7 @@ from ._url import (
     detect_app_language,
 )
 from ._utils import print_as_json
+from .version import SHINYLIVE_ASSETS_VERSION, SHINYLIVE_PACKAGE_VERSION
 
 
 # Make sure commands are listed in the order they are added in the code.
@@ -36,8 +37,8 @@ class OrderedGroup(click.Group):
 
 version_txt = f"""
     \b
-    shinylive Python package version: {_version.SHINYLIVE_PACKAGE_VERSION}
-    shinylive web assets version:     {_assets.SHINYLIVE_ASSETS_VERSION}
+    shinylive Python package version: {SHINYLIVE_PACKAGE_VERSION}
+    shinylive web assets version:     {SHINYLIVE_ASSETS_VERSION}
 """
 
 # CLI structure:
@@ -82,7 +83,7 @@ version_txt = f"""
 )
 # > Add a --version option which immediately prints the version number and exits the
 # > program.
-@click.version_option(_version.SHINYLIVE_PACKAGE_VERSION, message="%(version)s")
+@click.version_option(SHINYLIVE_PACKAGE_VERSION, message="%(version)s")
 def main() -> None:
     ...
 
@@ -193,7 +194,7 @@ def assets_info(
 @click.option(
     "--version",
     type=str,
-    default=_version.SHINYLIVE_ASSETS_VERSION,
+    default=SHINYLIVE_ASSETS_VERSION,
     help="Shinylive version to download.",
     show_default=True,
 )
@@ -215,7 +216,7 @@ def download(
     url: Optional[str],
 ) -> None:
     if version is None:  # pyright: ignore[reportUnnecessaryComparison]
-        version = _version.SHINYLIVE_ASSETS_VERSION
+        version = SHINYLIVE_ASSETS_VERSION
     _assets.download_shinylive(destdir=upgrade_dir(dir), version=version, url=url)
 
 
@@ -242,7 +243,7 @@ def cleanup(
     short_help="Remove a specific version of local copies of assets.",
     help=f"""Remove a specific version (`VERSION`) of local copies of assets."
 
-    For example, `VERSION` might be `{ _version.SHINYLIVE_ASSETS_VERSION }`.
+    For example, `VERSION` might be `{ SHINYLIVE_ASSETS_VERSION }`.
     """,
     no_args_is_help=True,
 )
@@ -278,7 +279,7 @@ def remove(
 @click.option(
     "--version",
     type=str,
-    default=_version.SHINYLIVE_ASSETS_VERSION,
+    default=SHINYLIVE_ASSETS_VERSION,
     help="Version of the shinylive assets being copied.",
     show_default=True,
 )
@@ -300,7 +301,7 @@ def install_from_local(
 ) -> None:
     dir = upgrade_dir(dir)
     if version is None:  # pyright: ignore[reportUnnecessaryComparison]
-        version = _version.SHINYLIVE_ASSETS_VERSION
+        version = SHINYLIVE_ASSETS_VERSION
     print(f"Copying shinylive-{version} from {build} to {dir}")
     _assets.copy_shinylive_local(source_dir=build, destdir=dir, version=version)
 
@@ -321,7 +322,7 @@ link_from_local_help = (
 @click.option(
     "--version",
     type=str,
-    default=_version.SHINYLIVE_ASSETS_VERSION,
+    default=SHINYLIVE_ASSETS_VERSION,
     help="Version of shinylive assets being linked.",
     show_default=True,
 )
@@ -345,7 +346,7 @@ def link_from_local(
         raise click.UsageError("Must specify BUILD")
     dir = upgrade_dir(dir)
     if version is None:  # pyright: ignore[reportUnnecessaryComparison]
-        version = _version.SHINYLIVE_ASSETS_VERSION
+        version = SHINYLIVE_ASSETS_VERSION
     print(f"Creating symlink for shinylive-{version} from {build} to {dir}")
     _assets.link_shinylive_local(source_dir=build, destdir=dir, version=version)
 
@@ -393,8 +394,8 @@ def extension() -> None:
 def extension_info() -> None:
     print_as_json(
         {
-            "version": _version.SHINYLIVE_PACKAGE_VERSION,
-            "assets_version": _version.SHINYLIVE_ASSETS_VERSION,
+            "version": SHINYLIVE_PACKAGE_VERSION,
+            "assets_version": SHINYLIVE_ASSETS_VERSION,
             "scripts": {
                 "codeblock-to-json": _assets.codeblock_to_json_file(),
             },
@@ -467,7 +468,7 @@ def app_resources(
 def defunct_help(cmd: str) -> str:
     return f"""The shinylive CLI command `{cmd}` is defunct.
 
-You are using a newer version of the Python shinylive package ({ _version.SHINYLIVE_PACKAGE_VERSION }) with an older
+You are using a newer version of the Python shinylive package ({ SHINYLIVE_PACKAGE_VERSION }) with an older
 version of the Quarto shinylive extension, and these versions are not compatible.
 
 Please update your Quarto shinylive extension by running this command in the top level
