@@ -13,6 +13,7 @@ from ._url import (
     create_shinylive_bundle_text,
     create_shinylive_url,
     decode_shinylive_url,
+    detect_app_language,
 )
 from ._utils import print_as_json
 
@@ -556,7 +557,7 @@ def encode(
                 f"Invalid language '{language}', must be one of 'py', 'python', 'r', 'R'."
             )
     else:
-        lang = None
+        lang = detect_app_language(app_in)
 
     if "\n" in app_in:
         bundle = create_shinylive_bundle_text(app_in, files, lang)
@@ -564,12 +565,13 @@ def encode(
         bundle = create_shinylive_bundle_file(app_in, files, lang)
 
     if json:
-        print_as_json(bundle["files"])
+        print_as_json(bundle)
         if not view:
             return
 
     url = create_shinylive_url(
         bundle,
+        lang,
         mode=mode,
         header=not no_header,
     )

@@ -23,11 +23,6 @@ class FileContentJson(TypedDict):
     type: NotRequired[Literal["text", "binary"]]
 
 
-class AppBundle(TypedDict):
-    language: Literal["py", "r"]
-    files: list[FileContentJson]
-
-
 def encode_shinylive_url(
     app: str | Path,
     files: Optional[str | Path | Sequence[str | Path]] = None,
@@ -35,59 +30,6 @@ def encode_shinylive_url(
     mode: Literal["editor", "app"] = "editor",
     header: bool = True,
 ) -> str:
-    if language is not None and language not in ["py", "r"]:
-        raise ValueError(f"Invalid language '{language}', must be either 'py' or 'r'.")
-
-    if isinstance(app, str) and "\n" in app:
-        bundle = create_shinylive_bundle_text(app, files, language)
-    else:
-        bundle = create_shinylive_bundle_file(app, files, language)
-
-    return create_shinylive_url(bundle, mode=mode, header=header)
-
-
-def create_shinylive_url(
-    bundle: AppBundle,
-    mode: Literal["editor", "app"] = "editor",
-    header: bool = True,
-) -> str:
-    file_lz = lzstring_file_bundle(bundle["files"])
-
-    base = "https://shinylive.io"
-    h = "h=0&" if not header and mode == "app" else ""
-
-    return f"{base}/{bundle['language']}/{mode}/#{h}code={file_lz}"
-
-
-def create_shinylive_bundle_text(
-    app: str,
-    files: Optional[str | Path | Sequence[str | Path]] = None,
-    language: Optional[Literal["py", "r"]] = None,
-    root_dir: str | Path = ".",
-) -> AppBundle:
-    if language is None:
-        language = detect_app_language(app)
-    elif language not in ["py", "r"]:
-        raise ValueError(
-            f"Language '{language}' is not supported. Please specify one of 'py' or 'r'."
-        )
-
-    app_fc: FileContentJson = {
-        "name": f"app.{'py' if language == 'py' else 'R'}",
-        "content": app,
-    }
-
-    return {
-        "language": language,
-        "files": add_supporting_files_to_bundle(app_fc, files, root_dir),
-    }
-
-
-def create_shinylive_bundle_file(
-    app: str | Path,
-    files: Optional[str | Path | Sequence[str | Path]] = None,
-    language: Optional[Literal["py", "r"]] = None,
-) -> AppBundle:
     """
     Generate a URL for a [ShinyLive application](https://shinylive.io).
 
@@ -98,9 +40,9 @@ def create_shinylive_bundle_file(
         `app.py` or an R `app.R`, `ui.R`, or `server.R` file. This file will be renamed
          `app.py` or `app.R` for shinylive, unless it's named `ui.R` or `server.R`.
     files
-        A tuple of file or directory paths to include in the application. On shinylive,
-        these files will be stored relative to the main `app` file. If an entry in files
-        is a directory, then all files in that directory will be included, recursively.
+        File(s) or directory path(s) to include in the application. On shinylive, these
+        files will be stored relative to the main `app` file. If an entry in files is a
+        directory, then all files in that directory will be included, recursively.
     mode
         The mode of the application, either "editor" or "app". Defaults to "editor".
     language
@@ -113,6 +55,64 @@ def create_shinylive_bundle_file(
         The generated URL for the ShinyLive application.
     """
 
+    if language is not None and language not in ["py", "r"]:
+        raise ValueError(f"Invalid language '{language}', must be either 'py' or 'r'.")
+
+    lang = language if language is not None else detect_app_language(app)
+
+    if isinstance(app, str) and "\n" in app:
+        bundle = create_shinylive_bundle_text(app, files, lang)
+    else:
+        bundle = create_shinylive_bundle_file(app, files, lang)
+
+    return create_shinylive_url(bundle, lang, mode=mode, header=header)
+
+
+def create_shinylive_url(
+    bundle: list[FileContentJson],
+    language: Literal["py", "r"],
+    mode: Literal["editor", "app"] = "editor",
+    header: bool = True,
+) -> str:
+    if language not in ["py", "r"]:
+        raise ValueError(f"Invalid language '{language}', must be either 'py' or 'r'.")
+    if mode not in ["editor", "app"]:
+        raise ValueError(f"Invalid mode '{mode}', must be either 'editor' or 'app'.")
+
+    file_lz = lzstring_file_bundle(bundle)
+
+    base = "https://shinylive.io"
+    h = "h=0&" if not header and mode == "app" else ""
+
+    return f"{base}/{language}/{mode}/#{h}code={file_lz}"
+
+
+def create_shinylive_bundle_text(
+    app: str,
+    files: Optional[str | Path | Sequence[str | Path]] = None,
+    language: Optional[Literal["py", "r"]] = None,
+    root_dir: str | Path = ".",
+) -> list[FileContentJson]:
+    if language is None:
+        language = detect_app_language(app)
+    elif language not in ["py", "r"]:
+        raise ValueError(
+            f"Language '{language}' is not supported. Please specify one of 'py' or 'r'."
+        )
+
+    app_fc: FileContentJson = {
+        "name": f"app.{'py' if language == 'py' else 'R'}",
+        "content": app,
+    }
+
+    return add_supporting_files_to_bundle(app_fc, files, root_dir)
+
+
+def create_shinylive_bundle_file(
+    app: str | Path,
+    files: Optional[str | Path | Sequence[str | Path]] = None,
+    language: Optional[Literal["py", "r"]] = None,
+) -> list[FileContentJson]:
     if language is None:
         language = detect_app_language(app)
     elif language not in ["py", "r"]:
@@ -128,10 +128,7 @@ def create_shinylive_bundle_file(
     if app_fc["name"] not in ["ui.R", "server.R"]:
         app_fc["name"] = f"app.{'py' if language == 'py' else 'R'}"
 
-    return {
-        "language": language,
-        "files": add_supporting_files_to_bundle(app_fc, files, root_dir, app_path),
-    }
+    return add_supporting_files_to_bundle(app_fc, files, root_dir, app_path)
 
 
 def add_supporting_files_to_bundle(
