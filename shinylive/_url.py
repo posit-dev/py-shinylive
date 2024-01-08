@@ -259,6 +259,38 @@ def decode_shinylive_url(url: str) -> list[FileContentJson]:
     return ret
 
 
+def create_shinylive_chunk_contents(bundle: list[FileContentJson]) -> str:
+    lines: list[str] = []
+    for file in bundle:
+        lines.append(f"## file: {file['name']}")
+        if "type" in file and file["type"] == "binary":
+            lines.append("## type: binary")
+        lines.append(file["content"].encode("utf-8", errors="ignore").decode("utf-8"))
+        lines.append("")
+
+    return "\n".join(lines)
+
+
+def write_files_from_shinylive_io(
+    bundle: list[FileContentJson], dest: str | Path
+) -> Path:
+    out_dir = Path(dest)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    for file in bundle:
+        if "type" in file and file["type"] == "binary":
+            import base64
+
+            with open(out_dir / file["name"], "wb") as f_out:
+                f_out.write(base64.b64decode(file["content"]))
+        else:
+            with open(out_dir / file["name"], "w") as f_out:
+                f_out.write(
+                    file["content"].encode("utf-8", errors="ignore").decode("utf-8")
+                )
+
+    return out_dir
+
+
 # Copied from https://github.com/posit-dev/py-shiny/blob/main/docs/_renderer.py#L231
 def read_file(file: str | Path, root_dir: str | Path | None = None) -> FileContentJson:
     file = Path(file)

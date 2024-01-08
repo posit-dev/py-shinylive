@@ -11,9 +11,11 @@ from . import _assets, _deps, _export
 from ._url import (
     create_shinylive_bundle_file,
     create_shinylive_bundle_text,
+    create_shinylive_chunk_contents,
     create_shinylive_url,
     decode_shinylive_url,
     detect_app_language,
+    write_files_from_shinylive_io,
 )
 from ._utils import print_as_json
 from .version import SHINYLIVE_ASSETS_VERSION, SHINYLIVE_PACKAGE_VERSION
@@ -627,27 +629,9 @@ def decode(url: str, dir: Optional[str] = None, json: bool = False) -> None:
         return
 
     if dir is not None:
-        out_dir = Path(dir)
-        out_dir.mkdir(parents=True, exist_ok=True)
-        for file in bundle:
-            if "type" in file and file["type"] == "binary":
-                import base64
-
-                with open(out_dir / file["name"], "wb") as f_out:
-                    f_out.write(base64.b64decode(file["content"]))
-            else:
-                with open(out_dir / file["name"], "w") as f_out:
-                    f_out.write(
-                        file["content"].encode("utf-8", errors="ignore").decode("utf-8")
-                    )
+        write_files_from_shinylive_io(bundle, dir)
     else:
-        print("")
-        for file in bundle:
-            print(f"## file: {file['name']}")
-            if "type" in file and file["type"] == "binary":
-                print("## type: binary")
-            print("")
-            print(file["content"].encode("utf-8", errors="ignore").decode("utf-8"))
+        print(create_shinylive_chunk_contents(bundle))
 
 
 # #############################################################################
