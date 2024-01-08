@@ -28,13 +28,29 @@ class AppBundle(TypedDict):
     files: list[FileContentJson]
 
 
+def encode_shinylive_url(
+    app: str | Path,
+    files: Optional[str | Path | Sequence[str | Path]] = None,
+    language: Optional[Literal["py", "r"]] = None,
+    mode: Literal["editor", "app"] = "editor",
+    header: bool = True,
+) -> str:
+    if language is not None and language not in ["py", "r"]:
+        raise ValueError(f"Invalid language '{language}', must be either 'py' or 'r'.")
+
+    if isinstance(app, str) and "\n" in app:
+        bundle = create_shinylive_bundle_text(app, files, language)
+    else:
+        bundle = create_shinylive_bundle_file(app, files, language)
+
+    return create_shinylive_url(bundle, mode=mode, header=header)
+
+
 def create_shinylive_url(
     bundle: AppBundle,
     mode: Literal["editor", "app"] = "editor",
     header: bool = True,
 ) -> str:
-    """ """
-
     file_lz = lzstring_file_bundle(bundle["files"])
 
     base = "https://shinylive.io"
