@@ -3,12 +3,22 @@ from __future__ import annotations
 import collections
 import sys
 from pathlib import Path
-from typing import MutableMapping, Optional
+from typing import Literal, MutableMapping, Optional
 
 import click
 
-from . import _assets, _deps, _export, _version
+from . import _assets, _deps, _export
+from ._url import (
+    create_shinylive_bundle_file,
+    create_shinylive_bundle_text,
+    create_shinylive_chunk_contents,
+    create_shinylive_url,
+    decode_shinylive_url,
+    detect_app_language,
+    write_files_from_shinylive_io,
+)
 from ._utils import print_as_json
+from ._version import SHINYLIVE_ASSETS_VERSION, SHINYLIVE_PACKAGE_VERSION
 
 
 # Make sure commands are listed in the order they are added in the code.
@@ -29,8 +39,8 @@ class OrderedGroup(click.Group):
 
 version_txt = f"""
     \b
-    shinylive Python package version: {_version.SHINYLIVE_PACKAGE_VERSION}
-    shinylive web assets version:     {_assets.SHINYLIVE_ASSETS_VERSION}
+    shinylive Python package version: {SHINYLIVE_PACKAGE_VERSION}
+    shinylive web assets version:     {SHINYLIVE_ASSETS_VERSION}
 """
 
 # CLI structure:
@@ -59,6 +69,7 @@ version_txt = f"""
 #         * language-resources
 #         * app-resources
 #             * Options: --json-file / stdin (required)
+#     * url
 
 
 # #############################################################################
@@ -74,7 +85,7 @@ version_txt = f"""
 )
 # > Add a --version option which immediately prints the version number and exits the
 # > program.
-@click.version_option(_version.SHINYLIVE_PACKAGE_VERSION, message="%(version)s")
+@click.version_option(SHINYLIVE_PACKAGE_VERSION, message="%(version)s")
 def main() -> None:
     ...
 
@@ -185,7 +196,7 @@ def assets_info(
 @click.option(
     "--version",
     type=str,
-    default=_version.SHINYLIVE_ASSETS_VERSION,
+    default=SHINYLIVE_ASSETS_VERSION,
     help="Shinylive version to download.",
     show_default=True,
 )
@@ -207,11 +218,11 @@ def download(
     url: Optional[str],
 ) -> None:
     if version is None:  # pyright: ignore[reportUnnecessaryComparison]
-        version = _version.SHINYLIVE_ASSETS_VERSION
+        version = SHINYLIVE_ASSETS_VERSION
     _assets.download_shinylive(destdir=upgrade_dir(dir), version=version, url=url)
 
 
-cleanup_help = f"Remove all versions of local assets except the currently-used version, {_assets.SHINYLIVE_ASSETS_VERSION}."
+cleanup_help = f"Remove all versions of local assets except the currently-used version, {SHINYLIVE_ASSETS_VERSION}."
 
 
 @assets.command(
@@ -234,7 +245,7 @@ def cleanup(
     short_help="Remove a specific version of local copies of assets.",
     help=f"""Remove a specific version (`VERSION`) of local copies of assets."
 
-    For example, `VERSION` might be `{ _version.SHINYLIVE_ASSETS_VERSION }`.
+    For example, `VERSION` might be `{ SHINYLIVE_ASSETS_VERSION }`.
     """,
     no_args_is_help=True,
 )
@@ -270,7 +281,7 @@ def remove(
 @click.option(
     "--version",
     type=str,
-    default=_version.SHINYLIVE_ASSETS_VERSION,
+    default=SHINYLIVE_ASSETS_VERSION,
     help="Version of the shinylive assets being copied.",
     show_default=True,
 )
@@ -292,7 +303,7 @@ def install_from_local(
 ) -> None:
     dir = upgrade_dir(dir)
     if version is None:  # pyright: ignore[reportUnnecessaryComparison]
-        version = _version.SHINYLIVE_ASSETS_VERSION
+        version = SHINYLIVE_ASSETS_VERSION
     print(f"Copying shinylive-{version} from {build} to {dir}")
     _assets.copy_shinylive_local(source_dir=build, destdir=dir, version=version)
 
@@ -313,7 +324,7 @@ link_from_local_help = (
 @click.option(
     "--version",
     type=str,
-    default=_version.SHINYLIVE_ASSETS_VERSION,
+    default=SHINYLIVE_ASSETS_VERSION,
     help="Version of shinylive assets being linked.",
     show_default=True,
 )
@@ -337,7 +348,7 @@ def link_from_local(
         raise click.UsageError("Must specify BUILD")
     dir = upgrade_dir(dir)
     if version is None:  # pyright: ignore[reportUnnecessaryComparison]
-        version = _version.SHINYLIVE_ASSETS_VERSION
+        version = SHINYLIVE_ASSETS_VERSION
     print(f"Creating symlink for shinylive-{version} from {build} to {dir}")
     _assets.link_shinylive_local(source_dir=build, destdir=dir, version=version)
 
@@ -346,7 +357,7 @@ def link_from_local(
     help="Print the version of the Shinylive assets.",
 )
 def version() -> None:
-    print(_assets.SHINYLIVE_ASSETS_VERSION)
+    print(SHINYLIVE_ASSETS_VERSION)
 
 
 # #############################################################################
@@ -385,8 +396,8 @@ def extension() -> None:
 def extension_info() -> None:
     print_as_json(
         {
-            "version": _version.SHINYLIVE_PACKAGE_VERSION,
-            "assets_version": _version.SHINYLIVE_ASSETS_VERSION,
+            "version": SHINYLIVE_PACKAGE_VERSION,
+            "assets_version": SHINYLIVE_ASSETS_VERSION,
             "scripts": {
                 "codeblock-to-json": _assets.codeblock_to_json_file(),
             },
@@ -459,7 +470,7 @@ def app_resources(
 def defunct_help(cmd: str) -> str:
     return f"""The shinylive CLI command `{cmd}` is defunct.
 
-You are using a newer version of the Python shinylive package ({ _version.SHINYLIVE_PACKAGE_VERSION }) with an older
+You are using a newer version of the Python shinylive package ({ SHINYLIVE_PACKAGE_VERSION }) with an older
 version of the Quarto shinylive extension, and these versions are not compatible.
 
 Please update your Quarto shinylive extension by running this command in the top level
@@ -467,6 +478,165 @@ of your Quarto project:
 
     quarto add quarto-ext/shinylive
 """
+
+
+# #############################################################################
+# ## shinylive.io url
+# #############################################################################
+
+
+@main.group(
+    short_help="Create or decode a shinylive.io URL.",
+    help="Create or decode a shinylive.io URL.",
+    no_args_is_help=True,
+    cls=OrderedGroup,
+)
+def url() -> None:
+    pass
+
+
+@url.command(
+    short_help="Create a shinylive.io URL from local files.",
+    help="""
+Create a shinylive.io URL for a Shiny app from local files.
+
+APP is the path to the primary Shiny app file.
+
+FILES are additional supporting files or directories for the app.
+
+On macOS, you can copy the URL to the clipboard with:
+
+    shinylive url encode app.py | pbcopy
+""",
+)
+@click.option(
+    "-m",
+    "--mode",
+    type=click.Choice(["editor", "app"]),
+    required=True,
+    default="editor",
+    help="The shinylive mode: include the editor or show only the app.",
+)
+@click.option(
+    "-l",
+    "--language",
+    type=click.Choice(["python", "py", "R", "r"]),
+    required=False,
+    default=None,
+    help="The primary language used to run the app, by default inferred from the app file.",
+)
+@click.option(
+    "-v", "--view", is_flag=True, default=False, help="Open the link in a browser."
+)
+@click.option(
+    "--json", is_flag=True, default=False, help="Print the bundle as JSON to stdout."
+)
+@click.option(
+    "--no-header", is_flag=True, default=False, help="Hide the Shinylive header."
+)
+@click.argument("app", type=str, nargs=1, required=True, default="-")
+@click.argument("files", type=str, nargs=-1, required=False)
+def encode(
+    app: str,
+    files: Optional[tuple[str, ...]] = None,
+    mode: Literal["editor", "app"] = "editor",
+    language: Optional[str] = None,
+    json: bool = False,
+    no_header: bool = False,
+    view: bool = False,
+) -> None:
+    if app == "-":
+        app_in = sys.stdin.read()
+    else:
+        app_in = app
+
+    if language is not None:
+        if language in ["py", "python"]:
+            lang = "py"
+        elif language in ["r", "R"]:
+            lang = "r"
+        else:
+            raise click.UsageError(
+                f"Invalid language '{language}', must be one of 'py', 'python', 'r', 'R'."
+            )
+    else:
+        lang = detect_app_language(app_in)
+
+    if "\n" in app_in:
+        bundle = create_shinylive_bundle_text(app_in, files, lang)
+    else:
+        bundle = create_shinylive_bundle_file(app_in, files, lang)
+
+    if json:
+        print_as_json(bundle)
+        if not view:
+            return
+
+    url = create_shinylive_url(
+        bundle,
+        lang,
+        mode=mode,
+        header=not no_header,
+    )
+
+    if not json:
+        print(url)
+
+    if view:
+        import webbrowser
+
+        webbrowser.open(url)
+
+
+@url.command(
+    short_help="Decode a shinylive.io URL.",
+    help="""
+Decode a shinylive.io URL.
+
+URL is the shinylive editor or app URL. If not specified, the URL will be read from
+stdin, allowing you to read the URL from a file or the clipboard.
+
+When `--dir` is provided, the decoded files will be written to the specified directory.
+Otherwise, the contents of the shinylive app will be printed to stdout.
+
+On macOS, you can read the URL from the clipboard with:
+
+    pbpaste | shinylive url decode
+""",
+)
+@click.option(
+    "--dir",
+    type=str,
+    default=None,
+    help="Output directory into which the app's files will be written. The directory is created if it does not exist. ",
+)
+@click.option(
+    "--json",
+    is_flag=True,
+    default=False,
+    help="Prints the decoded shinylive bundle as JSON to stdout, ignoring --dir.",
+)
+@click.argument("url", type=str, nargs=1, default="-")
+def decode(url: str, dir: Optional[str] = None, json: bool = False) -> None:
+    if url == "-":
+        url_in = sys.stdin.read()
+    else:
+        url_in = url
+    bundle = decode_shinylive_url(str(url_in))
+
+    if json:
+        print_as_json(bundle)
+        return
+
+    if dir is not None:
+        write_files_from_shinylive_io(bundle, dir)
+    else:
+        print(create_shinylive_chunk_contents(bundle))
+
+
+# #############################################################################
+# ## Deprecated commands
+# #############################################################################
 
 
 def defunct_error_txt(cmd: str) -> str:
