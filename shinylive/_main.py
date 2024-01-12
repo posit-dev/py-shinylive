@@ -18,7 +18,7 @@ from ._url import (
     write_files_from_shinylive_io,
 )
 from ._utils import print_as_json
-from .version import SHINYLIVE_ASSETS_VERSION, SHINYLIVE_PACKAGE_VERSION
+from ._version import SHINYLIVE_ASSETS_VERSION, SHINYLIVE_PACKAGE_VERSION
 
 
 # Make sure commands are listed in the order they are added in the code.
@@ -222,7 +222,7 @@ def download(
     _assets.download_shinylive(destdir=upgrade_dir(dir), version=version, url=url)
 
 
-cleanup_help = f"Remove all versions of local assets except the currently-used version, {_assets.SHINYLIVE_ASSETS_VERSION}."
+cleanup_help = f"Remove all versions of local assets except the currently-used version, {SHINYLIVE_ASSETS_VERSION}."
 
 
 @assets.command(
@@ -357,7 +357,7 @@ def link_from_local(
     help="Print the version of the Shinylive assets.",
 )
 def version() -> None:
-    print(_assets.SHINYLIVE_ASSETS_VERSION)
+    print(SHINYLIVE_ASSETS_VERSION)
 
 
 # #############################################################################
