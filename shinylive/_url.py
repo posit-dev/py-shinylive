@@ -36,6 +36,10 @@ SHINYLIVE_CODE_TEMPLATE = """
 
 
 class ShinyliveIoApp:
+    """
+    Create an instance of a Shiny App for use with shinylive.io.
+    """
+
     def __init__(
         self,
         bundle: list[FileContentJson],
@@ -56,20 +60,63 @@ class ShinyliveIoApp:
 
     @property
     def mode(self) -> Literal["editor", "app"]:
+        """
+        Is the shinylive.io app in editor or app mode?
+
+        Returns
+        -------
+        Literal["editor", "app"]
+            The current mode of the ShinyliveIoApp.
+        """
         return self._mode
 
     @mode.setter
-    def mode(self, value: Literal["editor", "app"]):
+    def mode(self, value: Literal["editor", "app"]) -> None:
+        """
+        Set the mode of the shinylive.io app.
+
+        Parameters
+        ----------
+        value : Literal["editor", "app"]
+            The new mode to set.
+
+        Raises
+        ------
+        ValueError
+            If the new mode is not 'editor' or 'app'.
+        """
         if value not in ["editor", "app"]:
             raise ValueError("Invalid mode, must be either 'editor' or 'app'.")
         self._mode = value
 
     @property
     def header(self) -> bool:
+        """
+        Should the Shiny header be included in the app preview? This property is only
+        used if the app is in 'app' mode.
+
+        Returns
+        -------
+        bool
+            `True` if the header should be included, `False` otherwise.
+        """
         return self._header
 
     @header.setter
-    def header(self, value: bool):
+    def header(self, value: bool) -> None:
+        """
+        Toggle whether or not to include the Shiny header in the app preview.
+
+        Parameters
+        ----------
+        value : bool
+            Whether the header should be included or not.
+
+        Raises
+        ------
+        ValueError
+            If the new header value is not boolean.
+        """
         if not isinstance(value, bool):
             raise ValueError("Invalid header value, must be a boolean.")
         self._header = value
@@ -82,6 +129,24 @@ class ShinyliveIoApp:
         mode: Optional[Literal["editor", "app"]] = None,
         header: Optional[bool] = None,
     ) -> str:
+        """
+        Get the URL of the ShinyLive application.
+
+        Parameters
+        ----------
+        mode
+            The mode of the application, either "editor" or "app". Defaults to the
+            current mode.
+
+        header
+            Whether to include a header bar in the UI. This is used only if ``mode`` is
+            "app". Defaults to the current header value.
+
+        Returns
+        -------
+        str
+            The URL of the ShinyLive application.
+        """
         mode = mode or self.mode
         header = header if header is not None else self.header
 
@@ -97,12 +162,24 @@ class ShinyliveIoApp:
 
         return f"{base}/{self._language}/{mode}/#{h}code={file_lz}"
 
-    def view(self):
+    def view(self) -> None:
+        """
+        Open the ShinyLive application in a browser.
+        """
         import webbrowser
 
         webbrowser.open(self.url())
 
     def chunk_contents(self) -> str:
+        """
+        Create the contents of a shinylive chunk based on the files in the app. This
+        output does not include the shinylive chunk header or options.
+
+        Returns
+        -------
+        str
+            The contents of the shinylive chunk.
+        """
         lines: list[str] = []
         for file in self._bundle:
             lines.append(f"## file: {file['name']}")
@@ -121,6 +198,26 @@ class ShinyliveIoApp:
         layout: Literal["horizontal", "vertical"] = "horizontal",
         viewerHeight: int = 500,
     ) -> str:
+        """
+        Create a shinylive chunk based on the files in the app for use in a Quarto
+        web document.
+
+        Parameters
+        ----------
+        components
+            Which components to include in the chunk. Defaults to both "editor" and
+            "viewer".
+        layout
+            The layout of the components, either "horizontal" or "vertical". Defaults
+            to "horizontal".
+        viewerHeight
+            The height of the viewer component in pixels. Defaults to 500.
+
+        Returns
+        -------
+        str
+            The full shinylive chunk, including the chunk header and options.
+        """
         if layout not in ["horizontal", "vertical"]:
             raise ValueError(
                 f"Invalid layout '{layout}', must be either 'horizontal' or 'vertical'."
@@ -142,9 +239,35 @@ class ShinyliveIoApp:
         )
 
     def json(self, **kwargs: Any) -> str:
+        """
+        Get the JSON representation of the ShinyLive application.
+
+        Parameters
+        ----------
+        kwargs
+            Keyword arguments passed to `json.dumps`.
+
+        Returns
+        -------
+        str
+            The JSON representation of the ShinyLive application.
+        """
         return json.dumps(self._bundle, **kwargs)
 
     def write_files(self, dest: str | Path) -> Path:
+        """
+        Write the files in the ShinyLive application to a directory.
+
+        Parameters
+        ----------
+        dest
+            The directory to write the files to.
+
+        Returns
+        -------
+        Path
+            The directory that the files were written to.
+        """
         out_dir = Path(dest)
         out_dir.mkdir(parents=True, exist_ok=True)
         for file in self._bundle:
@@ -163,6 +286,10 @@ class ShinyliveIoApp:
 
 
 class ShinyliveIoAppLocal(ShinyliveIoApp):
+    """
+    Create an instance of a Shiny App from local files for use with shinylive.io.
+    """
+
     def __init__(
         self,
         app: str | Path,
@@ -193,6 +320,15 @@ class ShinyliveIoAppLocal(ShinyliveIoApp):
         self,
         files: Optional[str | Path | Sequence[str | Path]] = None,
     ) -> None:
+        """
+        Add files to the ShinyLive application.
+
+        Parameters
+        ----------
+        files
+            File(s) or directory path(s) to include in the application. On shinylive, these
+            files will be stored relative to the main `app` file.
+        """
         if files is None:
             return
 
@@ -205,6 +341,14 @@ class ShinyliveIoAppLocal(ShinyliveIoApp):
             self.add_file(file)
 
     def add_file_contents(self, file_contents: dict[str, str]) -> None:
+        """
+        Directly adds a text file to the Shinylive app.
+
+        Parameters
+        ----------
+        file_contents
+            A dictionary of file names and file contents.
+        """
         for file in file_contents:
             self._bundle.append(
                 {
@@ -214,6 +358,16 @@ class ShinyliveIoAppLocal(ShinyliveIoApp):
             )
 
     def add_file(self, file: str | Path) -> None:
+        """
+        Add a file to the ShinyLive application.
+
+        Parameters
+        ----------
+        file
+            File or directory path to include in the application. On shinylive, this
+            file will be stored relative to the main `app` file. All files should be
+            contained in the same directory as or a subdirectory of the main `app` file.
+        """
         self._bundle.append(read_file(file, self._root_dir))
 
     def __add__(self, other: str | Path) -> None:
@@ -240,6 +394,11 @@ class ShinyliveIoAppLocal(ShinyliveIoApp):
 
 
 class ShinyliveIoAppText(ShinyliveIoAppLocal):
+    """
+    Create an instance of a Shiny App from a string containig the `app.py` or `app.R`
+    file contents for use with shinylive.io.
+    """
+
     def __init__(
         self,
         app: str,
@@ -286,9 +445,11 @@ def url_encode(
     mode
         The mode of the application, either "editor" or "app". Defaults to "editor".
     language
-        The language of the application, or None to autodetect the language. Defaults to None.
+        The language of the application, or None to autodetect the language. Defaults to
+        None.
     header
-        Whether to include a header bar in the UI. This is used only if ``mode`` is "app". Defaults to True.
+        Whether to include a header bar in the UI. This is used only if ``mode`` is
+        "app". Defaults to True.
 
     Returns
     -------
@@ -312,6 +473,18 @@ def url_encode(
 
 
 def url_decode(url: str) -> ShinyliveIoApp:
+    """
+    Decode a Shinylive URL into a ShinyliveIoApp object.
+
+    Parameters
+    ----------
+    url
+        The Shinylive URL to decode.
+
+    Returns
+    -------
+        A ShinyliveIoApp object.
+    """
     from lzstring import LZString  # type: ignore[reportMissingTypeStubs]
 
     url = url.strip()
