@@ -546,7 +546,12 @@ def url_decode(url: str) -> ShinyliveIoApp:
             )
         ret.append(fc)
 
-    return ShinyliveIoApp(ret, language=language)
+    app = ShinyliveIoApp(ret, language=language)
+
+    app.mode = "app" if f"{language}/app/" in url else "editor"
+    app.header = False if "h=0" in url else True
+
+    return app
 
 
 def detect_app_language(app: str | Path) -> Literal["py", "r"]:
