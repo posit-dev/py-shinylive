@@ -8,15 +8,7 @@ from typing import Literal, MutableMapping, Optional
 import click
 
 from . import _assets, _deps, _export
-from ._url import (
-    create_shinylive_bundle_file,
-    create_shinylive_bundle_text,
-    create_shinylive_chunk_contents,
-    create_shinylive_url,
-    decode_shinylive_url,
-    detect_app_language,
-    write_files_from_shinylive_io,
-)
+from ._url import detect_app_language, url_decode, url_encode
 from ._utils import print_as_json
 from ._version import SHINYLIVE_ASSETS_VERSION, SHINYLIVE_PACKAGE_VERSION
 
@@ -562,30 +554,23 @@ def encode(
     else:
         lang = detect_app_language(app_in)
 
-    if "\n" in app_in:
-        bundle = create_shinylive_bundle_text(app_in, files, lang)
-    else:
-        bundle = create_shinylive_bundle_file(app_in, files, lang)
+    sl_app = url_encode(
+        app_in, files=files, language=lang, mode=mode, header=not no_header
+    )
 
     if json:
-        print_as_json(bundle)
+        print(sl_app.json(indent=None))
         if not view:
             return
 
-    url = create_shinylive_url(
-        bundle,
-        lang,
-        mode=mode,
-        header=not no_header,
-    )
+    sl_app.mode = mode
+    sl_app.header = not no_header
 
     if not json:
-        print(url)
+        print(sl_app.url())
 
     if view:
-        import webbrowser
-
-        webbrowser.open(url)
+        sl_app.view()
 
 
 @url.command(
@@ -622,16 +607,16 @@ def decode(url: str, dir: Optional[str] = None, json: bool = False) -> None:
         url_in = sys.stdin.read()
     else:
         url_in = url
-    bundle = decode_shinylive_url(str(url_in))
+    sl_app = url_decode(url_in)
 
     if json:
-        print_as_json(bundle)
+        print(sl_app.json(indent=None))
         return
 
     if dir is not None:
-        write_files_from_shinylive_io(bundle, dir)
+        sl_app.write_files(dir)
     else:
-        print(create_shinylive_chunk_contents(bundle))
+        print(sl_app.chunk_contents())
 
 
 # #############################################################################

@@ -6,7 +6,7 @@ import os
 import re
 import sys
 from pathlib import Path
-from typing import Literal, Optional, Sequence, cast
+from typing import Any, Literal, Optional, Sequence, cast
 
 # Even though TypedDict is available in Python 3.8, because it's used with NotRequired,
 # they should both come from the same typing module.
@@ -23,13 +23,231 @@ class FileContentJson(TypedDict):
     type: NotRequired[Literal["text", "binary"]]
 
 
-def encode_shinylive_url(
+SHINYLIVE_CODE_TEMPLATE = """
+```{{shinylive-{language}}}
+#| standalone: true
+#| components: [{components}]
+#| layout: {layout}
+#| viewerHeight: {viewerHeight}
+
+{contents}
+```
+"""
+
+
+class ShinyliveIoApp:
+    def __init__(
+        self,
+        bundle: list[FileContentJson],
+        language: Optional[Literal["py", "r"]],
+    ):
+        self._bundle = bundle
+        if language is None:
+            self._language = detect_app_language(bundle[0]["content"])
+        else:
+            if language not in ["py", "r"]:
+                raise ValueError(
+                    f"Invalid language '{language}', must be either 'py' or 'r'."
+                )
+            self._language = language
+
+        self._mode: Literal["editor", "app"] = "editor"
+        self._header: bool = True
+
+    @property
+    def mode(self) -> Literal["editor", "app"]:
+        return self._mode
+
+    @mode.setter
+    def mode(self, value: Literal["editor", "app"]):
+        if value not in ["editor", "app"]:
+            raise ValueError("Invalid mode, must be either 'editor' or 'app'.")
+        self._mode = value
+
+    @property
+    def header(self) -> bool:
+        return self._header
+
+    @header.setter
+    def header(self, value: bool):
+        if not isinstance(value, bool):
+            raise ValueError("Invalid header value, must be a boolean.")
+        self._header = value
+
+    def __str__(self) -> str:
+        return self.url()
+
+    def url(
+        self,
+        mode: Optional[Literal["editor", "app"]] = None,
+        header: Optional[bool] = None,
+    ) -> str:
+        mode = mode or self.mode
+        header = header if header is not None else self.header
+
+        if mode not in ["editor", "app"]:
+            raise ValueError(
+                f"Invalid mode '{mode}', must be either 'editor' or 'app'."
+            )
+
+        file_lz = lzstring_file_bundle(self._bundle)
+
+        base = "https://shinylive.io"
+        h = "h=0&" if not header and mode == "app" else ""
+
+        return f"{base}/{self._language}/{mode}/#{h}code={file_lz}"
+
+    def view(self):
+        import webbrowser
+
+        webbrowser.open(self.url())
+
+    def chunk_contents(self) -> str:
+        lines: list[str] = []
+        for file in self._bundle:
+            lines.append(f"## file: {file['name']}")
+            if "type" in file and file["type"] == "binary":
+                lines.append("## type: binary")
+            lines.append(
+                file["content"].encode("utf-8", errors="ignore").decode("utf-8")
+            )
+            lines.append("")
+
+        return "\n".join(lines)
+
+    def chunk(
+        self,
+        components: Sequence[Literal["editor", "viewer"]] = ("editor", "viewer"),
+        layout: Literal["horizontal", "vertical"] = "horizontal",
+        viewerHeight: int = 500,
+    ) -> str:
+        if layout not in ["horizontal", "vertical"]:
+            raise ValueError(
+                f"Invalid layout '{layout}', must be either 'horizontal' or 'vertical'."
+            )
+
+        if not isinstance(components, Sequence) or not all(
+            component in ["editor", "viewer"] for component in components
+        ):
+            raise ValueError(
+                f"Invalid components '{components}', must be a list or tuple of 'editor' or 'viewer'."
+            )
+
+        return SHINYLIVE_CODE_TEMPLATE.format(
+            language=self._language,
+            components=", ".join(components),
+            layout=layout,
+            viewerHeight=viewerHeight,
+            contents=self.chunk_contents(),
+        )
+
+    def json(self, **kwargs: Any) -> str:
+        return json.dumps(self._bundle, **kwargs)
+
+    def write_files(self, dest: str | Path) -> Path:
+        out_dir = Path(dest)
+        out_dir.mkdir(parents=True, exist_ok=True)
+        for file in self._bundle:
+            if "type" in file and file["type"] == "binary":
+                import base64
+
+                with open(out_dir / file["name"], "wb") as f_out:
+                    f_out.write(base64.b64decode(file["content"]))
+            else:
+                with open(out_dir / file["name"], "w") as f_out:
+                    f_out.write(
+                        file["content"].encode("utf-8", errors="ignore").decode("utf-8")
+                    )
+
+        return out_dir
+
+
+class ShinyliveIoAppLocal(ShinyliveIoApp):
+    def __init__(
+        self,
+        app: str | Path,
+        files: Optional[str | Path | Sequence[str | Path]] = None,
+        language: Optional[Literal["py", "r"]] = None,
+    ):
+        if language is None:
+            language = detect_app_language(app)
+        elif language not in ["py", "r"]:
+            raise ValueError(
+                f"Language '{language}' is not supported. Please specify one of 'py' or 'r'."
+            )
+
+        self._bundle: list[FileContentJson] = []
+
+        self._app_path = Path(app)
+        self._root_dir = self._app_path.parent
+        app_fc = read_file(app, self._root_dir)
+
+        # if the app is not named either `ui.R` or `server.R`, then make it app.py or app.R
+        if app_fc["name"] not in ["ui.R", "server.R"]:
+            app_fc["name"] = f"app.{'py' if language == 'py' else 'R'}"
+
+        self._bundle.append(app_fc)
+        self.add_files(files)
+
+    def add_files(
+        self,
+        files: Optional[str | Path | Sequence[str | Path]] = None,
+    ) -> None:
+        if files is None:
+            return
+
+        if isinstance(files, (str, Path)):
+            files = [files]
+
+        for file in files or []:
+            if Path(file) == self._app_path:
+                continue
+            self.add_file(file)
+
+    def add_file_contents(self, file_contents: dict[str, str]) -> None:
+        for file in file_contents:
+            self._bundle.append(
+                {
+                    "name": file,
+                    "content": file_contents[file],
+                }
+            )
+
+    def add_file(self, file: str | Path) -> None:
+        self._bundle.append(read_file(file, self._root_dir))
+
+
+class ShinyliveIoAppText(ShinyliveIoAppLocal):
+    def __init__(
+        self,
+        app: str,
+        files: Optional[str | Path | Sequence[str | Path]] = None,
+        language: Optional[Literal["py", "r"]] = None,
+    ):
+        if language is None:
+            language = detect_app_language(app)
+        elif language not in ["py", "r"]:
+            raise ValueError(
+                f"Language '{language}' is not supported. Please specify one of 'py' or 'r'."
+            )
+
+        default_app_file = f"app.{'py' if language == 'py' else 'R'}"
+
+        self._bundle: list[FileContentJson] = []
+        self._language = language
+        self._root_dir: Path = Path(".")
+        self._app_path: Path = Path(".")
+        self.add_file_contents({default_app_file: app})
+        self.add_files(files)
+
+
+def url_encode(
     app: str | Path,
     files: Optional[str | Path | Sequence[str | Path]] = None,
     language: Optional[Literal["py", "r"]] = None,
     mode: Literal["editor", "app"] = "editor",
     header: bool = True,
-) -> str:
+) -> ShinyliveIoApp:
     """
     Generate a URL for a [ShinyLive application](https://shinylive.io).
 
@@ -52,7 +270,7 @@ def encode_shinylive_url(
 
     Returns
     -------
-        The generated URL for the ShinyLive application.
+        A ShinyliveIoApp object. Use the `.url()` method to retrieve the Shinylive URL.
     """
 
     if language is not None and language not in ["py", "r"]:
@@ -61,144 +279,21 @@ def encode_shinylive_url(
     lang = language if language is not None else detect_app_language(app)
 
     if isinstance(app, str) and "\n" in app:
-        bundle = create_shinylive_bundle_text(app, files, lang)
+        sl_app = ShinyliveIoAppText(app, files, lang)
     else:
-        bundle = create_shinylive_bundle_file(app, files, lang)
+        sl_app = ShinyliveIoAppLocal(app, files, lang)
 
-    return create_shinylive_url(bundle, lang, mode=mode, header=header)
+    sl_app.mode = mode
+    sl_app.header = header
 
-
-def create_shinylive_url(
-    bundle: list[FileContentJson],
-    language: Literal["py", "r"],
-    mode: Literal["editor", "app"] = "editor",
-    header: bool = True,
-) -> str:
-    if language not in ["py", "r"]:
-        raise ValueError(f"Invalid language '{language}', must be either 'py' or 'r'.")
-    if mode not in ["editor", "app"]:
-        raise ValueError(f"Invalid mode '{mode}', must be either 'editor' or 'app'.")
-
-    file_lz = lzstring_file_bundle(bundle)
-
-    base = "https://shinylive.io"
-    h = "h=0&" if not header and mode == "app" else ""
-
-    return f"{base}/{language}/{mode}/#{h}code={file_lz}"
+    return sl_app
 
 
-def create_shinylive_bundle_text(
-    app: str,
-    files: Optional[str | Path | Sequence[str | Path]] = None,
-    language: Optional[Literal["py", "r"]] = None,
-    root_dir: str | Path = ".",
-) -> list[FileContentJson]:
-    if language is None:
-        language = detect_app_language(app)
-    elif language not in ["py", "r"]:
-        raise ValueError(
-            f"Language '{language}' is not supported. Please specify one of 'py' or 'r'."
-        )
-
-    app_fc: FileContentJson = {
-        "name": f"app.{'py' if language == 'py' else 'R'}",
-        "content": app,
-    }
-
-    return add_supporting_files_to_bundle(app_fc, files, root_dir)
-
-
-def create_shinylive_bundle_file(
-    app: str | Path,
-    files: Optional[str | Path | Sequence[str | Path]] = None,
-    language: Optional[Literal["py", "r"]] = None,
-) -> list[FileContentJson]:
-    if language is None:
-        language = detect_app_language(app)
-    elif language not in ["py", "r"]:
-        raise ValueError(
-            f"Language '{language}' is not supported. Please specify one of 'py' or 'r'."
-        )
-
-    app_path = Path(app)
-    root_dir = app_path.parent
-    app_fc = read_file(app, root_dir)
-
-    # if the app is not named either `ui.R` or `server.R`, then make it app.py or app.R
-    if app_fc["name"] not in ["ui.R", "server.R"]:
-        app_fc["name"] = f"app.{'py' if language == 'py' else 'R'}"
-
-    return add_supporting_files_to_bundle(app_fc, files, root_dir, app_path)
-
-
-def add_supporting_files_to_bundle(
-    app: FileContentJson,
-    files: Optional[str | Path | Sequence[str | Path]] = None,
-    root_dir: str | Path = ".",
-    app_path: str | Path = "",
-) -> list[FileContentJson]:
-    app_path = Path(app_path)
-
-    file_bundle = [app]
-
-    if isinstance(files, (str, Path)):
-        files = [files]
-
-    if files is not None:
-        file_list: list[str | Path] = []
-
-        for file in files:
-            if Path(file).is_dir():
-                file_list.extend(listdir_recursive(file))
-            else:
-                file_list.append(file)
-
-        file_bundle = file_bundle + [
-            read_file(file, root_dir) for file in file_list if Path(file) != app_path
-        ]
-
-    return file_bundle
-
-
-def detect_app_language(app: str | Path) -> Literal["py", "r"]:
-    err_not_detected = """
-    Could not automatically detect the language of the app. Please specify `language`."""
-
-    if isinstance(app, str) and "\n" in app:
-        if re.search(r"^(import|from) shiny", app, re.MULTILINE):
-            return "py"
-        elif re.search(r"^library\(shiny\)", app, re.MULTILINE):
-            return "r"
-        else:
-            raise ValueError(err_not_detected)
-
-    app = Path(app)
-
-    if app.suffix.lower() == ".py":
-        return "py"
-    elif app.suffix.lower() == ".r":
-        return "r"
-    else:
-        raise ValueError(err_not_detected)
-
-
-def listdir_recursive(dir: str | Path) -> list[str]:
-    dir = Path(dir)
-    all_files: list[str] = []
-
-    for root, dirs, files in os.walk(dir):
-        for file in files:
-            all_files.append(os.path.join(root, file))
-        for dir in dirs:
-            all_files.extend(listdir_recursive(dir))
-
-    return all_files
-
-
-def decode_shinylive_url(url: str) -> list[FileContentJson]:
+def url_decode(url: str) -> ShinyliveIoApp:
     from lzstring import LZString  # type: ignore[reportMissingTypeStubs]
 
     url = url.strip()
+    language = "r" if "shinylive.io/r/" in url else "py"
 
     try:
         bundle_json = cast(
@@ -256,39 +351,42 @@ def decode_shinylive_url(url: str) -> list[FileContentJson]:
             )
         ret.append(fc)
 
-    return ret
+    return ShinyliveIoApp(ret, language=language)
 
 
-def create_shinylive_chunk_contents(bundle: list[FileContentJson]) -> str:
-    lines: list[str] = []
-    for file in bundle:
-        lines.append(f"## file: {file['name']}")
-        if "type" in file and file["type"] == "binary":
-            lines.append("## type: binary")
-        lines.append(file["content"].encode("utf-8", errors="ignore").decode("utf-8"))
-        lines.append("")
+def detect_app_language(app: str | Path) -> Literal["py", "r"]:
+    err_not_detected = """
+    Could not automatically detect the language of the app. Please specify `language`."""
 
-    return "\n".join(lines)
-
-
-def write_files_from_shinylive_io(
-    bundle: list[FileContentJson], dest: str | Path
-) -> Path:
-    out_dir = Path(dest)
-    out_dir.mkdir(parents=True, exist_ok=True)
-    for file in bundle:
-        if "type" in file and file["type"] == "binary":
-            import base64
-
-            with open(out_dir / file["name"], "wb") as f_out:
-                f_out.write(base64.b64decode(file["content"]))
+    if isinstance(app, str) and "\n" in app:
+        if re.search(r"^(import|from) shiny", app, re.MULTILINE):
+            return "py"
+        elif re.search(r"^library\(shiny\)", app, re.MULTILINE):
+            return "r"
         else:
-            with open(out_dir / file["name"], "w") as f_out:
-                f_out.write(
-                    file["content"].encode("utf-8", errors="ignore").decode("utf-8")
-                )
+            raise ValueError(err_not_detected)
 
-    return out_dir
+    app = Path(app)
+
+    if app.suffix.lower() == ".py":
+        return "py"
+    elif app.suffix.lower() == ".r":
+        return "r"
+    else:
+        raise ValueError(err_not_detected)
+
+
+def listdir_recursive(dir: str | Path) -> list[str]:
+    dir = Path(dir)
+    all_files: list[str] = []
+
+    for root, dirs, files in os.walk(dir):
+        for file in files:
+            all_files.append(os.path.join(root, file))
+        for dir in dirs:
+            all_files.extend(listdir_recursive(dir))
+
+    return all_files
 
 
 # Copied from https://github.com/posit-dev/py-shiny/blob/main/docs/_renderer.py#L231
