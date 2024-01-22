@@ -216,6 +216,28 @@ class ShinyliveIoAppLocal(ShinyliveIoApp):
     def add_file(self, file: str | Path) -> None:
         self._bundle.append(read_file(file, self._root_dir))
 
+    def __add__(self, other: str | Path) -> None:
+        self.add_file(other)
+
+    def __sub__(self, other: str | Path) -> None:
+        file_names = [file["name"] for file in self._bundle]
+
+        if other in file_names:
+            # find the index of the file to remove
+            index = file_names.index(other)
+            self._bundle.pop(index)
+            return
+
+        root_dir = self._root_dir.absolute()
+
+        other_path = str(Path(other).absolute().relative_to(root_dir))
+        if other_path in file_names:
+            index = file_names.index(other_path)
+            self._bundle.pop(index)
+            return
+
+        raise ValueError(f"File '{other}' not found in app bundle.")
+
 
 class ShinyliveIoAppText(ShinyliveIoAppLocal):
     def __init__(
