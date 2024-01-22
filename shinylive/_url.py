@@ -304,6 +304,7 @@ class ShinyliveIoAppLocal(ShinyliveIoApp):
             )
 
         self._bundle: list[FileContentJson] = []
+        self._language = language
 
         self._app_path = Path(app)
         self._root_dir = self._app_path.parent
@@ -311,7 +312,7 @@ class ShinyliveIoAppLocal(ShinyliveIoApp):
 
         # if the app is not named either `ui.R` or `server.R`, then make it app.py or app.R
         if app_fc["name"] not in ["ui.R", "server.R"]:
-            app_fc["name"] = f"app.{'py' if language == 'py' else 'R'}"
+            app_fc["name"] = f"app.{'py' if self._language == 'py' else 'R'}"
 
         self._bundle.append(app_fc)
         self.add_files(files)
