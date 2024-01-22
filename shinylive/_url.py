@@ -28,7 +28,7 @@ SHINYLIVE_CODE_TEMPLATE = """
 #| standalone: true
 #| components: [{components}]
 #| layout: {layout}
-#| viewerHeight: {viewerHeight}
+#| viewerHeight: {viewer_height}
 
 {contents}
 ```
@@ -196,7 +196,7 @@ class ShinyliveIoApp:
         self,
         components: Sequence[Literal["editor", "viewer"]] = ("editor", "viewer"),
         layout: Literal["horizontal", "vertical"] = "horizontal",
-        viewerHeight: int = 500,
+        viewer_height: int = 500,
     ) -> str:
         """
         Create a shinylive chunk based on the files in the app for use in a Quarto
@@ -210,7 +210,7 @@ class ShinyliveIoApp:
         layout
             The layout of the components, either "horizontal" or "vertical". Defaults
             to "horizontal".
-        viewerHeight
+        viewer_height
             The height of the viewer component in pixels. Defaults to 500.
 
         Returns
@@ -234,7 +234,7 @@ class ShinyliveIoApp:
             language="python" if self._language == "py" else "r",
             components=", ".join(components),
             layout=layout,
-            viewerHeight=viewerHeight,
+            viewer_height=viewer_height,
             contents=self.chunk_contents(),
         )
 
