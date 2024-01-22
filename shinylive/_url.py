@@ -231,7 +231,7 @@ class ShinyliveIoApp:
             )
 
         return SHINYLIVE_CODE_TEMPLATE.format(
-            language=self._language,
+            language="python" if self._language == "py" else "r",
             components=", ".join(components),
             layout=layout,
             viewerHeight=viewerHeight,
