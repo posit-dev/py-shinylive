@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import base64
+import copy
 import json
 import os
 import re
@@ -38,7 +39,19 @@ SHINYLIVE_CODE_TEMPLATE = """
 class ShinyliveIoApp:
     """
     Create an instance of a Shiny App for use with shinylive.io.
+
+    Parameters
+    ----------
+    bundle
+        The file bundle of the ShinyLive application. This should be a list of files
+        as a dictionary of "name", "content" and optionally `"type": "binary"` for
+        binary file types. (`"type": "text"` is the default and can be omitted.)
+    language
+        The language of the application, or None to autodetect the language. Defaults
+        to None.
     """
+
+    __slots__ = ("_bundle", "_language", "_mode", "_header", "_app_path", "_root_dir")
 
     def __init__(
         self,
@@ -57,6 +70,8 @@ class ShinyliveIoApp:
 
         self._mode: Literal["editor", "app"] = "editor"
         self._header: bool = True
+        self._app_path: Optional[Path] = None
+        self._root_dir: Optional[Path] = None
 
     @property
     def mode(self) -> Literal["editor", "app"]:
@@ -98,7 +113,7 @@ class ShinyliveIoApp:
         Returns
         -------
         bool
-            `True` if the header should be included, `False` otherwise.
+            ``True`` if the header should be included, ``False`` otherwise.
         """
         return self._header
 
@@ -245,7 +260,7 @@ class ShinyliveIoApp:
         Parameters
         ----------
         kwargs
-            Keyword arguments passed to `json.dumps`.
+            Keyword arguments passed to ``json.dumps``.
 
         Returns
         -------
@@ -284,10 +299,118 @@ class ShinyliveIoApp:
 
         return out_dir
 
+    def add_files(
+        self,
+        files: Optional[str | Path | Sequence[str | Path]] = None,
+    ) -> None:
+        """
+        Add files to the ShinyLive application. For more control over the file name,
+        use the ``add_file`` method.
+
+        Parameters
+        ----------
+        files
+            File(s) or directory path(s) to include in the application. On shinylive,
+            these files will be stored relative to the main ``app`` file. Use the
+            ``add_file`` method to add a single file if you need to rename the files.
+            In app bundles created from local files, added files will be stored relative
+            to the location of the local ``app`` file. In app bundles created from text,
+            files paths are flattened to include only the file name.
+        """
+        if files is None:
+            return
+
+        if isinstance(files, (str, Path)):
+            files = [files]
+
+        for file in files or []:
+            if self._app_path is not None and Path(file) == self._app_path:
+                continue
+            self.add_file(file)
+
+    def add_file_contents(self, file_contents: dict[str, str]) -> None:
+        """
+        Directly adds a text file to the Shinylive app.
+
+        Parameters
+        ----------
+        file_contents
+            A dictionary of file names and file contents.
+        """
+        for file in file_contents:
+            self._bundle.append(
+                {
+                    "name": file,
+                    "content": file_contents[file],
+                }
+            )
+
+    def add_file(self, file: str | Path, name: Optional[str | Path] = None) -> None:
+        """
+        Add a file to the ShinyLive application.
+
+        Parameters
+        ----------
+        file
+            File or directory path to include in the application. On shinylive, this
+            file will be stored relative to the main ``app`` file. All files should be
+            contained in the same directory as or a subdirectory of the main ``app`` file.
+
+        name
+            The name of the file to be used in the app. If not provided, the file name
+            will be used, using the relative path from the main ``app`` file if the
+            ``ShinyliveIoApp`` was created from local files.
+        """
+        file_new = read_file(file, self._root_dir)
+        if name is not None:
+            file_new["name"] = str(name)
+        self._bundle.append(file_new)
+
+    def __add__(self, other: str | Path) -> ShinyliveIoApp:
+        new: ShinyliveIoApp = copy.deepcopy(self)
+        new.add_file(other)
+        return new
+
+    def __sub__(self, other: str | Path) -> ShinyliveIoApp:
+        file_names = [file["name"] for file in self._bundle]
+        index = None
+
+        if other in file_names:
+            # find the index of the file to remove
+            index = file_names.index(other)
+
+        if self._root_dir is not None:
+            root_dir = self._root_dir.absolute()
+
+            other_path = str(Path(other).absolute().relative_to(root_dir))
+            if other_path in file_names:
+                index = file_names.index(other_path)
+
+        if index is None:
+            raise ValueError(f"File '{other}' not found in app bundle.")
+
+        new: ShinyliveIoApp = copy.deepcopy(self)
+        new._bundle.pop(index)
+        return new
+
 
 class ShinyliveIoAppLocal(ShinyliveIoApp):
     """
     Create an instance of a Shiny App from local files for use with shinylive.io.
+
+    Parameters
+    ----------
+    app
+        The main app file of the ShinyLive application. This file should be a Python
+        `app.py` or an R `app.R`, `ui.R`, or `server.R` file. This file will be
+        renamed `app.py` or `app.R` for shinylive, unless it's named `ui.R` or
+        `server.R`.
+    files
+        File(s) or directory path(s) to include in the application. On shinylive,
+        these files will be stored relative to the main `app` file.
+    language
+        The language of the application, or None to autodetect the language. Defaults
+        to None.
     """
 
     def __init__(
@@ -317,97 +440,38 @@ class ShinyliveIoAppLocal(ShinyliveIoApp):
         self._bundle.append(app_fc)
         self.add_files(files)
 
-    def add_files(
-        self,
-        files: Optional[str | Path | Sequence[str | Path]] = None,
-    ) -> None:
-        """
-        Add files to the ShinyLive application.
-
-        Parameters
-        ----------
-        files
-            File(s) or directory path(s) to include in the application. On shinylive, these
-            files will be stored relative to the main `app` file.
-        """
-        if files is None:
-            return
-
-        if isinstance(files, (str, Path)):
-            files = [files]
-
-        for file in files or []:
-            if Path(file) == self._app_path:
-                continue
-            self.add_file(file)
-
-    def add_file_contents(self, file_contents: dict[str, str]) -> None:
-        """
-        Directly adds a text file to the Shinylive app.
-
-        Parameters
-        ----------
-        file_contents
-            A dictionary of file names and file contents.
-        """
-        for file in file_contents:
-            self._bundle.append(
-                {
-                    "name": file,
-                    "content": file_contents[file],
-                }
-            )
-
-    def add_file(self, file: str | Path) -> None:
-        """
-        Add a file to the ShinyLive application.
-
-        Parameters
-        ----------
-        file
-            File or directory path to include in the application. On shinylive, this
-            file will be stored relative to the main `app` file. All files should be
-            contained in the same directory as or a subdirectory of the main `app` file.
-        """
-        self._bundle.append(read_file(file, self._root_dir))
-
-    def __add__(self, other: str | Path) -> None:
-        self.add_file(other)
-
-    def __sub__(self, other: str | Path) -> None:
-        file_names = [file["name"] for file in self._bundle]
-
-        if other in file_names:
-            # find the index of the file to remove
-            index = file_names.index(other)
-            self._bundle.pop(index)
-            return
-
-        root_dir = self._root_dir.absolute()
-
-        other_path = str(Path(other).absolute().relative_to(root_dir))
-        if other_path in file_names:
-            index = file_names.index(other_path)
-            self._bundle.pop(index)
-            return
-
-        raise ValueError(f"File '{other}' not found in app bundle.")
-
 
 class ShinyliveIoAppText(ShinyliveIoAppLocal):
     """
-    Create an instance of a Shiny App from a string containig the `app.py` or `app.R`
+    Create an instance of a Shiny App from a string containing the `app.py` or `app.R`
     file contents for use with shinylive.io.
+
+    Parameters
+    ----------
+    app_code
+        The text contents of the main app file for the ShinyLive application. This file
+        will be renamed `app.py` or `app.R` for shinylive.
+    files
+        File(s) or directory path(s) to include in the application. On shinylive,
+        these files will be stored relative to the main `app` file.
+    language
+        The language of the application, or None to autodetect the language. Defaults
+        to None.
+    root_dir
+        The root directory of the application,used to determine the relative
+        path of supporting files to the main ``app`` file. Defaults to ``None``, meaning
+        that additional files are added in a flattened structure.
     """
 
     def __init__(
         self,
-        app: str,
+        app_code: str,
         files: Optional[str | Path | Sequence[str | Path]] = None,
         language: Optional[Literal["py", "r"]] = None,
+        root_dir: Optional[str | Path] = None,
     ):
         if language is None:
-            language = detect_app_language(app)
+            language = detect_app_language(app_code)
         elif language not in ["py", "r"]:
             raise ValueError(
                 f"Language '{language}' is not supported. Please specify one of 'py' or 'r'."
@@ -417,9 +481,9 @@ class ShinyliveIoAppText(ShinyliveIoAppLocal):
 
         self._bundle: list[FileContentJson] = []
         self._language = language
-        self._root_dir: Path = Path(".")
-        self._app_path: Path = Path(".")
-        self.add_file_contents({default_app_file: app})
+        if root_dir is not None:
+            self._root_dir = Path(root_dir)
+        self.add_file_contents({default_app_file: app_code})
         self.add_files(files)
 
 
@@ -441,8 +505,7 @@ def url_encode(
          `app.py` or `app.R` for shinylive, unless it's named `ui.R` or `server.R`.
     files
         File(s) or directory path(s) to include in the application. On shinylive, these
-        files will be stored relative to the main `app` file. If an entry in files is a
-        directory, then all files in that directory will be included, recursively.
+        files will be stored relative to the main `app` file.
     mode
         The mode of the application, either "editor" or "app". Defaults to "editor".
     language
@@ -593,9 +656,6 @@ def listdir_recursive(dir: str | Path) -> list[str]:
 # Copied from https://github.com/posit-dev/py-shiny/blob/main/docs/_renderer.py#L231
 def read_file(file: str | Path, root_dir: str | Path | None = None) -> FileContentJson:
     file = Path(file)
-    if root_dir is None:
-        root_dir = Path("/")
-    root_dir = Path(root_dir)
 
     type: Literal["text", "binary"] = "text"
 
@@ -610,8 +670,10 @@ def read_file(file: str | Path, root_dir: str | Path | None = None) -> FileConte
             file_content = base64.b64encode(file_content_bin).decode("utf-8")
             type = "binary"
 
+    file_name = str(file.relative_to(root_dir)) if root_dir else file.name
+
     return {
-        "name": str(file.relative_to(root_dir)),
+        "name": file_name,
         "content": file_content,
         "type": type,
     }
