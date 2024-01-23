@@ -89,7 +89,7 @@ class ShinyliveApp:
             )
 
         self.mode: Literal["editor", "app"] = mode
-        self.header: bool = True
+        self.header: bool = header
         self.host: str = host
         self._language: Literal["py", "r"] = lang
         self._app_path: Optional[Path] = None
