@@ -49,12 +49,23 @@ class ShinyliveIoApp:
     language
         The language of the application, or None to autodetect the language. Defaults
         to None.
+    mode
+        The mode of the application, used when creating a shinylive.io URL. Accepted
+        values are either "editor" or "app"; defaults to "editor".
+    header
+        Whether to include a header bar in the UI when creating a shinylive.io URL. This
+        is used only if ``mode`` is "app". Defaults to True.
+    host
+        The host URL of the shinylive application. Defaults to "https://shinylive.io".
     """
 
     def __init__(
         self,
         bundle: list[FileContentJson],
         language: Optional[Literal["py", "r"]],
+        mode: Literal["editor", "app"] = "editor",
+        header: bool = True,
+        host: str = "https://shinylive.io",
     ):
         self._bundle = bundle
         if language is None:
@@ -66,8 +77,19 @@ class ShinyliveIoApp:
                 )
             self._language = language
 
-        self._mode: Literal["editor", "app"] = "editor"
-        self._header: bool = True
+        if mode not in ["editor", "app"]:
+            raise ValueError(
+                f"Invalid mode '{mode}', must be either 'editor' or 'app'."
+            )
+
+        if not isinstance(header, bool):
+            raise ValueError(
+                f"Invalid header '{header}', must be either True or False."
+            )
+
+        self.mode: Literal["editor", "app"] = mode
+        self.header: bool = True
+        self.host: str = host
         self._app_path: Optional[Path] = None
         self._root_dir: Optional[Path] = None
 
