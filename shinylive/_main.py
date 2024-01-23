@@ -8,7 +8,7 @@ from typing import Literal, MutableMapping, Optional
 import click
 
 from . import _assets, _deps, _export
-from ._url import detect_app_language, url_decode, url_encode
+from ._url import ShinyliveApp, detect_app_language, url_decode
 from ._utils import print_as_json
 from ._version import SHINYLIVE_ASSETS_VERSION, SHINYLIVE_PACKAGE_VERSION
 
@@ -554,17 +554,19 @@ def encode(
     else:
         lang = detect_app_language(app_in)
 
-    sl_app = url_encode(
-        app_in, files=files, language=lang, mode=mode, header=not no_header
-    )
+    if app == "-":
+        sl_app = ShinyliveApp.from_text(
+            app_in, files=files, language=lang, mode=mode, header=not no_header
+        )
+    else:
+        sl_app = ShinyliveApp.from_local(
+            app_in, files=files, language=lang, mode=mode, header=not no_header
+        )
 
     if json:
         print(sl_app.json(indent=None))
         if not view:
             return
-
-    sl_app.mode = mode
-    sl_app.header = not no_header
 
     if not json:
         print(sl_app.url())
