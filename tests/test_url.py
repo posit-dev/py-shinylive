@@ -19,7 +19,7 @@ LINKS = {
 def test_decode_py_editor():
     app = url_decode(LINKS["py"]["editor"])
     assert app._language == "py"
-    assert app._mode == "editor"
+    assert app.mode == "editor"
     assert app._bundle[0]["name"] == "app.py"
     assert "from shiny import" in app._bundle[0]["content"]
     assert "type" not in app._bundle[0]
@@ -28,8 +28,8 @@ def test_decode_py_editor():
 def test_decode_py_app():
     app = url_decode(LINKS["py"]["app"])
     assert app._language == "py"
-    assert app._mode == "app"
-    assert app._header
+    assert app.mode == "app"
+    assert app.header
     assert app._bundle[0]["name"] == "app.py"
     assert "from shiny import" in app._bundle[0]["content"]
     assert "type" not in app._bundle[0]
@@ -38,8 +38,8 @@ def test_decode_py_app():
 def test_decode_py_app_no_header():
     app = url_decode(LINKS["py"]["app_no_header"])
     assert app._language == "py"
-    assert app._mode == "app"
-    assert not app._header
+    assert app.mode == "app"
+    assert not app.header
     assert app._bundle[0]["name"] == "app.py"
     assert "from shiny import" in app._bundle[0]["content"]
     assert "type" not in app._bundle[0]
@@ -48,7 +48,7 @@ def test_decode_py_app_no_header():
 def test_decode_r_editor():
     app = url_decode(LINKS["r"]["editor"])
     assert app._language == "r"
-    assert app._mode == "editor"
+    assert app.mode == "editor"
     assert app._bundle[0]["name"] == "app.R"
     assert "library(shiny)" in app._bundle[0]["content"]
     assert "type" not in app._bundle[0]
@@ -57,8 +57,8 @@ def test_decode_r_editor():
 def test_decode_r_app():
     app = url_decode(LINKS["r"]["app"])
     assert app._language == "r"
-    assert app._mode == "app"
-    assert app._header
+    assert app.mode == "app"
+    assert app.header
     assert app._bundle[0]["name"] == "app.R"
     assert "library(shiny)" in app._bundle[0]["content"]
     assert "type" not in app._bundle[0]
@@ -67,8 +67,8 @@ def test_decode_r_app():
 def test_decode_r_app_no_header():
     app = url_decode(LINKS["r"]["app_no_header"])
     assert app._language == "r"
-    assert app._mode == "app"
-    assert not app._header
+    assert app.mode == "app"
+    assert not app.header
     assert app._bundle[0]["name"] == "app.R"
     assert "library(shiny)" in app._bundle[0]["content"]
     assert "type" not in app._bundle[0]
@@ -76,7 +76,7 @@ def test_decode_r_app_no_header():
 
 def test_encode_py_app_content():
     app_code = "from shiny.express import ui\nui.div()"
-    app = url_encode(app_code)
+    app = ShinyliveApp.from_text(app_code)
 
     assert app._language == "py"
     assert str(app) == app.url()
@@ -92,7 +92,7 @@ def test_encode_py_app_content():
 
 def test_encode_r_app_content():
     app_code = "library(shiny)\n\nshinyApp(pageFluid(), function(...) { })"
-    app = url_encode(app_code)
+    app = ShinyliveApp.from_text(app_code)
 
     assert app._language == "r"
     assert str(app) == app.url()
