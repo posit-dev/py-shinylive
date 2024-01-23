@@ -37,7 +37,7 @@ SHINYLIVE_CODE_TEMPLATE = """
 """
 
 
-class ShinyliveIoApp:
+class ShinyliveApp:
     """
     Create an instance of a Shiny App for use with shinylive.io.
 
@@ -101,7 +101,7 @@ class ShinyliveIoApp:
         files: Optional[str | Path | Sequence[str | Path]] = None,
         language: Optional[Literal["py", "r"]] = None,
         **kwargs: Any,
-    ) -> ShinyliveIoApp:
+    ) -> ShinyliveApp:
         """
         Create an instance of a Shiny App from local files for use with shinylive.io.
 
@@ -148,7 +148,7 @@ class ShinyliveIoApp:
         language: Optional[Literal["py", "r"]] = None,
         root_dir: Optional[str | Path] = None,
         **kwargs: Any,
-    ) -> ShinyliveIoApp:
+    ) -> ShinyliveApp:
         """
         Create an instance of a Shiny App from a string containing the `app.py` or `app.R`
         file contents for use with shinylive.io.
@@ -186,7 +186,7 @@ class ShinyliveIoApp:
         return self
 
     @classmethod
-    def from_url(cls, url: str) -> ShinyliveIoApp:
+    def from_url(cls, url: str) -> ShinyliveApp:
         """
         Create an instance of a Shiny App from a shinylive.io URL.
 
@@ -500,16 +500,16 @@ class ShinyliveIoApp:
 
         self._bundle.append(file_new)
 
-    def __add__(self, other: str | Path) -> ShinyliveIoApp:
+    def __add__(self, other: str | Path) -> ShinyliveApp:
         other = Path(other)
-        new: ShinyliveIoApp = copy.deepcopy(self)
+        new: ShinyliveApp = copy.deepcopy(self)
         if other.is_dir():
             new.add_dir(other)
         else:
             new.add_file(other)
         return new
 
-    def __sub__(self, other: str | Path) -> ShinyliveIoApp:
+    def __sub__(self, other: str | Path) -> ShinyliveApp:
         file_names = [file["name"] for file in self._bundle]
         index = None
 
@@ -527,7 +527,7 @@ class ShinyliveIoApp:
         if index is None:
             raise ValueError(f"File '{other}' not found in app bundle.")
 
-        new: ShinyliveIoApp = copy.deepcopy(self)
+        new: ShinyliveApp = copy.deepcopy(self)
         new._bundle.pop(index)
         return new
 
@@ -538,7 +538,7 @@ def url_encode(
     language: Optional[Literal["py", "r"]] = None,
     mode: Literal["editor", "app"] = "editor",
     header: bool = True,
-) -> ShinyliveIoApp:
+) -> ShinyliveApp:
     """
     Generate a URL for a [shinylive application](https://shinylive.io).
 
@@ -581,7 +581,7 @@ def url_encode(
     return sl_app
 
 
-def url_decode(url: str) -> ShinyliveIoApp:
+def url_decode(url: str) -> ShinyliveApp:
     """
     Decode a Shinylive URL into a ShinyliveIoApp object.
 
@@ -594,7 +594,7 @@ def url_decode(url: str) -> ShinyliveIoApp:
     -------
         A ShinyliveIoApp object.
     """
-    return ShinyliveIoApp.from_url(url)
+    return ShinyliveApp.from_url(url)
 
 
 def bundle_from_url(url: str) -> list[FileContentJson]:
