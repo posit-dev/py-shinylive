@@ -70,13 +70,13 @@ class ShinyliveApp:
     ):
         self._bundle = bundle
         if language is None:
-            self._language = detect_app_language(bundle[0]["content"])
+            lang = detect_app_language(bundle[0]["content"])
         else:
             if language not in ["py", "r"]:
                 raise ValueError(
                     f"Invalid language '{language}', must be either 'py' or 'r'."
                 )
-            self._language = language
+            lang = language
 
         if mode not in ["editor", "app"]:
             raise ValueError(
@@ -91,6 +91,7 @@ class ShinyliveApp:
         self.mode: Literal["editor", "app"] = mode
         self.header: bool = True
         self.host: str = host
+        self._language: Literal["py", "r"] = lang
         self._app_path: Optional[Path] = None
         self._root_dir: Optional[Path] = None
 
