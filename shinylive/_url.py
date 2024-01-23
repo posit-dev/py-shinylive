@@ -8,6 +8,7 @@ import re
 import sys
 from pathlib import Path
 from typing import Any, Literal, Optional, Sequence, cast
+from urllib.parse import urlparse
 
 # Even though TypedDict is available in Python 3.8, because it's used with NotRequired,
 # they should both come from the same typing module.
@@ -93,6 +94,123 @@ class ShinyliveIoApp:
         self._app_path: Optional[Path] = None
         self._root_dir: Optional[Path] = None
 
+    @classmethod
+    def from_local(
+        cls,
+        app: str | Path,
+        files: Optional[str | Path | Sequence[str | Path]] = None,
+        language: Optional[Literal["py", "r"]] = None,
+        **kwargs: Any,
+    ) -> ShinyliveIoApp:
+        """
+        Create an instance of a Shiny App from local files for use with shinylive.io.
+
+        Parameters
+        ----------
+        app
+            The main app file of the shinylive application. This file should be a Python
+            `app.py` or an R `app.R`, `ui.R`, or `server.R` file. This file will be
+            renamed `app.py` or `app.R` for shinylive, unless it's named `ui.R` or
+            `server.R`.
+        files
+            File(s) or directory path(s) to include in the application. On shinylive,
+            these files will be stored relative to the main `app` file.
+        language
+            The language of the application, or None to autodetect the language. Defaults
+            to None.
+        """
+        if language is None:
+            language = detect_app_language(app)
+        elif language not in ["py", "r"]:
+            raise ValueError(
+                f"Language '{language}' is not supported. Please specify one of 'py' or 'r'."
+            )
+
+        self = cls([], language=language, **kwargs)
+
+        self._app_path = Path(app)
+        self._root_dir = self._app_path.parent
+        app_fc = read_file(app, self._root_dir)
+
+        # if the app is not named either `ui.R` or `server.R`, then make it app.py or app.R
+        if app_fc["name"] not in ["ui.R", "server.R"]:
+            app_fc["name"] = f"app.{'py' if self._language == 'py' else 'R'}"
+
+        self._bundle.append(app_fc)
+        self.add_files(files)
+        return self
+
+    @classmethod
+    def from_text(
+        cls,
+        app_text: str,
+        files: Optional[str | Path | Sequence[str | Path]] = None,
+        language: Optional[Literal["py", "r"]] = None,
+        root_dir: Optional[str | Path] = None,
+        **kwargs: Any,
+    ) -> ShinyliveIoApp:
+        """
+        Create an instance of a Shiny App from a string containing the `app.py` or `app.R`
+        file contents for use with shinylive.io.
+
+        Parameters
+        ----------
+        app_code
+            The text contents of the main app file for the shinylive application. This file
+            will be renamed `app.py` or `app.R` for shinylive.
+        files
+            File(s) or directory path(s) to include in the application. On shinylive,
+            these files will be stored relative to the main `app` file.
+        language
+            The language of the application, or None to autodetect the language. Defaults
+            to None.
+        root_dir
+            The root directory of the application,used to determine the relative
+            path of supporting files to the main ``app`` file. Defaults to ``None``, meaning
+            that additional files are added in a flattened structure.
+        """
+        if language is None:
+            language = detect_app_language(app_text)
+        elif language not in ["py", "r"]:
+            raise ValueError(
+                f"Language '{language}' is not supported. Please specify one of 'py' or 'r'."
+            )
+
+        default_app_file = f"app.{'py' if language == 'py' else 'R'}"
+
+        self = cls([], language=language, **kwargs)
+
+        self._root_dir = Path(root_dir) if root_dir is not None else None
+        self.add_file_contents({default_app_file: app_text})
+        self.add_files(files)
+        return self
+
+    @classmethod
+    def from_url(cls, url: str) -> ShinyliveIoApp:
+        """
+        Create an instance of a Shiny App from a shinylive.io URL.
+
+        Parameters
+        ----------
+        url
+            The shinylive.io URL to decode.
+        """
+
+        url = url.strip()
+        bundle = bundle_from_url(url)
+        language = "r" if "shinylive.io/r/" in url else "py"
+        mode = "app" if f"{language}/app/" in url else "editor"
+        header = False if "h=0" in url else True
+        scheme, netloc, *_ = urlparse(url)
+
+        return cls(
+            bundle,
+            language=language,
+            mode=mode,
+            header=header,
+            host=f"{scheme}://{netloc}",
+        )
+
     def __str__(self) -> str:
         return self.url()
 
@@ -100,6 +218,7 @@ class ShinyliveIoApp:
         self,
         mode: Optional[Literal["editor", "app"]] = None,
         header: Optional[bool] = None,
+        host: Optional[str] = None,
     ) -> str:
         """
         Get the URL of the shinylive application.
@@ -109,10 +228,12 @@ class ShinyliveIoApp:
         mode
             The mode of the application, either "editor" or "app". Defaults to the
             current mode.
-
         header
             Whether to include a header bar in the UI. This is used only if ``mode`` is
             "app". Defaults to the current header value.
+        host
+            The host URL of the shinylive application. Defaults to the current host URL,
+            which is typically ``"https://shinylive.io"``.
 
         Returns
         -------
@@ -129,7 +250,8 @@ class ShinyliveIoApp:
 
         file_lz = lzstring_file_bundle(self._bundle)
 
-        base = "https://shinylive.io"
+        base = host or self.host
+
         h = "h=0&" if not header and mode == "app" else ""
 
         return f"{base}/{self._language}/{mode}/#{h}code={file_lz}"
@@ -410,98 +532,6 @@ class ShinyliveIoApp:
         return new
 
 
-class ShinyliveIoAppLocal(ShinyliveIoApp):
-    """
-    Create an instance of a Shiny App from local files for use with shinylive.io.
-
-    Parameters
-    ----------
-    app
-        The main app file of the shinylive application. This file should be a Python
-        `app.py` or an R `app.R`, `ui.R`, or `server.R` file. This file will be
-        renamed `app.py` or `app.R` for shinylive, unless it's named `ui.R` or
-        `server.R`.
-    files
-        File(s) or directory path(s) to include in the application. On shinylive,
-        these files will be stored relative to the main `app` file.
-    language
-        The language of the application, or None to autodetect the language. Defaults
-        to None.
-    """
-
-    def __init__(
-        self,
-        app: str | Path,
-        files: Optional[str | Path | Sequence[str | Path]] = None,
-        language: Optional[Literal["py", "r"]] = None,
-    ):
-        if language is None:
-            language = detect_app_language(app)
-        elif language not in ["py", "r"]:
-            raise ValueError(
-                f"Language '{language}' is not supported. Please specify one of 'py' or 'r'."
-            )
-
-        self._bundle: list[FileContentJson] = []
-        self._language = language
-
-        self._app_path = Path(app)
-        self._root_dir = self._app_path.parent
-        app_fc = read_file(app, self._root_dir)
-
-        # if the app is not named either `ui.R` or `server.R`, then make it app.py or app.R
-        if app_fc["name"] not in ["ui.R", "server.R"]:
-            app_fc["name"] = f"app.{'py' if self._language == 'py' else 'R'}"
-
-        self._bundle.append(app_fc)
-        self.add_files(files)
-
-
-class ShinyliveIoAppText(ShinyliveIoAppLocal):
-    """
-    Create an instance of a Shiny App from a string containing the `app.py` or `app.R`
-    file contents for use with shinylive.io.
-
-    Parameters
-    ----------
-    app_code
-        The text contents of the main app file for the shinylive application. This file
-        will be renamed `app.py` or `app.R` for shinylive.
-    files
-        File(s) or directory path(s) to include in the application. On shinylive,
-        these files will be stored relative to the main `app` file.
-    language
-        The language of the application, or None to autodetect the language. Defaults
-        to None.
-    root_dir
-        The root directory of the application,used to determine the relative
-        path of supporting files to the main ``app`` file. Defaults to ``None``, meaning
-        that additional files are added in a flattened structure.
-    """
-
-    def __init__(
-        self,
-        app_code: str,
-        files: Optional[str | Path | Sequence[str | Path]] = None,
-        language: Optional[Literal["py", "r"]] = None,
-        root_dir: Optional[str | Path] = None,
-    ):
-        if language is None:
-            language = detect_app_language(app_code)
-        elif language not in ["py", "r"]:
-            raise ValueError(
-                f"Language '{language}' is not supported. Please specify one of 'py' or 'r'."
-            )
-
-        default_app_file = f"app.{'py' if language == 'py' else 'R'}"
-
-        self._bundle: list[FileContentJson] = []
-        self._language = language
-        self._root_dir = Path(root_dir) if root_dir is not None else None
-        self.add_file_contents({default_app_file: app_code})
-        self.add_files(files)
-
-
 def url_encode(
     app: str | Path,
     files: Optional[str | Path | Sequence[str | Path]] = None,
@@ -564,10 +594,13 @@ def url_decode(url: str) -> ShinyliveIoApp:
     -------
         A ShinyliveIoApp object.
     """
+    return ShinyliveIoApp.from_url(url)
+
+
+def bundle_from_url(url: str) -> list[FileContentJson]:
     from lzstring import LZString  # type: ignore[reportMissingTypeStubs]
 
     url = url.strip()
-    language = "r" if "shinylive.io/r/" in url else "py"
 
     try:
         bundle_json = cast(
@@ -625,12 +658,7 @@ def url_decode(url: str) -> ShinyliveIoApp:
             )
         ret.append(fc)
 
-    app = ShinyliveIoApp(ret, language=language)
-
-    app.mode = "app" if f"{language}/app/" in url else "editor"
-    app.header = False if "h=0" in url else True
-
-    return app
+    return ret
 
 
 def detect_app_language(app: str | Path) -> Literal["py", "r"]:
