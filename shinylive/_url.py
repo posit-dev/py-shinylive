@@ -51,8 +51,6 @@ class ShinyliveIoApp:
         to None.
     """
 
-    __slots__ = ("_bundle", "_language", "_mode", "_header", "_app_path", "_root_dir")
-
     def __init__(
         self,
         bundle: list[FileContentJson],
@@ -72,69 +70,6 @@ class ShinyliveIoApp:
         self._header: bool = True
         self._app_path: Optional[Path] = None
         self._root_dir: Optional[Path] = None
-
-    @property
-    def mode(self) -> Literal["editor", "app"]:
-        """
-        Is the shinylive.io app in editor or app mode?
-
-        Returns
-        -------
-        Literal["editor", "app"]
-            The current mode of the ShinyliveIoApp.
-        """
-        return self._mode
-
-    @mode.setter
-    def mode(self, value: Literal["editor", "app"]) -> None:
-        """
-        Set the mode of the shinylive.io app.
-
-        Parameters
-        ----------
-        value : Literal["editor", "app"]
-            The new mode to set.
-
-        Raises
-        ------
-        ValueError
-            If the new mode is not 'editor' or 'app'.
-        """
-        if value not in ["editor", "app"]:
-            raise ValueError("Invalid mode, must be either 'editor' or 'app'.")
-        self._mode = value
-
-    @property
-    def header(self) -> bool:
-        """
-        Should the Shiny header be included in the app preview? This property is only
-        used if the app is in 'app' mode.
-
-        Returns
-        -------
-        bool
-            ``True`` if the header should be included, ``False`` otherwise.
-        """
-        return self._header
-
-    @header.setter
-    def header(self, value: bool) -> None:
-        """
-        Toggle whether or not to include the Shiny header in the app preview.
-
-        Parameters
-        ----------
-        value : bool
-            Whether the header should be included or not.
-
-        Raises
-        ------
-        ValueError
-            If the new header value is not boolean.
-        """
-        if not isinstance(value, bool):
-            raise ValueError("Invalid header value, must be a boolean.")
-        self._header = value
 
     def __str__(self) -> str:
         return self.url()
