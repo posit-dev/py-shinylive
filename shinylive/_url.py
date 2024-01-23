@@ -434,13 +434,18 @@ class ShinyliveApp:
             raise ValueError(f"Directory '{dir}' does not exist or is not a directory.")
 
         for file in listdir_recursive(dir):
-            if not flatten:
+            if flatten:
+                # The contents of the directory are added into the "root" of the app
+                # bundle, e.g. `"../some_dir/www"` adds its contents to the bundle,
+                # i.e. the bundle will have `styles.css` and `app.js`, etc.
+                name = str(Path(file).relative_to(dir))
+            else:
+                # The directory is added into the bundle, e.g. `"../some_dir/www"`
+                # is added as `www/` in the bundle.
                 name = os.path.join(
                     os.path.basename(dir),
                     str(Path(file).relative_to(dir)),
                 )
-            else:
-                name = str(Path(file).relative_to(dir))
             self.add_file(file, name, overwrite=overwrite)
 
     def add_file_contents(self, file_contents: dict[str, str]) -> None:
