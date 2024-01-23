@@ -328,6 +328,42 @@ class ShinyliveIoApp:
                 continue
             self.add_file(file)
 
+    def add_dir(
+        self,
+        dir: str | Path,
+        flatten: bool = False,
+        overwrite: bool = False,
+    ) -> None:
+        """
+        Add all files in a directory to the ShinyLive application.
+
+        Parameters
+        ----------
+        dir
+            The directory to add to the application.
+        flatten
+            Whether or not to flatten the directory structure. Defaults to ``False``.
+            When ``True``, all files are added to the root directory of the application,
+            otherwise all files are added into a directory with the same name as the
+            input ``dir``.
+        overwrite
+            Whether or not to overwrite an existing file with the same name. Defaults
+            to ``False``.
+        """
+        dir = Path(dir)
+        if not dir.is_dir():
+            raise ValueError(f"Directory '{dir}' does not exist or is not a directory.")
+
+        for file in listdir_recursive(dir):
+            if not flatten:
+                name = os.path.join(
+                    os.path.basename(dir),
+                    str(Path(file).relative_to(dir)),
+                )
+            else:
+                name = str(Path(file).relative_to(dir))
+            self.add_file(file, name, overwrite=overwrite)
+
     def add_file_contents(self, file_contents: dict[str, str]) -> None:
         """
         Directly adds a text file to the Shinylive app.
@@ -345,7 +381,12 @@ class ShinyliveIoApp:
                 }
             )
 
-    def add_file(self, file: str | Path, name: Optional[str | Path] = None) -> None:
+    def add_file(
+        self,
+        file: str | Path,
+        name: Optional[str | Path] = None,
+        overwrite: bool = False,
+    ) -> None:
         """
         Add a file to the ShinyLive application.
 
@@ -355,20 +396,38 @@ class ShinyliveIoApp:
             File or directory path to include in the application. On shinylive, this
             file will be stored relative to the main ``app`` file. All files should be
             contained in the same directory as or a subdirectory of the main ``app`` file.
-
         name
             The name of the file to be used in the app. If not provided, the file name
             will be used, using the relative path from the main ``app`` file if the
             ``ShinyliveIoApp`` was created from local files.
+        overwrite
+            Whether or not to overwrite an existing file with the same name. Defaults
+            to ``False``.
         """
         file_new = read_file(file, self._root_dir)
         if name is not None:
             file_new["name"] = str(name)
+
+        file_names = [file["name"] for file in self._bundle]
+
+        if any([name == file_new["name"] for name in file_names]):
+            if overwrite:
+                index = file_names.index(file_new["name"])
+                self._bundle[index] = file_new
+            else:
+                raise ValueError(
+                    f"File '{file_new['name']}' already exists in app bundle and `overwrite` was `False`."
+                )
+
         self._bundle.append(file_new)
 
     def __add__(self, other: str | Path) -> ShinyliveIoApp:
+        other = Path(other)
         new: ShinyliveIoApp = copy.deepcopy(self)
-        new.add_file(other)
+        if other.is_dir():
+            new.add_dir(other)
+        else:
+            new.add_file(other)
         return new
 
     def __sub__(self, other: str | Path) -> ShinyliveIoApp:
@@ -481,8 +540,7 @@ class ShinyliveIoAppText(ShinyliveIoAppLocal):
 
         self._bundle: list[FileContentJson] = []
         self._language = language
-        if root_dir is not None:
-            self._root_dir = Path(root_dir)
+        self._root_dir = Path(root_dir) if root_dir is not None else None
         self.add_file_contents({default_app_file: app_code})
         self.add_files(files)
 
@@ -641,14 +699,21 @@ def detect_app_language(app: str | Path) -> Literal["py", "r"]:
 
 
 def listdir_recursive(dir: str | Path) -> list[str]:
+    """
+    List files in a directory, recursively. Ignores directories or files that start with
+    "." or "__".
+    """
     dir = Path(dir)
     all_files: list[str] = []
 
     for root, dirs, files in os.walk(dir):
+        # Exclude files and directories that start with `.` or `__`
+        dirs[:] = [d for d in dirs if not (d.startswith(".") or d.startswith("__"))]
+        files[:] = [f for f in files if not (f.startswith(".") or f.startswith("__"))]
+
         for file in files:
-            all_files.append(os.path.join(root, file))
-        for dir in dirs:
-            all_files.extend(listdir_recursive(dir))
+            if not (file.startswith(".") or file.startswith("__")):
+                all_files.append(os.path.join(root, file))
 
     return all_files
 
