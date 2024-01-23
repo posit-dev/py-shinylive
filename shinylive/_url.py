@@ -538,7 +538,8 @@ def url_encode(
     language: Optional[Literal["py", "r"]] = None,
     mode: Literal["editor", "app"] = "editor",
     header: bool = True,
-) -> ShinyliveApp:
+    host: str = "https://shinylive.io",
+) -> str:
     """
     Generate a URL for a [shinylive application](https://shinylive.io).
 
@@ -560,6 +561,7 @@ def url_encode(
         Whether to include a header bar in the UI. This is used only if ``mode`` is
         "app". Defaults to True.
 
+
     Returns
     -------
         A ShinyliveIoApp object. Use the `.url()` method to retrieve the Shinylive URL.
@@ -571,14 +573,15 @@ def url_encode(
     lang = language if language is not None else detect_app_language(app)
 
     if isinstance(app, str) and "\n" in app:
-        sl_app = ShinyliveIoAppText(app, files, lang)
+        sl_app = ShinyliveApp.from_text(
+            app, files, lang, mode=mode, header=header, host=host
+        )
     else:
-        sl_app = ShinyliveIoAppLocal(app, files, lang)
+        sl_app = ShinyliveApp.from_local(
+            app, files, lang, mode=mode, header=header, host=host
+        )
 
-    sl_app.mode = mode
-    sl_app.header = header
-
-    return sl_app
+    return sl_app.url()
 
 
 def url_decode(url: str) -> ShinyliveApp:
