@@ -43,7 +43,7 @@ class ShinyliveIoApp:
     Parameters
     ----------
     bundle
-        The file bundle of the ShinyLive application. This should be a list of files
+        The file bundle of the shinylive application. This should be a list of files
         as a dictionary of "name", "content" and optionally `"type": "binary"` for
         binary file types. (`"type": "text"` is the default and can be omitted.)
     language
@@ -145,7 +145,7 @@ class ShinyliveIoApp:
         header: Optional[bool] = None,
     ) -> str:
         """
-        Get the URL of the ShinyLive application.
+        Get the URL of the shinylive application.
 
         Parameters
         ----------
@@ -160,7 +160,7 @@ class ShinyliveIoApp:
         Returns
         -------
         str
-            The URL of the ShinyLive application.
+            The URL of the shinylive application.
         """
         mode = mode or self.mode
         header = header if header is not None else self.header
@@ -179,7 +179,7 @@ class ShinyliveIoApp:
 
     def view(self) -> None:
         """
-        Open the ShinyLive application in a browser.
+        Open the shinylive application in a browser.
         """
         import webbrowser
 
@@ -255,7 +255,7 @@ class ShinyliveIoApp:
 
     def json(self, **kwargs: Any) -> str:
         """
-        Get the JSON representation of the ShinyLive application.
+        Get the JSON representation of the shinylive application.
 
         Parameters
         ----------
@@ -265,13 +265,13 @@ class ShinyliveIoApp:
         Returns
         -------
         str
-            The JSON representation of the ShinyLive application.
+            The JSON representation of the shinylive application.
         """
         return json.dumps(self._bundle, **kwargs)
 
     def write_files(self, dest: str | Path) -> Path:
         """
-        Write the files in the ShinyLive application to a directory.
+        Write the files in the shinylive application to a directory.
 
         Parameters
         ----------
@@ -304,7 +304,7 @@ class ShinyliveIoApp:
         files: Optional[str | Path | Sequence[str | Path]] = None,
     ) -> None:
         """
-        Add files to the ShinyLive application. For more control over the file name,
+        Add files to the shinylive application. For more control over the file name,
         use the ``add_file`` method.
 
         Parameters
@@ -335,7 +335,7 @@ class ShinyliveIoApp:
         overwrite: bool = False,
     ) -> None:
         """
-        Add all files in a directory to the ShinyLive application.
+        Add all files in a directory to the shinylive application.
 
         Parameters
         ----------
@@ -388,7 +388,7 @@ class ShinyliveIoApp:
         overwrite: bool = False,
     ) -> None:
         """
-        Add a file to the ShinyLive application.
+        Add a file to the shinylive application.
 
         Parameters
         ----------
@@ -460,7 +460,7 @@ class ShinyliveIoAppLocal(ShinyliveIoApp):
     Parameters
     ----------
     app
-        The main app file of the ShinyLive application. This file should be a Python
+        The main app file of the shinylive application. This file should be a Python
         `app.py` or an R `app.R`, `ui.R`, or `server.R` file. This file will be
         renamed `app.py` or `app.R` for shinylive, unless it's named `ui.R` or
         `server.R`.
@@ -508,7 +508,7 @@ class ShinyliveIoAppText(ShinyliveIoAppLocal):
     Parameters
     ----------
     app_code
-        The text contents of the main app file for the ShinyLive application. This file
+        The text contents of the main app file for the shinylive application. This file
         will be renamed `app.py` or `app.R` for shinylive.
     files
         File(s) or directory path(s) to include in the application. On shinylive,
@@ -553,12 +553,12 @@ def url_encode(
     header: bool = True,
 ) -> ShinyliveIoApp:
     """
-    Generate a URL for a [ShinyLive application](https://shinylive.io).
+    Generate a URL for a [shinylive application](https://shinylive.io).
 
     Parameters
     ----------
     app
-        The main app file of the ShinyLive application. This file should be a Python
+        The main app file of the shinylive application. This file should be a Python
         `app.py` or an R `app.R`, `ui.R`, or `server.R` file. This file will be renamed
          `app.py` or `app.R` for shinylive, unless it's named `ui.R` or `server.R`.
     files
