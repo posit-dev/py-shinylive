@@ -580,7 +580,7 @@ def url_encode(
 
     Returns
     -------
-        A ShinyliveIoApp object. Use the `.url()` method to retrieve the Shinylive URL.
+        A ShinyliveApp object. Use the `.url()` method to retrieve the Shinylive URL.
     """
 
     if language is not None and language not in ["py", "r"]:
