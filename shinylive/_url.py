@@ -250,7 +250,7 @@ class ShinyliveApp:
 
         file_lz = lzstring_file_bundle(self._bundle)
 
-        base = host or self.host
+        base = (host or self.host).rstrip("/")
 
         h = "h=0&" if not header and mode == "app" else ""
 
