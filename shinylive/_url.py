@@ -506,6 +506,24 @@ class ShinyliveApp:
 
         self._bundle.append(file_new)
 
+    def remove_file(self, file: str | Path) -> None:
+        file_names = [file["name"] for file in self._bundle]
+        index = None
+
+        if file in file_names:
+            # find the index of the file to remove
+            index = file_names.index(file)
+
+        if self._root_dir is not None:
+            root_dir = self._root_dir.absolute()
+
+            other_path = str(Path(file).absolute().relative_to(root_dir))
+            if other_path in file_names:
+                index = file_names.index(other_path)
+
+        if index is None:
+            raise ValueError(f"File '{file}' not found in app bundle.")
+
     def __add__(self, other: str | Path) -> ShinyliveApp:
         other = Path(other)
         new: ShinyliveApp = copy.deepcopy(self)
@@ -516,25 +534,8 @@ class ShinyliveApp:
         return new
 
     def __sub__(self, other: str | Path) -> ShinyliveApp:
-        file_names = [file["name"] for file in self._bundle]
-        index = None
-
-        if other in file_names:
-            # find the index of the file to remove
-            index = file_names.index(other)
-
-        if self._root_dir is not None:
-            root_dir = self._root_dir.absolute()
-
-            other_path = str(Path(other).absolute().relative_to(root_dir))
-            if other_path in file_names:
-                index = file_names.index(other_path)
-
-        if index is None:
-            raise ValueError(f"File '{other}' not found in app bundle.")
-
         new: ShinyliveApp = copy.deepcopy(self)
-        new._bundle.pop(index)
+        new.remove_file(other)
         return new
 
 
