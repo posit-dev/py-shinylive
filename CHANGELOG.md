@@ -5,7 +5,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
-* Added `shinylive url encode` and `shinylive url decode` commands to encode local apps into a shinylive.io URL or decode a shinylive.io URL into local files. These commands are accompanied by `url_encode()` and `url_decode()` functions for programmatic use, returning a `ShinyliveIoApp` instance with helpful methods to get the app URL, save the app locally, or create a shinylive quarto chunk from the app's files. (#20, #23)
+* Added `shinylive url encode` and `shinylive url decode` commands to encode local apps into a [shinylive.io](https://shinylive.io) URL or decode a [shinylive.io](https://shinylive.io) URL into local files. These commands are accompanied by `url_encode()` and `url_decode()` functions for programmatic use. They are supported by the new `ShinyliveIoApp` class which provides methods to get the app URL, save the app locally, or create a [Shinylive quarto chunk](https://quarto-ext.github.io/shinylive/) from the app's files. (#20, #23)
 
 ## [0.1.3] - 2024-12-19
 
