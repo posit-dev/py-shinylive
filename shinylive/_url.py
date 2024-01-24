@@ -212,9 +212,9 @@ class ShinyliveApp:
         )
 
     def __str__(self) -> str:
-        return self.url()
+        return self.to_url()
 
-    def url(
+    def to_url(
         self,
         mode: Optional[Literal["editor", "app"]] = None,
         header: Optional[bool] = None,
@@ -262,9 +262,9 @@ class ShinyliveApp:
         """
         import webbrowser
 
-        webbrowser.open(self.url())
+        webbrowser.open(self.to_url())
 
-    def chunk_contents(self) -> str:
+    def to_chunk_contents(self) -> str:
         """
         Create the contents of a shinylive chunk based on the files in the app. This
         output does not include the shinylive chunk header or options.
@@ -286,7 +286,7 @@ class ShinyliveApp:
 
         return "\n".join(lines)
 
-    def chunk(
+    def to_chunk(
         self,
         components: Sequence[Literal["editor", "viewer"]] = ("editor", "viewer"),
         layout: Literal["horizontal", "vertical"] = "horizontal",
@@ -329,10 +329,10 @@ class ShinyliveApp:
             components=", ".join(components),
             layout=layout,
             viewer_height=viewer_height,
-            contents=self.chunk_contents(),
+            contents=self.to_chunk_contents(),
         )
 
-    def json(self, **kwargs: Any) -> str:
+    def to_json(self, **kwargs: Any) -> str:
         """
         Get the JSON representation of the shinylive application.
 
@@ -597,7 +597,7 @@ def url_encode(
             app, files, lang, mode=mode, header=header, host=host
         )
 
-    return sl_app.url()
+    return sl_app.to_url()
 
 
 def url_decode(url: str) -> ShinyliveApp:

@@ -79,15 +79,15 @@ def test_encode_py_app_content():
     app = ShinyliveApp.from_text(app_code)
 
     assert app._language == "py"
-    assert str(app) == app.url()
+    assert str(app) == app.to_url()
     assert app._bundle == [
         {
             "name": "app.py",
             "content": app_code,
         }
     ]
-    assert "## file: app.py" in app.chunk_contents()
-    assert app_code in app.chunk_contents()
+    assert "## file: app.py" in app.to_chunk_contents()
+    assert app_code in app.to_chunk_contents()
 
 
 def test_encode_r_app_content():
@@ -95,12 +95,12 @@ def test_encode_r_app_content():
     app = ShinyliveApp.from_text(app_code)
 
     assert app._language == "r"
-    assert str(app) == app.url()
+    assert str(app) == app.to_url()
     assert app._bundle == [
         {
             "name": "app.R",
             "content": app_code,
         }
     ]
-    assert "## file: app.R" in app.chunk_contents()
-    assert app_code in app.chunk_contents()
+    assert "## file: app.R" in app.to_chunk_contents()
+    assert app_code in app.to_chunk_contents()

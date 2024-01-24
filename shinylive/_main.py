@@ -564,12 +564,12 @@ def encode(
         )
 
     if json:
-        print(sl_app.json(indent=None))
+        print(sl_app.to_json(indent=None))
         if not view:
             return
 
     if not json:
-        print(sl_app.url())
+        print(sl_app.to_url())
 
     if view:
         sl_app.view()
@@ -612,13 +612,13 @@ def decode(url: str, dir: Optional[str] = None, json: bool = False) -> None:
     sl_app = url_decode(url_in)
 
     if json:
-        print(sl_app.json(indent=None))
+        print(sl_app.to_json(indent=None))
         return
 
     if dir is not None:
         sl_app.write_files(dir)
     else:
-        print(sl_app.chunk_contents())
+        print(sl_app.to_chunk_contents())
 
 
 # #############################################################################
