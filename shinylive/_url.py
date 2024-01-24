@@ -178,13 +178,12 @@ class ShinyliveApp:
             )
 
         default_app_file = f"app.{'py' if language == 'py' else 'R'}"
+        app_fc = {default_app_file: app_text}
 
         self = cls([], language=language, **kwargs)
-
         self._root_dir = Path(root_dir) if root_dir is not None else None
-        self.add_file_contents({default_app_file: app_text})
-        self.add_files(files)
-        return self
+
+        return self.add_file_contents(app_fc).add_files(files)
 
     @classmethod
     def from_url(cls, url: str) -> ShinyliveApp:
@@ -382,7 +381,7 @@ class ShinyliveApp:
     def add_files(
         self,
         files: Optional[str | Path | Sequence[str | Path]] = None,
-    ) -> None:
+    ) -> ShinyliveApp:
         """
         Add files to the shinylive application. For more control over the file name,
         use the ``add_file`` method.
@@ -398,7 +397,7 @@ class ShinyliveApp:
             files paths are flattened to include only the file name.
         """
         if files is None:
-            return
+            return self
 
         if isinstance(files, (str, Path)):
             files = [files]
@@ -408,12 +407,14 @@ class ShinyliveApp:
                 continue
             self.add_file(file)
 
+        return self
+
     def add_dir(
         self,
         dir: str | Path,
         flatten: bool = False,
         overwrite: bool = False,
-    ) -> None:
+    ) -> ShinyliveApp:
         """
         Add all files in a directory to the shinylive application.
 
@@ -449,7 +450,9 @@ class ShinyliveApp:
                 )
             self.add_file(file, name, overwrite=overwrite)
 
-    def add_file_contents(self, file_contents: dict[str, str]) -> None:
+        return self
+
+    def add_file_contents(self, file_contents: dict[str, str]) -> ShinyliveApp:
         """
         Directly adds a text file to the Shinylive app.
 
@@ -466,12 +469,14 @@ class ShinyliveApp:
                 }
             )
 
+        return self
+
     def add_file(
         self,
         file: str | Path,
         name: Optional[str | Path] = None,
         overwrite: bool = False,
-    ) -> None:
+    ) -> ShinyliveApp:
         """
         Add a file to the shinylive application.
 
@@ -506,7 +511,9 @@ class ShinyliveApp:
 
         self._bundle.append(file_new)
 
-    def remove_file(self, file: str | Path) -> None:
+        return self
+
+    def remove_file(self, file: str | Path) -> ShinyliveApp:
         file_names = [file["name"] for file in self._bundle]
         index = None
 
@@ -523,6 +530,8 @@ class ShinyliveApp:
 
         if index is None:
             raise ValueError(f"File '{file}' not found in app bundle.")
+
+        return self
 
     def __add__(self, other: str | Path) -> ShinyliveApp:
         other = Path(other)
