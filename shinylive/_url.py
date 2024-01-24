@@ -44,7 +44,7 @@ class ShinyliveApp:
     Parameters
     ----------
     bundle
-        The file bundle of the shinylive application. This should be a list of files
+        The file bundle of the Shinylive application. This should be a list of files
         as a dictionary of "name", "content" and optionally `"type": "binary"` for
         binary file types. (`"type": "text"` is the default and can be omitted.)
     language
@@ -57,7 +57,7 @@ class ShinyliveApp:
         Whether to include a header bar in the UI when creating a shinylive.io URL. This
         is used only if ``mode`` is "app". Defaults to True.
     host
-        The host URL of the shinylive application. Defaults to "https://shinylive.io".
+        The host URL of the Shinylive application. Defaults to "https://shinylive.io".
     """
 
     def __init__(
@@ -109,7 +109,7 @@ class ShinyliveApp:
         Parameters
         ----------
         app
-            The main app file of the shinylive application. This file should be a Python
+            The main app file of the Shinylive application. This file should be a Python
             `app.py` or an R `app.R`, `ui.R`, or `server.R` file. This file will be
             renamed `app.py` or `app.R` for shinylive, unless it's named `ui.R` or
             `server.R`.
@@ -157,7 +157,7 @@ class ShinyliveApp:
         Parameters
         ----------
         app_code
-            The text contents of the main app file for the shinylive application. This file
+            The text contents of the main app file for the Shinylive application. This file
             will be renamed `app.py` or `app.R` for shinylive.
         files
             File(s) or directory path(s) to include in the application. On shinylive,
@@ -221,7 +221,7 @@ class ShinyliveApp:
         host: Optional[str] = None,
     ) -> str:
         """
-        Get the URL of the shinylive application.
+        Get the URL of the Shinylive application.
 
         Parameters
         ----------
@@ -232,13 +232,13 @@ class ShinyliveApp:
             Whether to include a header bar in the UI. This is used only if ``mode`` is
             "app". Defaults to the current header value.
         host
-            The host URL of the shinylive application. Defaults to the current host URL,
+            The host URL of the Shinylive application. Defaults to the current host URL,
             which is typically ``"https://shinylive.io"``.
 
         Returns
         -------
         str
-            The URL of the shinylive application.
+            The URL of the Shinylive application.
         """
         mode = mode or self.mode
         header = header if header is not None else self.header
@@ -258,7 +258,7 @@ class ShinyliveApp:
 
     def view(self) -> None:
         """
-        Open the shinylive application in a browser.
+        Open the Shinylive application in a browser.
         """
         import webbrowser
 
@@ -266,13 +266,13 @@ class ShinyliveApp:
 
     def to_chunk_contents(self) -> str:
         """
-        Create the contents of a shinylive chunk based on the files in the app. This
-        output does not include the shinylive chunk header or options.
+        Create the contents of a Shinylive chunk based on the files in the app. This
+        output does not include the Shinylive chunk header or options.
 
         Returns
         -------
         str
-            The contents of the shinylive chunk.
+            The contents of the Shinylive chunk.
         """
         lines: list[str] = []
         for file in self._bundle:
@@ -293,7 +293,7 @@ class ShinyliveApp:
         viewer_height: int = 500,
     ) -> str:
         """
-        Create a shinylive chunk based on the files in the app for use in a Quarto
+        Create a Shinylive chunk based on the files in the app for use in a Quarto
         web document.
 
         Parameters
@@ -310,7 +310,7 @@ class ShinyliveApp:
         Returns
         -------
         str
-            The full shinylive chunk, including the chunk header and options.
+            The full Shinylive chunk, including the chunk header and options.
         """
         if layout not in ["horizontal", "vertical"]:
             raise ValueError(
@@ -334,7 +334,7 @@ class ShinyliveApp:
 
     def to_json(self, **kwargs: Any) -> str:
         """
-        Get the JSON representation of the shinylive application.
+        Get the JSON representation of the Shinylive application.
 
         Parameters
         ----------
@@ -344,13 +344,13 @@ class ShinyliveApp:
         Returns
         -------
         str
-            The JSON representation of the shinylive application.
+            The JSON representation of the Shinylive application.
         """
         return json.dumps(self._bundle, **kwargs)
 
     def write_files(self, dest: str | Path) -> Path:
         """
-        Write the files in the shinylive application to a directory.
+        Write the files in the Shinylive application to a directory.
 
         Parameters
         ----------
@@ -383,7 +383,7 @@ class ShinyliveApp:
         files: Optional[str | Path | Sequence[str | Path]] = None,
     ) -> ShinyliveApp:
         """
-        Add files to the shinylive application. For more control over the file name,
+        Add files to the Shinylive application. For more control over the file name,
         use the ``add_file`` method.
 
         Parameters
@@ -416,7 +416,7 @@ class ShinyliveApp:
         overwrite: bool = False,
     ) -> ShinyliveApp:
         """
-        Add all files in a directory to the shinylive application.
+        Add all files in a directory to the Shinylive application.
 
         Parameters
         ----------
@@ -478,7 +478,7 @@ class ShinyliveApp:
         overwrite: bool = False,
     ) -> ShinyliveApp:
         """
-        Add a file to the shinylive application.
+        Add a file to the Shinylive application.
 
         Parameters
         ----------
@@ -557,12 +557,12 @@ def url_encode(
     host: str = "https://shinylive.io",
 ) -> str:
     """
-    Generate a URL for a [shinylive application](https://shinylive.io).
+    Generate a URL for a [Shinylive application](https://shinylive.io).
 
     Parameters
     ----------
     app
-        The main app file of the shinylive application. This file should be a Python
+        The main app file of the Shinylive application. This file should be a Python
         `app.py` or an R `app.R`, `ui.R`, or `server.R` file. This file will be renamed
          `app.py` or `app.R` for shinylive, unless it's named `ui.R` or `server.R`.
     files
@@ -630,30 +630,30 @@ def bundle_from_url(url: str) -> list[FileContentJson]:
         )
         bundle = json.loads(bundle_json)
     except Exception:
-        raise ValueError("Could not parse and decode the shinylive URL code payload.")
+        raise ValueError("Could not parse and decode the Shinylive URL code payload.")
 
     ret: list[FileContentJson] = []
 
     # bundle should be an array of FileContentJson objects, otherwise raise an error
     if not isinstance(bundle, list):
         raise ValueError(
-            "The shinylive URL was not formatted correctly: `code` did not decode to a list."
+            "The Shinylive URL was not formatted correctly: `code` did not decode to a list."
         )
 
     for file in bundle:  # type: ignore
         if not isinstance(file, dict):
             raise ValueError(
-                "Invalid shinylive URL: `code` did not decode to a list of dictionaries."
+                "Invalid Shinylive URL: `code` did not decode to a list of dictionaries."
             )
         if not all(key in file for key in ["name", "content"]):
             raise ValueError(
-                "Invalid shinylive URL: `code` included an object that was missing required fields `name` or `content`."
+                "Invalid Shinylive URL: `code` included an object that was missing required fields `name` or `content`."
             )
 
         for key in ["name", "content"]:
             if not isinstance(file[key], str):
                 raise ValueError(
-                    f"Invalid shinylive URL: encoded file bundle contains an file where `{key}` was not a string."
+                    f"Invalid Shinylive URL: encoded file bundle contains an file where `{key}` was not a string."
                 )
 
         fc: FileContentJson = {
@@ -668,12 +668,12 @@ def bundle_from_url(url: str) -> list[FileContentJson]:
                 pass
             else:
                 raise ValueError(
-                    f"Invalid shinylive URL: unexpected file type '{file['type']}' in '{file['name']}'."
+                    f"Invalid Shinylive URL: unexpected file type '{file['type']}' in '{file['name']}'."
                 )
 
         if not all(isinstance(value, str) for value in file.values()):  # type: ignore
             raise ValueError(
-                f"Invalid shinylive URL: not all items in '{file['name']}' were strings."
+                f"Invalid Shinylive URL: not all items in '{file['name']}' were strings."
             )
         ret.append(fc)
 
