@@ -3,7 +3,7 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [UNRELEASED]
+## [0.2.1] - 2024-01-25
 
 * Added support for packages which are listed in `requirements.txt` and are part of the Pyodide distribution, but are not `import`ed in the code, and are soft dependencies of `import`ed packages (they are optionally loaded, as opposed to hard dependencies which are always loaded). (#25)
 
