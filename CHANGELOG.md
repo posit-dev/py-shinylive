@@ -5,7 +5,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
-
+* Added support for packages which are listed in `requirements.txt` and are part of the Pyodide distribution, but are not `import`ed in the code, and are soft dependencies of `import`ed packages (they are optionally loaded, as opposed to hard dependencies which are always loaded). (#25)
 
 ## [0.2.0] - 2024-01-25
 
