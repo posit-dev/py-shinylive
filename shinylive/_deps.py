@@ -5,6 +5,7 @@ import copy
 import functools
 import json
 import os
+import re
 import sys
 from pathlib import Path
 from textwrap import dedent
@@ -347,9 +348,8 @@ def find_package_deps(
     """
 
     imports: set[str] = _find_import_app_contents(app_contents)
+    imports = imports.union(_find_requirements_app_contents(app_contents))
 
-    # TODO: Need to also add in requirements.txt, and find dependencies of those
-    # packages, in case any of those dependencies are included as part of pyodide.
     verbose_print("Imports detected in app:\n ", ", ".join(sorted(imports)))
 
     dep_names = _find_recursive_deps(imports, verbose_print)
@@ -455,6 +455,26 @@ def _find_import_app_contents(app_contents: list[FileContentJson]) -> set[str]:
     return set(packages)
 
 
+def _find_requirements_app_contents(app_contents: list[FileContentJson]) -> set[str]:
+    """
+    Given an app.json file, find packages that are listed in requirements.txt. This does
+    not include version constraints, nor does it include packages at URLs.
+
+    The purpose of this function is to find packages that are provided by Pyodide, so
+    that we can copy those dependencies into the Shinylive assets directory.
+    """
+    packages: set[str] = set()
+    for file_content in app_contents:
+        if not file_content["name"] != "requirements.txt":
+            continue
+
+        packages = packages.union(
+            _find_packages_in_requirements(file_content["content"])
+        )
+
+    return packages
+
+
 def module_to_package(module: str) -> str | None:
     """
     Given a module name, like "cv2", return the corresponding package name, like
@@ -537,3 +557,44 @@ def _find_imports(source: str) -> list[str]:
                 continue
             imports.add(module_name.split(".")[0])
     return list(sorted(imports))
+
+
+def _find_packages_in_requirements(req_txt: str) -> list[str]:
+    """
+    Given the contents of a requirements.txt, return list of package names.
+
+    This returns a list of package names in a requirements.txt file. The purpose of this
+    function is to find packages that are provided by Pyodide, so that we can copy those
+    dependencies into the Shinylive assets directory.
+
+    This function only returns names; it does not include version constraints. It also
+    ignores packages that are at URLs (because we can be sure those packages aren't be
+    provided by Pyodide).
+
+    Parameters
+    ----------
+    source : str
+       The contents of a requirements.txt to inspect for package names.
+
+    Returns
+    -------
+    :
+        A list of package names.
+    """
+    reqs: list[str] = []
+    lines = req_txt.split("\n")
+
+    for line in lines:
+        line = line.strip()
+        if line == "" or line.startswith("#"):
+            continue
+        # If it's a URL, then it must be a wheel file. Ignore it.
+        if line.startswith("http://") or line.startswith("https://"):
+            continue
+        else:
+            # If we got here, it's a package specification.
+            # Remove any trailing version info: "my-package (>= 1.0.0)" -> "my-package"
+            pkg_name = re.sub(r"([a-zA-Z0-9._-]+)(.*)", r"\\1", line).strip()
+            reqs.append(pkg_name)
+
+    return reqs
