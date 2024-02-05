@@ -78,8 +78,7 @@ version_txt = f"""
 # > Add a --version option which immediately prints the version number and exits the
 # > program.
 @click.version_option(SHINYLIVE_PACKAGE_VERSION, message="%(version)s")
-def main() -> None:
-    ...
+def main() -> None: ...
 
 
 # #############################################################################
