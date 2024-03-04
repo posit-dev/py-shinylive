@@ -107,17 +107,24 @@ def create_copy_fn(
 
 # Wrapper for TarFile.extractall(), to avoid CVE-2007-4559.
 def tar_safe_extractall(file: str | Path, destdir: str | Path) -> None:
-    import tarfile
+    if sys.version_info >= (3, 12):
+        # Python 3.12 adds a `filter` argument to `TarFile.extractall`, which eliminates
+        # the security vulnerability in CVE-2007-4559. The `tar_safe_extractall`
+        # function can be removed once we no longer support Python versions older than
+        # 3.12. Also, in Python 3.14, "data" will be the default value.
+        tar.extractall(destdir, filter="data")
+    else:
+        import tarfile
 
-    destdir = Path(destdir).resolve()
+        destdir = Path(destdir).resolve()
 
-    with tarfile.open(file) as tar:
-        for member in tar.getmembers():
-            member_path = (destdir / member.name).resolve()
-            if not is_relative_to(member_path, destdir):
-                raise RuntimeError("Attempted path traversal in tar file.")
+        with tarfile.open(file) as tar:
+            for member in tar.getmembers():
+                member_path = (destdir / member.name).resolve()
+                if not is_relative_to(member_path, destdir):
+                    raise RuntimeError("Attempted path traversal in tar file.")
 
-        tar.extractall(destdir)
+            tar.extractall(destdir)  # pyright: ignore[reportDeprecated]
 
 
 def print_as_json(x: object) -> None:
