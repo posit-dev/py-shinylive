@@ -236,7 +236,7 @@ def cleanup(
     short_help="Remove a specific version of local copies of assets.",
     help=f"""Remove a specific version (`VERSION`) of local copies of assets."
 
-    For example, `VERSION` might be `{ SHINYLIVE_ASSETS_VERSION }`.
+    For example, `VERSION` might be `{SHINYLIVE_ASSETS_VERSION}`.
     """,
     no_args_is_help=True,
 )
@@ -461,7 +461,7 @@ def app_resources(
 def defunct_help(cmd: str) -> str:
     return f"""The shinylive CLI command `{cmd}` is defunct.
 
-You are using a newer version of the Python shinylive package ({ SHINYLIVE_PACKAGE_VERSION }) with an older
+You are using a newer version of the Python shinylive package ({SHINYLIVE_PACKAGE_VERSION}) with an older
 version of the Quarto shinylive extension, and these versions are not compatible.
 
 Please update your Quarto shinylive extension by running this command in the top level
@@ -626,7 +626,7 @@ def decode(url: str, dir: Optional[str] = None, json: bool = False) -> None:
 
 
 def defunct_error_txt(cmd: str) -> str:
-    return f"Error: { defunct_help(cmd) }"
+    return f"Error: {defunct_help(cmd)}"
 
 
 def raise_defunct(cmd: str) -> None:
