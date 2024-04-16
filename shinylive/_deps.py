@@ -20,16 +20,19 @@ else:
     from typing_extensions import NotRequired, TypedDict
 
 from ._app_json import FileContentJson
-from ._assets import ensure_shinylive_assets, repodata_json_file, shinylive_assets_dir
+from ._assets import (
+    ensure_shinylive_assets,
+    pyodide_lock_json_file,
+    shinylive_assets_dir,
+)
 from ._version import SHINYLIVE_ASSETS_VERSION
 
 # Files in Pyodide that should always be included.
 BASE_PYODIDE_FILES = {
-    "pyodide_py.tar",
     "pyodide.asm.js",
-    "pyodide.asm.data",
     "pyodide.asm.wasm",
-    "repodata.json",
+    "python_stdlib.zip",
+    "pyodide-lock.json",
 }
 
 # Packages that should always be included in a Shinylive deployment.
@@ -38,7 +41,7 @@ AssetType = Literal["base", "python", "r"]
 
 
 # =============================================================================
-# Data structures used in pyodide/repodata.json
+# Data structures used in pyodide/pyodide-lock.json
 # =============================================================================
 # Note: This block of code is copied from /scripts/pyodide_packages.py
 class PyodidePackageInfo(TypedDict):
@@ -52,8 +55,8 @@ class PyodidePackageInfo(TypedDict):
     unvendored_tests: NotRequired[bool]
 
 
-# The package information structure used by Pyodide's repodata.json.
-class PyodideRepodataFile(TypedDict):
+# The package information structure used by Pyodide's pyodide-lock.json.
+class PyodideLockFile(TypedDict):
     info: dict[str, str]
     packages: dict[str, PyodidePackageInfo]
 
@@ -88,9 +91,9 @@ class QuartoHtmlDependency(TypedDict):
 def _dep_names_to_pyodide_pkg_infos(
     dep_names: Iterable[str],
 ) -> list[PyodidePackageInfo]:
-    repodata = _pyodide_repodata()
+    pyodide_lock = _pyodide_lock_data()
     pkg_infos: list[PyodidePackageInfo] = [
-        copy.deepcopy(repodata["packages"][dep_name]) for dep_name in dep_names
+        copy.deepcopy(pyodide_lock["packages"][dep_name]) for dep_name in dep_names
     ]
     return pkg_infos
 
@@ -390,24 +393,24 @@ def _find_recursive_deps(
 ) -> list[str]:
     """
     Given a list of packages, recursively find all dependencies that are contained in
-    repodata.json. This returns a list of all dependencies, including the original
+    pyodide-lock.json. This returns a list of all dependencies, including the original
     packages passed in.
     """
-    repodata = _pyodide_repodata()
+    pyodide_lock = _pyodide_lock_data()
     deps = list(pkgs)
     i = 0
     while i < len(deps):
         dep = deps[i]
-        if dep not in repodata["packages"]:
+        if dep not in pyodide_lock["packages"]:
             # TODO: Need to distinguish between built-in packages and external ones in
             # requirements.txt.
             verbose_print(
-                f"  {dep} not in repodata.json. Assuming it is in base Pyodide or in requirements.txt."
+                f"  {dep} not in pyodide-lock.json. Assuming it is in base Pyodide or in requirements.txt."
             )
             deps.remove(dep)
             continue
 
-        dep_deps = set(repodata["packages"][dep]["depends"])
+        dep_deps = set(pyodide_lock["packages"][dep]["depends"])
         new_deps = dep_deps.difference(deps)
         deps.extend(new_deps)
         i += 1
@@ -420,18 +423,18 @@ def _dep_name_to_dep_file(dep_name: str) -> str:
     Given the name of a dependency, like "pandas", return the name of the .whl file,
     like "pandas-1.4.2-cp310-cp310-emscripten_3_1_14_wasm32.whl".
     """
-    repodata = _pyodide_repodata()
-    return repodata["packages"][dep_name]["file_name"]
+    pyodide_lock = _pyodide_lock_data()
+    return pyodide_lock["packages"][dep_name]["file_name"]
 
 
 def _dep_names_to_dep_files(dep_names: list[str]) -> list[str]:
     """
     Given a list of dependency names, like ["pandas"], return a list with the names of
-    corresponding .whl files (from data in repodata.json), like
+    corresponding .whl files (from data in pyodide-lock.json), like
     ["pandas-1.4.2-cp310-cp310-emscripten_3_1_14_wasm32.whl"].
     """
-    repodata = _pyodide_repodata()
-    dep_files = [repodata["packages"][x]["file_name"] for x in dep_names]
+    pyodide_lock = _pyodide_lock_data()
+    dep_files = [pyodide_lock["packages"][x]["file_name"] for x in dep_names]
     return dep_files
 
 
@@ -494,9 +497,9 @@ def _module_to_package_mappings() -> dict[str, str]:
     sometimes the module name and package name are different. For example, the module
     name is "cv2", but the package name is "opencv-python".
     """
-    repodata = _pyodide_repodata()
+    pyodide_lock = _pyodide_lock_data()
     module_to_package: dict[str, str] = {}
-    for pkg_name, pkg_info in repodata["packages"].items():
+    for pkg_name, pkg_info in pyodide_lock["packages"].items():
         modules = pkg_info["imports"]
         for module in modules:
             module_to_package[module] = pkg_name
@@ -505,13 +508,13 @@ def _module_to_package_mappings() -> dict[str, str]:
 
 
 @functools.lru_cache
-def _pyodide_repodata() -> PyodideRepodataFile:
+def _pyodide_lock_data() -> PyodideLockFile:
     """
-    Read in the Pyodide repodata.json file and return the contents. The result is
+    Read in the Pyodide pyodide-lock.json file and return the contents. The result is
     cached, so if the file changes, it won't register until the Python session is
     restarted.
     """
-    with open(repodata_json_file(), "r") as f:
+    with open(pyodide_lock_json_file(), "r") as f:
         return json.load(f)
 
 
