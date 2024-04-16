@@ -753,4 +753,4 @@ def lzstring_file_bundle(file_bundle: list[FileContentJson]) -> str:
 
     file_json = json.dumps(file_bundle)
     file_lz = LZString.compressToEncodedURIComponent(file_json)  # type: ignore[reportUnknownMemberType]
-    return cast(str, file_lz)
+    return file_lz
