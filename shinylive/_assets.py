@@ -67,9 +67,12 @@ def shinylive_assets_dir(version: str = SHINYLIVE_ASSETS_VERSION) -> str:
     return os.path.join(shinylive_cache_dir(), "shinylive-" + version)
 
 
-def repodata_json_file(version: str = SHINYLIVE_ASSETS_VERSION) -> Path:
+def pyodide_lock_json_file(version: str = SHINYLIVE_ASSETS_VERSION) -> Path:
     return (
-        Path(shinylive_assets_dir(version)) / "shinylive" / "pyodide" / "repodata.json"
+        Path(shinylive_assets_dir(version))
+        / "shinylive"
+        / "pyodide"
+        / "pyodide-lock.json"
     )
 
 
