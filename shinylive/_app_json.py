@@ -73,7 +73,7 @@ def read_app_files(appdir: Path, destdir: Path) -> list[FileContentJson]:
 
             type: Literal["text", "binary"] = "text"
             try:
-                with open(root / filename, "r") as f:
+                with open(root / filename, "r", encoding="utf-8") as f:
                     file_content = f.read()
                     type = "text"
             except UnicodeDecodeError:
