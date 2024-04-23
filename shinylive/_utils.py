@@ -65,7 +65,7 @@ FromTo = Tuple[str, str]
 def copy_file_and_substitute(
     src: str | Path, dest: str | Path, *, replacements: Sequence[FromTo]
 ) -> None:
-    with open(src, "r") as fin:
+    with open(src, "r", encoding="utf-8") as fin:
         in_content = fin.read()
         for from_str, to_str in replacements:
             in_content = in_content.replace(from_str, to_str)

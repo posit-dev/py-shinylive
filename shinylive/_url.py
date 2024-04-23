@@ -729,7 +729,7 @@ def read_file(file: str | Path, root_dir: str | Path | None = None) -> FileConte
     type: Literal["text", "binary"] = "text"
 
     try:
-        with open(file, "r") as f:
+        with open(file, "r", encoding="utf-8") as f:
             file_content = f.read()
             type = "text"
     except UnicodeDecodeError:

@@ -330,7 +330,7 @@ def shinylive_app_resources(
 
     if json_file is not None:
         json_file = Path(json_file)
-        with open(json_file) as f:
+        with open(json_file, encoding="utf-8") as f:
             file_contents = json.load(f)
 
     if json_content is not None:
@@ -514,7 +514,7 @@ def _pyodide_lock_data() -> PyodideLockFile:
     cached, so if the file changes, it won't register until the Python session is
     restarted.
     """
-    with open(pyodide_lock_json_file(), "r") as f:
+    with open(pyodide_lock_json_file(), "r", encoding="utf-8") as f:
         return json.load(f)
 
 
