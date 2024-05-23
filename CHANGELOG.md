@@ -3,7 +3,9 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [UNRELEASED]
+## [0.4.0] - 2024-05-23
+
+* Updated to Shinylive web assets 0.4.0.
 
 * Closed #28: On Windows, extended characters were not handled correctly. Files are now always loaded with UTF-8 encoding. (#29)
 
