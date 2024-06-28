@@ -147,12 +147,13 @@ def export(
     template_dir: str | None,
     template_params: str | None,
 ) -> None:
+    template_params_dict = None
     if template_params is not None:
         if Path(template_params).exists():
             with open(template_params, "r") as f:
-                template_params = json.load(f)
+                template_params_dict = json.load(f)
         else:
-            template_params = json.loads(template_params)
+            template_params_dict = json.loads(template_params)
 
     _export.export(
         appdir,
@@ -161,7 +162,7 @@ def export(
         verbose=verbose,
         full_shinylive=full_shinylive,
         template_dir=template_dir,
-        template_params=template_params,
+        template_params=template_params_dict,
     )
 
 

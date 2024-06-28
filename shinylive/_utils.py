@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 from typing import Callable
 
-import pystache
+import chevron
 
 
 def is_relative_to(path: Path, base: Path) -> bool:
@@ -68,7 +68,7 @@ def copy_file_and_substitute(
 ) -> None:
     with open(src, "r", encoding="utf-8") as fin:
         in_content = fin.read()
-        out_content = pystache.render(in_content, **kwargs)
+        out_content = chevron.render(in_content, data=kwargs)
         with open(dest, "w") as fout:
             fout.write(out_content)
 
