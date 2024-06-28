@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import collections
+import json
 import sys
 from pathlib import Path
 from typing import Literal, MutableMapping, Optional
@@ -121,6 +122,16 @@ After writing the output files, you can serve them locally with the following co
     show_default=True,
 )
 @click.option(
+    "--template-params",
+    default=None,
+    help='A JSON string or a path to a JSON file containing template parameters to pass to the export template. E.g. \'{"title": "My App"}\'',
+)
+@click.option(
+    "--template-dir",
+    default=None,
+    help="Path to the directory containing the mustache templates for the exported shinylive files.",
+)
+@click.option(
     "--verbose",
     is_flag=True,
     default=False,
@@ -133,13 +144,24 @@ def export(
     subdir: str | None,
     verbose: bool,
     full_shinylive: bool,
+    template_dir: str | None,
+    template_params: str | None,
 ) -> None:
+    if template_params is not None:
+        if Path(template_params).exists():
+            with open(template_params, "r") as f:
+                template_params = json.load(f)
+        else:
+            template_params = json.loads(template_params)
+
     _export.export(
         appdir,
         destdir,
         subdir=subdir,
         verbose=verbose,
         full_shinylive=full_shinylive,
+        template_dir=template_dir,
+        template_params=template_params,
     )
 
 
