@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+import shutil
 from pathlib import Path
 from typing import Literal, TypedDict
 
@@ -123,17 +124,21 @@ def write_app_json(
         "APP_ENGINE": "python",
     }
 
-    template_files = list(html_source_dir.glob("**/*.html"))
+    template_files = list(html_source_dir.glob("**/*"))
+    template_files = [f for f in template_files if f.is_file()]
 
     for template_file in template_files:
         dest_file = app_destdir / template_file.relative_to(html_source_dir)
         dest_file.parent.mkdir(parents=True, exist_ok=True)
 
-        _utils.copy_file_and_substitute(
-            src=template_file,
-            dest=dest_file,
-            **replacements,
-        )
+        if template_file.suffix == ".html":
+            _utils.copy_file_and_substitute(
+                src=template_file,
+                dest=dest_file,
+                **replacements,
+            )
+        else:
+            shutil.copyfile(template_file, dest_file)
 
     app_json_output_file = app_destdir / "app.json"
 
