@@ -16,6 +16,8 @@ def export(
     subdir: str | Path | None = None,
     verbose: bool = False,
     full_shinylive: bool = False,
+    template_dir: str | Path | None = None,
+    template_params: dict[str, object] | None = None,
 ):
     def verbose_print(*args: object) -> None:
         if verbose:
@@ -34,6 +36,13 @@ def export(
         raise ValueError(
             f"subdir {subdir} is absolute, but only relative paths are allowed."
         )
+
+    if template_dir is None:
+        template_dir = Path(shinylive_assets_dir()) / "export_template"
+    else:
+        template_dir = Path(template_dir)
+        if not template_dir.exists():
+            raise ValueError(f"template_dir: Directory {template_dir}/ does not exist.")
 
     if not destdir.exists():
         print(f"Creating {destdir}/", file=sys.stderr)
@@ -112,7 +121,8 @@ def export(
     write_app_json(
         app_info,
         destdir,
-        html_source_dir=Path(shinylive_assets_dir()) / "export_template",
+        html_source_dir=template_dir,
+        template_params=template_params if template_params is not None else {},
     )
 
     print(

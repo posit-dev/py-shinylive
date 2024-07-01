@@ -3,6 +3,14 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [UNRELEASED]
+
+* `shinylive.export()` gains `template_params` and `template_dir` arguments that are reflected in the CLI as `--template-params` and `--template-dir` arguments to `shinylive export`.
+
+  These options control the template HTML files used in the export, allowing users to partially or completely customize the exported HTML. The export template is provided by the shinylive assets and may change from release-to-release. Use `shinylive assets info` to locate installed shinylive assets; the template files for a given release are in the `export_template` directory of the release. (#32)
+    * `template_params` takes a list of parameters to be interpolated into the template. In the CLI `--template-params` takes a string of JSON or a path to a JSON file. The default template includes `title` (the title for the page with the exported app), `include_in_head` (HTML added to the `<head>` of the page), and `include_before_body` (HTML added just after `<body>`) and `include_after_body` (HTML added just after `</body>`).
+    * `template_dir` is the directory containing the template files. The default is the `export_template` directory of the shinylive assets being used for the export. Use `shinylive assets info` to locate installed shinylive assets where you can find the default template files.
+
 
 ## [0.4.1] - 2024-05-28
 

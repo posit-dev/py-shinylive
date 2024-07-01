@@ -3,6 +3,7 @@ from __future__ import annotations
 import base64
 import json
 import os
+import shutil
 from pathlib import Path
 from typing import Literal, TypedDict
 
@@ -94,7 +95,12 @@ def read_app_files(appdir: Path, destdir: Path) -> list[FileContentJson]:
     return app_files
 
 
-def write_app_json(app_info: AppInfo, destdir: Path, html_source_dir: Path) -> None:
+def write_app_json(
+    app_info: AppInfo,
+    destdir: Path,
+    html_source_dir: Path,
+    template_params: dict[str, object] | None = None,
+) -> None:
     """
     Write index.html, edit/index.html, and app.json for an application in the destdir.
     """
@@ -108,26 +114,31 @@ def write_app_json(app_info: AppInfo, destdir: Path, html_source_dir: Path) -> N
     if not app_destdir.exists():
         app_destdir.mkdir()
 
-    _utils.copy_file_and_substitute(
-        src=html_source_dir / "index.html",
-        dest=app_destdir / "index.html",
-        replacements=(
-            ("{{REL_PATH}}", subdir_inverse),
-            ("{{APP_ENGINE}}", "python"),
-        ),
-    )
+    replacements = {
+        # Default values
+        "title": "Shiny App",
+        # User values
+        **(template_params or {}),
+        # Forced values
+        "REL_PATH": subdir_inverse,
+        "APP_ENGINE": "python",
+    }
 
-    editor_destdir = app_destdir / "edit"
-    if not editor_destdir.exists():
-        editor_destdir.mkdir()
-    _utils.copy_file_and_substitute(
-        src=html_source_dir / "edit" / "index.html",
-        dest=(editor_destdir / "index.html"),
-        replacements=(
-            ("{{REL_PATH}}", subdir_inverse),
-            ("{{APP_ENGINE}}", "python"),
-        ),
-    )
+    template_files = list(html_source_dir.glob("**/*"))
+    template_files = [f for f in template_files if f.is_file()]
+
+    for template_file in template_files:
+        dest_file = app_destdir / template_file.relative_to(html_source_dir)
+        dest_file.parent.mkdir(parents=True, exist_ok=True)
+
+        if template_file.suffix == ".html":
+            _utils.copy_file_and_substitute(
+                src=template_file,
+                dest=dest_file,
+                data=replacements,
+            )
+        else:
+            shutil.copyfile(template_file, dest_file)
 
     app_json_output_file = app_destdir / "app.json"
 
