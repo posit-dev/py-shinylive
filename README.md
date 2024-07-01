@@ -13,7 +13,7 @@ Shinylive runs Shiny entirely in the browser, without any need for a hosted serv
 
 The Shinylive project consists of four interdependent components that work together in several different contexts.
 
-1. Shinylive ([posit-dev/shinylive](https://github.com/posit-dev/shinylive)) is web library that runs Shiny applications in the browser. You can try it out online at [shinylive.io/r](https://shinylive.io/r) or [shinylive.io/py](https://shinylive.io/py).
+1. Shinylive ([posit-dev/shinylive](https://github.com/posit-dev/shinylive)) is web assets library that runs Shiny applications in the browser. You can try it out online at [shinylive.io/r](https://shinylive.io/r) or [shinylive.io/py](https://shinylive.io/py).
 
 2. The [shinylive Python package](https://shiny.posit.co/py/docs/shinylive.html) ([posit-dev/py-shinylive](https://github.com/posit-dev/py-shinylive)) helps you export your Shiny applications from local files to a directory that can be hosted on a static web server.
 
