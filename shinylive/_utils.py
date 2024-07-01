@@ -64,11 +64,11 @@ def listdir_recursive(dir: str | Path) -> list[str]:
 def copy_file_and_substitute(
     src: str | Path,
     dest: str | Path,
-    **kwargs: object,
+    data: dict[str, object],
 ) -> None:
     with open(src, "r", encoding="utf-8") as fin:
         in_content = fin.read()
-        out_content = chevron.render(in_content, data=kwargs)
+        out_content = chevron.render(in_content, data)
         with open(dest, "w") as fout:
             fout.write(out_content)
 

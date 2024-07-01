@@ -135,7 +135,7 @@ def write_app_json(
             _utils.copy_file_and_substitute(
                 src=template_file,
                 dest=dest_file,
-                **replacements,
+                data=replacements,
             )
         else:
             shutil.copyfile(template_file, dest_file)
