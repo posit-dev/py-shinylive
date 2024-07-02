@@ -6,9 +6,22 @@ Shinylive Python package
 
 [Documentation site](https://github.com/posit-dev/py-shinylive)
 
-This repository contains a Python package for exporting Shiny applications as Shinylive applications.
+The goal of the shinylive Python package is to help you create Shinylive applications from your [Shiny for Python](https://shiny.posit.co/py) applications.
+Shinylive runs Shiny entirely in the browser, without any need for a hosted server, using WebAssembly via [pyodide](https://pyodide.org/en/stable/).
 
-This repository is not the same as the https://github.com/posit-dev/shinylive repository. That repository is used to generate the Shinylive assets distribution, which is a bundle containing HTML, JavaScript, CSS, and wasm files. The Python package in this repository downloads the assets and uses them to create Shinylive applications.
+## About Shinylive
+
+The Shinylive project consists of four interdependent components that work together in several different contexts.
+
+1. Shinylive ([posit-dev/shinylive](https://github.com/posit-dev/shinylive)) is a web assets library that runs Shiny applications in the browser. You can try it out online at [shinylive.io/r](https://shinylive.io/r) or [shinylive.io/py](https://shinylive.io/py).
+
+2. The [shinylive Python package](https://shiny.posit.co/py/docs/shinylive.html) ([posit-dev/py-shinylive](https://github.com/posit-dev/py-shinylive)) helps you export your Shiny applications from local files to a directory that can be hosted on a static web server.
+
+   The Python package also downloads the Shinylive web assets mentioned above and manages them in a local cache. These assets are included in the exported Shinylive applications and are used to run your Shiny app in the browser.
+
+3. The shinylive R package ([posit-dev/r-shinylive](https://github.com/posit-dev/r-shinylive)) serves the same role as the shinylive Python package but for Shiny for R apps.
+
+4. The [shinylive Quarto extension](https://quarto-ext.github.io/shinylive/) ([quarto-ext/shinylive](https://github.com/quarto-ext/shinylive)) lets you write Shiny applications in [Quarto web documents and slides](https://quarto.org) and uses the Python or R package (or both) to translate `shinylive-py` or `shinylive-r` code blocks into Shinylive applications.
 
 ## Installation
 
