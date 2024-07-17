@@ -119,6 +119,9 @@ def link_shinylive_local(
     if not source_dir.is_dir():
         raise RuntimeError("Source directory does not exist: " + str(source_dir))
 
+    # Ensure parent dir exists before we create a symlink in it.
+    target_dir.parent.mkdir(parents=True, exist_ok=True)
+
     if target_dir.is_symlink():
         target_dir.unlink()
     elif target_dir.is_dir():
