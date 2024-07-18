@@ -3,7 +3,9 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [UNRELEASED]
+## [0.5.0] - 2025-07-18
+
+* Updated to Shinylive web assets 0.5.0.
 
 * `shinylive.export()` gains `template_params` and `template_dir` arguments that are reflected in the CLI as `--template-params` and `--template-dir` arguments to `shinylive export`.
 
