@@ -1,4 +1,4 @@
-"""Tests for Shinlyive assets."""
+"""Tests for Shinylive assets."""
 
 import os
 
