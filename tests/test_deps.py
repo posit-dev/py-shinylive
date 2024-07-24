@@ -40,7 +40,7 @@ def test_module_to_package_key():
 
     assert module_to_package_key("cv2") == "opencv-python"
     assert module_to_package_key("black") == "black"
-    assert module_to_package_key("foobar") == None
+    assert module_to_package_key("foobar") is None
 
 
 def test_dep_name_to_dep_key():
@@ -54,13 +54,13 @@ def test_dep_name_to_dep_key():
     )
 
     # Should not convert `_` to `-`
-    assert dep_name_to_dep_key("typing_extensions") == None
+    assert dep_name_to_dep_key("typing_extensions") is None
 
     # Should be case insensitive to input.
     assert dep_name_to_dep_key("Jinja2") == "jinja2"
     assert dep_name_to_dep_key("JiNJa2") == "jinja2"
 
-    assert dep_name_to_dep_key("cv2") == None
+    assert dep_name_to_dep_key("cv2") is None
 
 
 def test_find_recursive_deps():
