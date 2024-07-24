@@ -42,6 +42,11 @@ def test_module_to_package_key():
 
     assert module_to_package_key("cv2") == "opencv-python"
     assert module_to_package_key("black") == "black"
+    assert module_to_package_key("jinja2") == "jinja2"
+
+    # Should be case sensitive for module names.
+    assert module_to_package_key("Jinja2") is None
+
     assert module_to_package_key("foobar") is None
 
 
@@ -63,6 +68,10 @@ def test_dep_name_to_dep_key():
     assert dep_name_to_dep_key("JiNJa2") == "jinja2"
 
     assert dep_name_to_dep_key("cv2") is None
+
+    # Special case for a base pyodide package. It is not in pyodide_lock.json but should
+    # be included in the list of dependencies.
+    assert dep_name_to_dep_key("distutils") == "distutils"
 
 
 def test_find_recursive_deps():
