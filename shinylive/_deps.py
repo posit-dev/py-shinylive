@@ -36,7 +36,7 @@ BASE_PYODIDE_FILES = {
 }
 
 # Packages that should always be included in a Shinylive deployment.
-BASE_PYODIDE_PACKAGES = {"distutils", "micropip", "ssl"}
+BASE_PYODIDE_PACKAGE_NAMES = {"distutils", "micropip", "ssl"}
 AssetType = Literal["base", "python", "r"]
 
 
@@ -56,6 +56,11 @@ class PyodidePackageInfo(TypedDict):
 
 
 # The package information structure used by Pyodide's pyodide-lock.json.
+# Note that the key in `packages` may be something like "jsonschema-specifications",
+# but the actual name of the package may be different, like "jsonschema_specifications".
+# (The "name" entry in the PyodidePackageInfo object is the actual package name.)
+# And also further note that the module names in the "imports" list are not necessarily
+# the same as either: the "opencv-python" package has a module name "cv2".
 class PyodideLockFile(TypedDict):
     info: dict[str, str]
     packages: dict[str, PyodidePackageInfo]
@@ -93,7 +98,8 @@ def _dep_names_to_pyodide_pkg_infos(
 ) -> list[PyodidePackageInfo]:
     pyodide_lock = _pyodide_lock_data()
     pkg_infos: list[PyodidePackageInfo] = [
-        copy.deepcopy(pyodide_lock["packages"][dep_name]) for dep_name in dep_names
+        copy.deepcopy(pyodide_lock["packages"][dep_name_to_dep_key(dep_name)])
+        for dep_name in dep_names
     ]
     return pkg_infos
 
@@ -378,7 +384,7 @@ def base_package_deps() -> list[PyodidePackageInfo]:
     Return list of python packages that should be included in all python Shinylive
     deployments. The returned data structure is a list of PyodidePackageInfo objects.
     """
-    dep_names = _find_recursive_deps(BASE_PYODIDE_PACKAGES)
+    dep_names = _find_recursive_deps(BASE_PYODIDE_PACKAGE_NAMES)
     pkg_infos = _dep_names_to_pyodide_pkg_infos(dep_names)
 
     return pkg_infos
@@ -388,7 +394,7 @@ def base_package_deps() -> list[PyodidePackageInfo]:
 # Internal functions
 # =============================================================================
 def _find_recursive_deps(
-    pkgs: Iterable[str],
+    dep_names: Iterable[str],
     verbose_print: Callable[..., None] = lambda *args: None,
 ) -> list[str]:
     """
@@ -397,45 +403,66 @@ def _find_recursive_deps(
     packages passed in.
     """
     pyodide_lock = _pyodide_lock_data()
-    deps = list(pkgs)
+
+    # The keys in pyodide_lock are not the same as the package names. For example, the
+    # key "jsonschema-specifications" points to an object where the "name" entry is
+    # "jsonschema_specifications". The dependencies are listed with names, not keys.
+
+    dep_names = list(dep_names)
     i = 0
-    while i < len(deps):
-        dep = deps[i]
-        if dep not in pyodide_lock["packages"]:
-            # TODO: Need to distinguish between built-in packages and external ones in
-            # requirements.txt.
-            verbose_print(
-                f"  {dep} not in pyodide-lock.json. Assuming it is in base Pyodide or in requirements.txt."
-            )
-            deps.remove(dep)
+    while i < len(dep_names):
+        dep_name = dep_names[i]
+        dep_key = dep_name_to_dep_key(dep_name)
+
+        if dep_key not in pyodide_lock["packages"]:
+            if dep_name not in BASE_PYODIDE_PACKAGE_NAMES:
+                # TODO: Need to distinguish between built-in packages and external ones in
+                # requirements.txt.
+                verbose_print(
+                    f"  {dep_name} not in pyodide-lock.json. Assuming it is in base Pyodide or in requirements.txt."
+                )
+            dep_names.remove(dep_name)
             continue
 
-        dep_deps = set(pyodide_lock["packages"][dep]["depends"])
-        new_deps = dep_deps.difference(deps)
-        deps.extend(new_deps)
+        dep_depnames = set(pyodide_lock["packages"][dep_key]["depends"])
+        new_depnames = dep_depnames.difference(dep_names)
+        dep_names.extend(new_depnames)
         i += 1
 
-    return deps
+    return dep_names
 
 
-def _dep_name_to_dep_file(dep_name: str) -> str:
+def dep_name_to_dep_key(name: str) -> str:
     """
-    Given the name of a dependency, like "pandas", return the name of the .whl file,
-    like "pandas-1.4.2-cp310-cp310-emscripten_3_1_14_wasm32.whl".
+    Convert a package name to a key that can be used to look up the package in
+    pyodide-lock.json.
+
+    The keys in pyodide-lock.json are not the same as the package names. For example,
+    the key "jsonschema-specifications" points to an object where the "name" entry is
+    "jsonschema_specifications".
     """
+    # Special case for base pyodide packages
+    if name in BASE_PYODIDE_PACKAGE_NAMES:
+        return name
+
+    return _dep_name_to_dep_key_mappings()[name]
+
+
+@functools.lru_cache
+def _dep_name_to_dep_key_mappings() -> dict[str, str]:
+    """
+    Return a dictionary that maps package names to keys. This is needed because
+    sometimes the package name and package key are different. For example, the package
+    name is "jsonschema_specifications", but the package name is
+    "jsonschema-specifications".
+    """
+    name_to_key: dict[str, str] = {}
+
     pyodide_lock = _pyodide_lock_data()
-    return pyodide_lock["packages"][dep_name]["file_name"]
+    for key, pkg_info in pyodide_lock["packages"].items():
+        name_to_key[pkg_info["name"]] = key
 
-
-def _dep_names_to_dep_files(dep_names: list[str]) -> list[str]:
-    """
-    Given a list of dependency names, like ["pandas"], return a list with the names of
-    corresponding .whl files (from data in pyodide-lock.json), like
-    ["pandas-1.4.2-cp310-cp310-emscripten_3_1_14_wasm32.whl"].
-    """
-    pyodide_lock = _pyodide_lock_data()
-    dep_files = [pyodide_lock["packages"][x]["file_name"] for x in dep_names]
-    return dep_files
+    return name_to_key
 
 
 def _find_import_app_contents(app_contents: list[FileContentJson]) -> set[str]:
@@ -452,7 +479,7 @@ def _find_import_app_contents(app_contents: list[FileContentJson]) -> set[str]:
     # Note that at this point, the imports are module names, like "cv2", but these can
     # sometimes differ from the package names, like "opencv-python". We need to map from
     # module names to package names.
-    packages = [module_to_package(x) for x in imports]
+    packages = [module_to_package_key(x) for x in imports]
     packages = [x for x in packages if x is not None]
 
     return set(packages)
@@ -478,12 +505,12 @@ def _find_requirements_app_contents(app_contents: list[FileContentJson]) -> set[
     return packages
 
 
-def module_to_package(module: str) -> str | None:
+def module_to_package_key(module: str) -> str | None:
     """
     Given a module name, like "cv2", return the corresponding package name, like
     "opencv-python". If not found, return None.
     """
-    module_to_package = _module_to_package_mappings()
+    module_to_package = _module_to_package_key_mappings()
     if module in module_to_package:
         return module_to_package[module]
     else:
@@ -491,7 +518,7 @@ def module_to_package(module: str) -> str | None:
 
 
 @functools.lru_cache
-def _module_to_package_mappings() -> dict[str, str]:
+def _module_to_package_key_mappings() -> dict[str, str]:
     """
     Return a dictionary that maps module names to package names. This is needed because
     sometimes the module name and package name are different. For example, the module
@@ -499,10 +526,10 @@ def _module_to_package_mappings() -> dict[str, str]:
     """
     pyodide_lock = _pyodide_lock_data()
     module_to_package: dict[str, str] = {}
-    for pkg_name, pkg_info in pyodide_lock["packages"].items():
+    for pkg_key, pkg_info in pyodide_lock["packages"].items():
         modules = pkg_info["imports"]
         for module in modules:
-            module_to_package[module] = pkg_name
+            module_to_package[module] = pkg_key
 
     return module_to_package
 
