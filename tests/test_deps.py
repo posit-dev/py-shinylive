@@ -25,9 +25,11 @@ def test_requirements_txt():
     assert _find_packages_in_requirements("jinja2") == ["jinja2"]
 
 
+# ======================================================================================
 # Don't run remaining tests in CI, unless we're triggered by a release event. This is
 # because they require the assets to be installed. In the future, it would make sense to
 # run this test when we're on an rc branch.
+# ======================================================================================
 if os.environ.get("CI") == "true" and os.environ.get("GITHUB_EVENT_NAME") != "release":
     pytest.skip(
         reason="Don't run this test in CI, unless we're on a release branch.",
