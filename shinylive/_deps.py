@@ -465,7 +465,7 @@ def _dep_name_to_dep_key_mappings() -> dict[str, str]:
     """
     Return a dictionary that maps package names to keys. This is needed because
     sometimes the package name and package key are different. For example, the package
-    name is "jsonschema_specifications", but the package name is
+    name is "jsonschema_specifications", but the package key is
     "jsonschema-specifications".
 
     Note that the names are lowercased because the package names should be treated as
