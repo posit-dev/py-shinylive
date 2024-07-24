@@ -440,12 +440,15 @@ def dep_name_to_dep_key(name: str) -> str:
     The keys in pyodide-lock.json are not the same as the package names. For example,
     the key "jsonschema-specifications" points to an object where the "name" entry is
     "jsonschema_specifications".
+
+    Note that the names are lowercased because the package names should be treated as
+    case-insensitive. https://github.com/pyodide/pyodide/issues/1614
     """
     # Special case for base pyodide packages
     if name in BASE_PYODIDE_PACKAGE_NAMES:
         return name
 
-    return _dep_name_to_dep_key_mappings()[name]
+    return _dep_name_to_dep_key_mappings()[name.lower()]
 
 
 @functools.lru_cache
@@ -455,12 +458,16 @@ def _dep_name_to_dep_key_mappings() -> dict[str, str]:
     sometimes the package name and package key are different. For example, the package
     name is "jsonschema_specifications", but the package name is
     "jsonschema-specifications".
+
+    Note that the names are lowercased because the package names should be treated as
+    case-insensitive. https://github.com/pyodide/pyodide/issues/1614
     """
     name_to_key: dict[str, str] = {}
 
     pyodide_lock = _pyodide_lock_data()
     for key, pkg_info in pyodide_lock["packages"].items():
-        name_to_key[pkg_info["name"]] = key
+        name = pkg_info["name"].lower()
+        name_to_key[name] = key
 
     return name_to_key
 
