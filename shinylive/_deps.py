@@ -97,10 +97,15 @@ def _dep_names_to_pyodide_pkg_infos(
     dep_names: Iterable[str],
 ) -> list[PyodidePackageInfo]:
     pyodide_lock = _pyodide_lock_data()
-    pkg_infos: list[PyodidePackageInfo] = [
-        copy.deepcopy(pyodide_lock["packages"][dep_name_to_dep_key(dep_name)])
-        for dep_name in dep_names
-    ]
+    pkg_infos: list[PyodidePackageInfo] = []
+
+    for dep_name in dep_names:
+        dep_key = dep_name_to_dep_key(dep_name)
+        if dep_key is None:
+            continue
+        pkg_info = copy.deepcopy(pyodide_lock["packages"][dep_key])
+        pkg_infos.append(pkg_info)
+
     return pkg_infos
 
 
@@ -412,7 +417,7 @@ def _find_recursive_deps(
     i = 0
     while i < len(dep_names):
         dep_name = dep_names[i]
-        dep_key = dep_name_to_dep_key(dep_name)
+        dep_key: str | None = dep_name_to_dep_key(dep_name)
 
         if dep_key not in pyodide_lock["packages"]:
             if dep_name not in BASE_PYODIDE_PACKAGE_NAMES:
@@ -432,7 +437,7 @@ def _find_recursive_deps(
     return dep_names
 
 
-def dep_name_to_dep_key(name: str) -> str:
+def dep_name_to_dep_key(name: str) -> str | None:
     """
     Convert a package name to a key that can be used to look up the package in
     pyodide-lock.json.
@@ -448,7 +453,11 @@ def dep_name_to_dep_key(name: str) -> str:
     if name in BASE_PYODIDE_PACKAGE_NAMES:
         return name
 
-    return _dep_name_to_dep_key_mappings()[name.lower()]
+    name = name.lower()
+    if name not in _dep_name_to_dep_key_mappings():
+        return None
+
+    return _dep_name_to_dep_key_mappings()[name]
 
 
 @functools.lru_cache
