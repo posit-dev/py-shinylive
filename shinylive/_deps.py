@@ -631,7 +631,7 @@ def _find_packages_in_requirements(req_txt: str) -> list[str]:
         else:
             # If we got here, it's a package specification.
             # Remove any trailing version info: "my-package (>= 1.0.0)" -> "my-package"
-            pkg_name = re.sub(r"([a-zA-Z0-9._-]+)(.*)", r"\\1", line).strip()
+            pkg_name = re.sub(r"([a-zA-Z0-9._-]+)(.*)", r"\1", line).strip()
             reqs.append(pkg_name)
 
     return reqs
