@@ -468,7 +468,7 @@ def _find_requirements_app_contents(app_contents: list[FileContentJson]) -> set[
     """
     packages: set[str] = set()
     for file_content in app_contents:
-        if not file_content["name"] != "requirements.txt":
+        if file_content["name"] != "requirements.txt":
             continue
 
         packages = packages.union(
