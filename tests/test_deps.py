@@ -36,6 +36,11 @@ if os.environ.get("CI") == "true" and os.environ.get("GITHUB_EVENT_NAME") != "re
         allow_module_level=True,
     )
 
+import shinylive._assets
+
+# Make sure assets are present before continuing with the tests.
+shinylive._assets.ensure_shinylive_assets()
+
 
 def test_module_to_package_key():
     from shinylive._deps import module_to_package_key
