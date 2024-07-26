@@ -4,6 +4,8 @@ import os
 
 import pytest
 
+import shinylive._assets
+
 
 def test_requirements_txt():
     from shinylive._deps import _find_packages_in_requirements
@@ -35,6 +37,9 @@ if os.environ.get("CI") == "true" and os.environ.get("GITHUB_EVENT_NAME") != "re
         reason="Don't run this test in CI, unless we're on a release branch.",
         allow_module_level=True,
     )
+
+# Make sure assets are present before continuing with the tests.
+shinylive._assets.ensure_shinylive_assets()
 
 
 def test_module_to_package_key():
