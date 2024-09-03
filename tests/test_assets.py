@@ -6,11 +6,15 @@ import pytest
 
 import shinylive._assets
 
-
 # Don't run this test in CI, unless we're triggered by a release event. In the future,
 # it would make sense to run this test when we're on an rc branch.
+skip_if_not_release = (
+    os.environ.get("CI") == "true" and os.environ.get("GITHUB_EVENT_NAME") != "release"
+)
+
+
 @pytest.mark.skipif(
-    os.environ.get("CI") == "true" and os.environ.get("GITHUB_EVENT_NAME") != "release",
+    skip_if_not_release,
     reason="Don't run this test in CI, unless we're on a release branch.",
 )
 def test_assets_available():

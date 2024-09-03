@@ -4,6 +4,8 @@ import os
 
 import pytest
 
+from shinylive._assets import ensure_shinylive_assets
+
 
 def test_requirements_txt():
     from shinylive._deps import _find_packages_in_requirements
@@ -30,14 +32,18 @@ def test_requirements_txt():
 # because they require the assets to be installed. In the future, it would make sense to
 # run this test when we're on an rc branch.
 # ======================================================================================
-if os.environ.get("CI") == "true" and os.environ.get("GITHUB_EVENT_NAME") != "release":
-    pytest.skip(
-        reason="Don't run this test in CI, unless we're on a release branch.",
-        allow_module_level=True,
-    )
+skip_if_not_release = (
+    os.environ.get("CI") == "true" and os.environ.get("GITHUB_EVENT_NAME") != "release"
+)
 
 
+@pytest.mark.skipif(
+    skip_if_not_release,
+    reason="Don't run this test in CI, unless we're on a release branch.",
+)
 def test_module_to_package_key():
+    ensure_shinylive_assets()
+
     from shinylive._deps import module_to_package_key
 
     assert module_to_package_key("cv2") == "opencv-python"
@@ -50,7 +56,13 @@ def test_module_to_package_key():
     assert module_to_package_key("foobar") is None
 
 
+@pytest.mark.skipif(
+    skip_if_not_release,
+    reason="Don't run this test in CI, unless we're on a release branch.",
+)
 def test_dep_name_to_dep_key():
+    ensure_shinylive_assets()
+
     from shinylive._deps import dep_name_to_dep_key
 
     assert dep_name_to_dep_key("black") == "black"
@@ -74,7 +86,13 @@ def test_dep_name_to_dep_key():
     assert dep_name_to_dep_key("distutils") == "distutils"
 
 
+@pytest.mark.skipif(
+    skip_if_not_release,
+    reason="Don't run this test in CI, unless we're on a release branch.",
+)
 def test_find_recursive_deps():
+    ensure_shinylive_assets()
+
     from shinylive._deps import _find_recursive_deps
 
     # It is possible that these dependencies will change in future versions of Pyodide,
