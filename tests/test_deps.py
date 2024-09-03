@@ -32,11 +32,6 @@ def test_requirements_txt():
 # because they require the assets to be installed. In the future, it would make sense to
 # run this test when we're on an rc branch.
 # ======================================================================================
-if os.environ.get("CI") == "true":
-    pytest.skip(
-        reason="Don't run this test in CI, unless we're on a release branch.",
-        allow_module_level=True,
-    )
 
 
 ensure_shinylive_assets()
