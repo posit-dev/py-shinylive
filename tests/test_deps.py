@@ -36,6 +36,8 @@ skip_if_not_release = (
     os.environ.get("CI") == "true" and os.environ.get("GITHUB_EVENT_NAME") != "release"
 )
 
+skip_if_not_release = False
+
 
 @pytest.mark.skipif(
     skip_if_not_release,
