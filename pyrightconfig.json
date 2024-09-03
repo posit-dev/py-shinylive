@@ -1,5 +1,5 @@
 {
-  "ignore": ["build", "dist", "typings", "sandbox", "_dev"],
+  "ignore": ["build", "dist", "typings", "sandbox", "_dev", "setup.py"],
   "typeCheckingMode": "strict",
   "reportImportCycles":  "none",
   "reportUnusedFunction":  "none",
