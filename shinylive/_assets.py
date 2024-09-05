@@ -17,6 +17,7 @@ def download_shinylive(
     destdir: str | Path | None = None,
     version: str = SHINYLIVE_ASSETS_VERSION,
     url: Optional[str] = None,
+    status: bool = True,
 ) -> None:
     if destdir is None:
         # Note that this is the cache directory, which is the parent of the assets
@@ -36,6 +37,9 @@ def download_shinylive(
         last_update_time = start_time
 
         def reporthook(count: int, block_size: int, total_size: int):
+            if not status:
+                return
+
             nonlocal last_update_time
             current_time = time.time()
 
