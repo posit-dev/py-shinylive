@@ -226,14 +226,23 @@ def assets_info(
     default=None,
     help="URL to download from. If used, this will override --version.",
 )
+@click.option(
+    "--status/--no-status",
+    is_flag=True,
+    default=True,
+    help="Enable/disable status output during download.",
+)
 def download(
     version: str,
     dir: Optional[str | Path],
     url: Optional[str],
+    status: bool,
 ) -> None:
     if version is None:  # pyright: ignore[reportUnnecessaryComparison]
         version = SHINYLIVE_ASSETS_VERSION
-    _assets.download_shinylive(destdir=upgrade_dir(dir), version=version, url=url)
+    _assets.download_shinylive(
+        destdir=upgrade_dir(dir), version=version, url=url, status=status
+    )
 
 
 cleanup_help = f"Remove all versions of local assets except the currently-used version, {SHINYLIVE_ASSETS_VERSION}."

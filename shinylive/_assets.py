@@ -4,6 +4,7 @@ import os
 import re
 import shutil
 import sys
+import time
 import urllib.request
 from pathlib import Path
 from typing import Optional
@@ -16,6 +17,7 @@ def download_shinylive(
     destdir: str | Path | None = None,
     version: str = SHINYLIVE_ASSETS_VERSION,
     url: Optional[str] = None,
+    status: bool = True,
 ) -> None:
     if destdir is None:
         # Note that this is the cache directory, which is the parent of the assets
@@ -30,7 +32,32 @@ def download_shinylive(
 
     try:
         print(f"Downloading {url}...", file=sys.stderr)
-        tmp_name, _ = urllib.request.urlretrieve(url)
+
+        start_time = time.time()
+        last_update_time = start_time
+
+        def reporthook(count: int, block_size: int, total_size: int):
+            if not status:
+                return
+
+            nonlocal last_update_time
+            current_time = time.time()
+
+            if current_time - last_update_time < 1:
+                return
+
+            duration = current_time - start_time
+            progress_size = int(count * block_size)
+            speed = int(progress_size / (1024 * duration))
+            percent = min(int(count * block_size * 100 / total_size), 100)
+            sys.stderr.write(
+                f"\r{percent}%, {speed} KB/s, {progress_size / (1024 * 1024):.1f}/{total_size / (1024 * 1024):.1f} MB"
+            )
+            sys.stderr.flush()
+            last_update_time = current_time
+
+        tmp_name, _ = urllib.request.urlretrieve(url, reporthook=reporthook)
+        sys.stderr.write("\n")
 
         print(f"Unzipping to {destdir}/", file=sys.stderr)
         tar_safe_extractall(tmp_name, destdir)
