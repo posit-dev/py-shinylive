@@ -50,7 +50,9 @@ def download_shinylive(
             progress_size = int(count * block_size)
             speed = int(progress_size / (1024 * duration))
             percent = min(int(count * block_size * 100 / total_size), 100)
-            sys.stderr.write(f"\r{percent}%, {speed} KB/s, {progress_size / (1024 * 1024):.1f}/{total_size / (1024 * 1024):.1f} MB")
+            sys.stderr.write(
+                f"\r{percent}%, {speed} KB/s, {progress_size / (1024 * 1024):.1f}/{total_size / (1024 * 1024):.1f} MB"
+            )
             sys.stderr.flush()
             last_update_time = current_time
 

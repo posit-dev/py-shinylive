@@ -240,7 +240,9 @@ def download(
 ) -> None:
     if version is None:  # pyright: ignore[reportUnnecessaryComparison]
         version = SHINYLIVE_ASSETS_VERSION
-    _assets.download_shinylive(destdir=upgrade_dir(dir), version=version, url=url, status=status)
+    _assets.download_shinylive(
+        destdir=upgrade_dir(dir), version=version, url=url, status=status
+    )
 
 
 cleanup_help = f"Remove all versions of local assets except the currently-used version, {SHINYLIVE_ASSETS_VERSION}."
