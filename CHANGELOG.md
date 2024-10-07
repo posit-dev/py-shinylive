@@ -5,6 +5,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+* Updated to Shinylive web assets 0.8.0.
+
 * Download status is now displayed while downloading Shinylive assets.
 
 ## [0.6.0] - 2024-09-03
