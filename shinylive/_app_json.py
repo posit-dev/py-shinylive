@@ -65,7 +65,7 @@ def read_app_files(appdir: Path, destdir: Path) -> list[FileContentJson]:
             if rel_dir == ".":  # pyright: ignore[reportUnnecessaryComparison]
                 output_filename = filename
             else:
-                output_filename = str(rel_dir / filename)
+                output_filename = str((rel_dir / filename).as_posix())
 
             if filename == "shinylive.js":
                 print(
