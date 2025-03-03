@@ -517,7 +517,7 @@ class ShinyliveApp:
         file_names = [file["name"] for file in self._bundle]
         index = None
 
-        if file in file_names:
+        if file in file_names and isinstance(file, str):
             # find the index of the file to remove
             index = file_names.index(file)
 
