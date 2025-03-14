@@ -36,7 +36,7 @@ BASE_PYODIDE_FILES = {
 }
 
 # Packages that should always be included in a Shinylive deployment.
-BASE_PYODIDE_PACKAGE_NAMES = {"distutils", "micropip", "ssl"}
+BASE_PYODIDE_PACKAGE_NAMES = {"distutils", "micropip", "ssl", "pyodide-http"}
 AssetType = Literal["base", "python", "r"]
 
 
