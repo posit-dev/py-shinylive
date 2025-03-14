@@ -76,8 +76,7 @@ release: dist ## package and upload a release
 	twine upload dist/*
 
 dist: clean ## builds source and wheel package
-	python3 setup.py sdist
-	python3 setup.py bdist_wheel
+	python -m build
 	ls -l dist
 
 ## install the package to the active Python's site-packages

@@ -1,0 +1,78 @@
+[build-system]
+requires = ["setuptools>=42", "wheel", "build"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "shinylive"
+dynamic = ["version"]
+authors = [
+    {name = "Winston Chang", email = "winston@posit.co"},
+]
+description = "Run Shiny applications running Python in the browser."
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.8"
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "License :: OSI Approved :: MIT License",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3.8",
+    "Programming Language :: Python :: 3.9",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+]
+dependencies = [
+    "shiny",
+    "click>=8.1.7",
+    "appdirs>=1.4.4",
+    "lzstring>=1.0.4",
+    "typing-extensions>=4.0.1",
+    "setuptools; python_version>='3.12'",
+    "chevron>=0.14.0",
+]
+
+[project.urls]
+"Bug Tracker" = "https://github.com/posit-dev/py-shinylive/issues"
+"Documentation" = "https://github.com/posit-dev/py-shinylive"
+"Source Code" = "https://github.com/posit-dev/py-shinylive"
+
+[project.optional-dependencies]
+test = [
+    "pytest>=6.2.4",
+]
+dev = [
+    "black>=22.3.0",
+    "flake8>=3.9.2",
+    "flake8-bugbear>=22.6.22",
+    "isort>=5.11.2",
+    "pyright>=1.1.284",
+    "wheel",
+    "build",
+]
+
+[project.scripts]
+shinylive = "shinylive._main:main"
+
+[tool.setuptools]
+include-package-data = true
+zip-safe = false
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["shinylive*"]
+exclude = []
+
+[tool.setuptools.package-data]
+shinylive = ["py.typed"]
+
+[tool.setuptools.dynamic]
+version = {attr = "shinylive._version.SHINYLIVE_PACKAGE_VERSION"}
+
+[tool.flake8]
+ignore = ["E302", "E501", "E704", "F403", "F405", "W503"]
+exclude = ["docs", ".venv", "_dev"]
+
+[tool.isort]
+profile = "black"
