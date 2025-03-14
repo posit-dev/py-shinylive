@@ -1,6 +1,6 @@
 [build-system]
-requires = ["setuptools>=42", "wheel", "build"]
-build-backend = "setuptools.build_meta"
+requires = ["hatchling"]
+build-backend = "hatchling.build"
 
 [project]
 name = "shinylive"
@@ -48,27 +48,26 @@ dev = [
     "flake8-bugbear>=22.6.22",
     "isort>=5.11.2",
     "pyright>=1.1.284",
-    "wheel",
-    "build",
 ]
 
 [project.scripts]
 shinylive = "shinylive._main:main"
 
-[tool.setuptools]
-include-package-data = true
-zip-safe = false
+[tool.hatch.version]
+path = "shinylive/_version/__init__.py"
+pattern = "SHINYLIVE_PACKAGE_VERSION\\s*=\\s*['\"](?P<version>[^'\"]+)['\"]"
 
-[tool.setuptools.packages.find]
-where = ["."]
-include = ["shinylive*"]
-exclude = []
+[tool.hatch.build.targets.wheel]
+packages = ["shinylive"]
+include = ["py.typed"]
 
-[tool.setuptools.package-data]
-shinylive = ["py.typed"]
 
-[tool.setuptools.dynamic]
-version = {attr = "shinylive._version.SHINYLIVE_PACKAGE_VERSION"}
+[tool.hatch.build.targets.sdist]
+include = [
+    "shinylive",
+    "LICENSE",
+    "README.md",
+]
 
 [tool.flake8]
 ignore = ["E302", "E501", "E704", "F403", "F405", "W503"]
