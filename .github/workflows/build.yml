@@ -30,7 +30,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install "shiny[dev]" -e ".[dev,test]"
+          pip install -e ".[dev,test]"
 
       - name: Install
         id: install
