@@ -4,7 +4,7 @@ import collections
 import json
 import sys
 from pathlib import Path
-from typing import Literal, MutableMapping, Optional, Callable, Any
+from typing import Any, Callable, Literal, MutableMapping, Optional
 
 import click
 
