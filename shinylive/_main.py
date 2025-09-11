@@ -4,7 +4,7 @@ import collections
 import json
 import sys
 from pathlib import Path
-from typing import Literal, MutableMapping, Optional
+from typing import Any, Callable, Literal, MutableMapping, Optional
 
 import click
 
@@ -20,9 +20,23 @@ class OrderedGroup(click.Group):
         self,
         name: Optional[str] = None,
         commands: Optional[MutableMapping[str, click.Command]] = None,
+        invoke_without_command: bool = False,
+        no_args_is_help: bool | None = None,
+        subcommand_metavar: str | None = None,
+        chain: bool = False,
+        result_callback: Callable[..., Any] | None = None,
         **kwargs: object,
     ):
-        super(OrderedGroup, self).__init__(name, commands, **kwargs)
+        super(OrderedGroup, self).__init__(
+            name,
+            commands,
+            invoke_without_command=invoke_without_command,
+            no_args_is_help=no_args_is_help,
+            subcommand_metavar=subcommand_metavar,
+            chain=chain,
+            result_callback=result_callback,
+            **kwargs,
+        )
         #: the registered subcommands by their exported names.
         self.commands = commands or collections.OrderedDict()
 
