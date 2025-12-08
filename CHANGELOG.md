@@ -3,6 +3,11 @@
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+
+## [0.8.4] - 2025-12-08
+
+* Updated to Shinylive web assets 0.10.7.
+
 ## [0.8.4] - 2025-09-12
 
 * Updated to Shinylive web assets 0.10.6.
