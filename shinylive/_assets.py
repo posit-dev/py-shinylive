@@ -273,11 +273,9 @@ def print_shinylive_local_info(
     if destdir is None:
         destdir = Path(shinylive_cache_dir())
 
-    print(
-        f"""    Local cached shinylive asset dir:
+    print(f"""    Local cached shinylive asset dir:
     {str(destdir)}
-    """
-    )
+    """)
     if destdir.exists():
         print("""    Installed versions:""")
         installed_version_paths = _installed_shinylive_version_paths(destdir)
