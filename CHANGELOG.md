@@ -6,7 +6,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [0.8.10] - 2026-07-28
 
-* Updated to Shinylive web assets 0.10.13, which bundle Shiny for Python 1.6.4. That release fixes a path-traversal vulnerability in bookmark restore (CWE-22).
+* Updated to Shinylive web assets 0.10.13, which bundles Shiny for Python 1.6.4.
 
 ## [0.8.9] - 2026-06-01
 
