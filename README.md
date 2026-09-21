@@ -63,6 +63,21 @@ shinylive export myapp2 site --subdir app2
 ```
 
 
+### GitHub Pages
+
+`posit-dev/py-shinylive` has a workflow to automatically deploy the Shiny app in the root directory of your GitHub repository to its GitHub Pages. Add it to your repo with:
+
+```bash
+mkdir -p .github/workflows
+curl -fsSL https://raw.githubusercontent.com/posit-dev/py-shinylive/actions/v1/examples/deploy-app.yaml \
+  -o .github/workflows/deploy-app.yaml
+```
+
+Then, in your repository's Settings > Pages, set the "Source" to "GitHub Actions".
+
+For more information, see the [examples folder](https://github.com/posit-dev/py-shinylive/tree/actions/v1/examples).
+
+
 ## Shinylive asset management
 
 Each version of the Shinylive Python package is associated with a particular version of the Shinylive web assets. ([See the releases here](https://github.com/posit-dev/shinylive/releases).)

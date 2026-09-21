@@ -1,5 +1,7 @@
 {
-  "ignore": ["build", "dist", "typings", "sandbox", "_dev", "setup.py"],
+  // `tests/app` is a fixture Shiny app for the deploy-app workflow. It imports
+  // packages that are not dependencies of this repo and is never run here.
+  "ignore": ["tests/app", "build", "dist", "typings", "sandbox", "_dev", "setup.py"],
   "typeCheckingMode": "strict",
   "reportImportCycles":  "none",
   "reportUnusedFunction":  "none",
