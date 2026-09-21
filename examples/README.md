@@ -37,6 +37,7 @@ Actions".
 | ----- | ------- | ----------- |
 | `python-version` | `""` | Python version used to run `shinylive export`. Empty lets uv pick. |
 | `shinylive-version` | `"shinylive"` | Version spec for the `shinylive` package, e.g. `shinylive==0.8.0`. |
+| `app-dir` | `"."` | Directory containing the Shiny app. |
 
 # Contributing
 

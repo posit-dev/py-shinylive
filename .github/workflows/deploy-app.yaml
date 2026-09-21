@@ -4,7 +4,7 @@
 # The agreed upon contract is:
 #
 # - Install Python and the `shinylive` package
-# - Export the Shiny app in the root directory to `./site`
+# - Export the Shiny app in the root directory (or `app-dir`) to `./site`
 # - On push events, deploy the exported app to GitHub Pages
 #
 # If this contract is not met or could be easily improved for others,
@@ -36,6 +36,11 @@ on:
         type: string
         default: "shinylive"
         required: false
+      app-dir:
+        description: "Directory containing the Shiny app. Defaults to the repository root."
+        type: string
+        default: "."
+        required: false
 
 jobs:
   build:
@@ -49,7 +54,7 @@ jobs:
           python-version: ${{ inputs.python-version }}
 
       - name: Build site
-        run: uvx --from '${{ inputs.shinylive-version }}' shinylive export . site
+        run: uvx --from '${{ inputs.shinylive-version }}' shinylive export '${{ inputs.app-dir }}' site
 
       - name: Upload site artifact
         if: github.ref == 'refs/heads/main'
