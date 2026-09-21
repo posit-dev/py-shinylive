@@ -21,5 +21,3 @@ jobs:
       app-dir: tests/app
       # Build shinylive from this checkout rather than pulling it from PyPI.
       shinylive-version: "."
-      # Not the default (""), so the `uv-version` passthrough is exercised too.
-      uv-version: "latest"
