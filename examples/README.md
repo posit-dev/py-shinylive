@@ -45,7 +45,7 @@ If any changes are made to the reusable workflows in `.github/workflows/`, pleas
 
 ```bash
 git tag -f actions-v1
-git push --tags --force
+git push --force origin refs/tags/actions-v1
 ```
 
 This update is not necessary for changes in `examples/` as these files are copied within each of the user's repositories.
