@@ -69,13 +69,13 @@ shinylive export myapp2 site --subdir app2
 
 ```bash
 mkdir -p .github/workflows
-curl -fsSL https://raw.githubusercontent.com/posit-dev/py-shinylive/actions-v1/examples/deploy-app.yaml \
+curl -fsSL https://raw.githubusercontent.com/posit-dev/py-shinylive/actions/v1/examples/deploy-app.yaml \
   -o .github/workflows/deploy-app.yaml
 ```
 
 Then, in your repository's Settings > Pages, set the "Source" to "GitHub Actions".
 
-For more information, see the [examples folder](https://github.com/posit-dev/py-shinylive/tree/actions-v1/examples).
+For more information, see the [examples folder](https://github.com/posit-dev/py-shinylive/tree/actions/v1/examples).
 
 
 ## Shinylive asset management

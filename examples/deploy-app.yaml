@@ -1,4 +1,4 @@
-# Workflow derived from https://github.com/posit-dev/py-shinylive/tree/actions-v1/examples
+# Workflow derived from https://github.com/posit-dev/py-shinylive/tree/actions/v1/examples
 #
 # Basic example of a GitHub Actions workflow that builds a Shiny app and deploys
 # it to GitHub Pages.
@@ -15,7 +15,7 @@ on:
 
 jobs:
   shinylive:
-    uses: posit-dev/py-shinylive/.github/workflows/deploy-app.yaml@actions-v1
+    uses: posit-dev/py-shinylive/.github/workflows/deploy-app.yaml@actions/v1
     # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
     permissions:
       pages: write # to deploy to Pages

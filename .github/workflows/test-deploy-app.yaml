@@ -2,7 +2,7 @@
 #
 # Exports the small app in `tests/app/` using this branch's copy of
 # `deploy-app.yaml`, so changes to that workflow are exercised before the
-# `actions-v1` tag is moved onto them.
+# `actions/v1` tag is moved onto them.
 #
 # This only ever triggers on pull requests, where `github.ref` is
 # `refs/pull/N/merge`. The upload/deploy steps in `deploy-app.yaml` are gated on

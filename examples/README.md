@@ -24,7 +24,7 @@ To add the workflow to your repository, copy
 
 ```bash
 mkdir -p .github/workflows
-curl -fsSL https://raw.githubusercontent.com/posit-dev/py-shinylive/actions-v1/examples/deploy-app.yaml \
+curl -fsSL https://raw.githubusercontent.com/posit-dev/py-shinylive/actions/v1/examples/deploy-app.yaml \
   -o .github/workflows/deploy-app.yaml
 ```
 
@@ -41,11 +41,11 @@ Actions".
 
 # Contributing
 
-If any changes are made to the reusable workflows in `.github/workflows/`, please force update the tag `actions-v1` to the latest appropriate git sha. This will allow users to easily reference the latest version of the workflow.
+If any changes are made to the reusable workflows in `.github/workflows/`, please force update the tag `actions/v1` to the latest appropriate git sha. This will allow users to easily reference the latest version of the workflow.
 
 ```bash
-git tag -f actions-v1
-git push --force origin refs/tags/actions-v1
+git tag -f actions/v1
+git push --force origin refs/tags/actions/v1
 ```
 
 This update is not necessary for changes in `examples/` as these files are copied within each of the user's repositories.
