@@ -1,0 +1,79 @@
+# Basic example of a GitHub Actions workflow that builds a Shiny app and deploys
+# it to GitHub Pages.
+#
+# The agreed upon contract is:
+#
+# - Install Python and the `shinylive` package
+# - Export the Shiny app in the root directory to `./site`
+# - On push events, deploy the exported app to GitHub Pages
+#
+# If this contract is not met or could be easily improved for others,
+# please open a new Issue https://github.com/posit-dev/py-shinylive/
+#
+# The _magic_ of this workflow is in `shinylive export`, which creates a static
+# version of the Shiny app into the folder `./site`. The exported app folder is
+# then uploaded and deployed to GitHub Pages.
+#
+# Note that your app's own dependencies do not need to be installed here. They
+# are read from the app's `requirements.txt` at export time and installed in the
+# browser by Pyodide.
+#
+# When deploying to GitHub Pages, be sure to have the appropriate write
+# permissions for your token (`pages` and `id-token`).
+
+name: Deploy app
+
+on:
+  workflow_call:
+    inputs:
+      python-version:
+        description: "Python version used to run `shinylive export`. Empty (the default) lets uv pick."
+        type: string
+        default: ""
+        required: false
+      shinylive-version:
+        description: "Version spec for the shinylive package, e.g. `shinylive==0.8.0`"
+        type: string
+        default: "shinylive"
+        required: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: astral-sh/setup-uv@v10
+        with:
+          python-version: ${{ inputs.python-version }}
+
+      - name: Build site
+        run: uvx --from '${{ inputs.shinylive-version }}' shinylive export . site
+
+      - name: Upload site artifact
+        if: github.ref == 'refs/heads/main'
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: "site"
+
+  deploy:
+    if: github.ref == 'refs/heads/main'
+    needs: build
+
+    # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
+    permissions:
+      pages: write # to deploy to Pages
+      id-token: write # to verify the deployment originates from an appropriate source
+
+    # Deploy to the github-pages environment
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+
+    # Specify runner + deployment step
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

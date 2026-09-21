@@ -1,0 +1,22 @@
+# Workflow derived from https://github.com/posit-dev/py-shinylive/tree/actions-v1/examples
+#
+# Basic example of a GitHub Actions workflow that builds a Shiny app and deploys
+# it to GitHub Pages.
+name: Deploy app to gh-pages
+
+on:
+  # Manually trigger the workflow
+  workflow_dispatch:
+  # Trigger on push to `main` branch
+  push:
+    branches: ["main"]
+  # Trigger on pull request to all branches (but do not deploy to gh-pages)
+  pull_request:
+
+jobs:
+  shinylive:
+    uses: posit-dev/py-shinylive/.github/workflows/deploy-app.yaml@actions-v1
+    # Grant GITHUB_TOKEN the permissions required to make a Pages deployment
+    permissions:
+      pages: write # to deploy to Pages
+      id-token: write # to verify the deployment originates from an appropriate source
