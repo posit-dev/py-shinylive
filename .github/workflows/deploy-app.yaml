@@ -41,6 +41,11 @@ on:
         type: string
         default: "."
         required: false
+      uv-version:
+        description: "Version of uv to install, e.g. `0.9.5` or `latest`. Empty (the default) uses the version pinned in your `uv.toml` / `pyproject.toml`, else the latest."
+        type: string
+        default: ""
+        required: false
 
 jobs:
   build:
@@ -53,6 +58,7 @@ jobs:
       # is pinned to an exact release and needs bumping by hand.
       - uses: astral-sh/setup-uv@v10.2.0
         with:
+          version: ${{ inputs.uv-version }}
           python-version: ${{ inputs.python-version }}
 
       - name: Build site
