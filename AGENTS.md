@@ -39,6 +39,25 @@ run is for a release.
 - **Messages:** print progress messages to stderr, never to stdout, because
   the Quarto extension reads stdout as JSON.
 
+## Memory Bank
+
+The `memory-bank/` directory holds contributor documentation with YAML
+frontmatter (`title`, `description`). **Before exploring the codebase**, invoke
+the `memory-bank` skill to find and read the relevant docs. Start with
+`memory-bank/architecture.md`; it explains how the pieces fit and which doc
+covers each `shinylive/` file. Update or add docs when you learn something
+future contributors will need (see the skill for conventions).
+
+## Skills
+
+Task-specific instructions live in `.agents/skills/` (`.claude/skills` is a
+symlink to it):
+
+- `memory-bank`: find, read, and update the docs in `memory-bank/`.
+
+Only allowlisted skills are tracked, so when adding or removing one, update
+the `!/.agents/skills/<name>/` lines in `.gitignore` to match.
+
 ## Keep r-shinylive in sync
 
 [posit-dev/r-shinylive](https://github.com/posit-dev/r-shinylive) is the R
