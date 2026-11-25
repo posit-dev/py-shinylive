@@ -25,6 +25,12 @@ def is_relative_to(path: Path, base: Path) -> bool:
             return False
 
 
+def comparable_path(path: str | Path) -> Path:
+    """Return `path` made absolute, with symlinks resolved and, on Windows, in lower
+    case. Use it only to compare paths, never to name files."""
+    return Path(os.path.normcase(Path(path).resolve()))
+
+
 def path_length(path: str | Path) -> int:
     """Returns the number of elements in a path.
 

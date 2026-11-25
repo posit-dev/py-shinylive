@@ -7,6 +7,7 @@ from pathlib import Path
 from . import _deps, _utils
 from ._app_json import AppInfo, read_app_files, write_app_json
 from ._assets import shinylive_assets_dir
+from ._utils import comparable_path, is_relative_to
 from ._assets_version import (
     assets_version_input,
     resolve_assets_version,
@@ -34,6 +35,13 @@ def export(
 
     if not (appdir / "app.py").exists():
         raise ValueError(f"Directory {appdir}/ must contain a file named app.py.")
+
+    if is_relative_to(comparable_path(appdir), comparable_path(destdir)):
+        # Every app file would be skipped as part of the export
+        raise ValueError(
+            f"destdir {destdir}/ is or holds appdir {appdir}/. Export to a separate "
+            "folder, such as `shinylive export myapp site`."
+        )
 
     if subdir is None:
         subdir = ""
