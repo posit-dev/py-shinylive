@@ -28,7 +28,7 @@ def export(
 ):
     def verbose_print(*args: object) -> None:
         if verbose:
-            print(*args)
+            print(*args, file=sys.stderr)
 
     appdir = Path(appdir)
     destdir = Path(destdir)
@@ -109,7 +109,9 @@ def export(
         ]
 
     else:
-        deps = _deps.base_package_deps() + _deps.find_package_deps(app_info["files"])
+        deps = _deps.base_package_deps() + _deps.find_package_deps(
+            app_info["files"], verbose_print
+        )
 
         package_files: list[str] = [dep["file_name"] for dep in deps]
 

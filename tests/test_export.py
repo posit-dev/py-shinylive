@@ -118,3 +118,16 @@ def test_export_prints_nothing_to_stdout(
     assert "shinylive.js" in captured.err
     index = (tmp_path / "site" / "index.html").read_bytes().decode("utf-8")
     assert index == "<title>Café ✨</title>"
+
+
+def test_export_verbose_prints_nothing_to_stdout(
+    fake_assets: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+):
+    app = make_app(tmp_path / "myapp")
+    export(app, tmp_path / "site", verbose=True)
+    # A second export skips the files that are already there
+    export(app, tmp_path / "site", verbose=True)
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "Skipping" in captured.err
+    assert "Imports detected in app" in captured.err
