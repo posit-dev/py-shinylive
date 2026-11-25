@@ -60,7 +60,8 @@ hidden and exit with a message to update the Quarto extension.
   packages' output the same way.
 - **Never print to stdout in code these commands reach.** Download and
   resolve messages go to stderr; keep it that way.
-- **Resource order changes between runs** because `BASE_PYODIDE_FILES` is a
-  `set` (see `pyodidePackages.md`).
+- **Keep resource order stable.** `shinylive_common_files()` and
+  `_find_recursive_deps()` return sorted lists, so the JSON is the same on
+  every run.
 - **Only `info` may use the network.** Adding a GitHub check or a download to
   another command can make one render use two versions.

@@ -122,14 +122,13 @@ version. A local build is treated like any other installed version.
 - **The cache is shared with r-shinylive.** Folder names, `versions.json`, and
   the temp prefixes must stay the same in both packages. Changes must be
   released in both at about the same time.
-- **`install-from-local` deletes the old folder before copying.** If `BUILD`
-  does not exist, the copy fails after the existing `shinylive-<version>` is
-  already gone.
-- **Download progress without a size.** A server (such as a mirror) that sends
-  no `Content-Length` makes the progress line show negative percents and sizes.
-- **`_check_assets_url()` never returns `False`.** `urlopen()` raises
-  `HTTPError` for a 404. Only `tests/test_assets.py` calls it.
-- **`assets remove --help`** shows a stray `"` at the end of its first line.
+- **Check inputs before removing anything.** `copy_shinylive_local()` and
+  `link_shinylive_local()` check that `BUILD` is a folder before they remove
+  the old `shinylive-<version>`.
+- **A server may send no size.** Mirrors may leave out `Content-Length`, so
+  `_urlretrieve()` passes `-1` and the progress line shows only the MB so far.
+- **`urlopen()` raises for HTTP errors.** `_check_assets_url()` catches
+  `HTTPError` to return `False` for a missing release.
 - **Tests must not touch your real cache.** Monkeypatch
   `assets.shinylive_cache_dir` and call `_assets_version._reset()`; see the
   `offline` fixture in `tests/test_assets_version.py`.
