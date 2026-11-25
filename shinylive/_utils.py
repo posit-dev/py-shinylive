@@ -65,9 +65,13 @@ def copy_file_and_substitute(
             fout.write(out_content)
 
 
+def print_nothing(*args: object) -> None:
+    """The default `verbose_print`: print nothing."""
+
+
 def create_copy_fn(
     overwrite: bool,
-    verbose_print: Callable[..., None] = lambda *args: None,
+    verbose_print: Callable[..., None] = print_nothing,
 ) -> Callable[..., None]:
     """Returns a function that can be used as a copy_function for shutil.copytree.
 
@@ -116,7 +120,7 @@ def tar_safe_extractall(file: str | Path, destdir: str | Path) -> None:
                 if not member_path.is_relative_to(destdir):
                     raise RuntimeError("Attempted path traversal in tar file.")
 
-            tar.extractall(destdir)  # pyright: ignore[reportDeprecated]
+            tar.extractall(destdir)
 
 
 def print_as_json(x: object) -> None:

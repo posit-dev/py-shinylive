@@ -389,7 +389,7 @@ def remove(
     version: str,
     dir: Optional[str | Path],
 ) -> None:
-    if version is None:  # pyright: ignore[reportUnnecessaryComparison]
+    if version is None:
         raise click.UsageError("Must specify --version")
     dir = upgrade_dir(dir)
     _assets.remove_shinylive_assets(shinylive_dir=dir, version=version)
@@ -469,7 +469,7 @@ def link_from_local(
     version: Optional[str],
     dir: Optional[str | Path],
 ) -> None:
-    if build is None:  # pyright: ignore[reportUnnecessaryComparison]
+    if build is None:
         raise click.UsageError("Must specify BUILD")
     dir = upgrade_dir(dir)
     version = _assets.local_build_target_version(build, version)

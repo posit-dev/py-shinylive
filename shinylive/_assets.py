@@ -88,7 +88,7 @@ def download_shinylive(
                 return
 
             duration = current_time - start_time
-            progress_size = int(count * block_size)
+            progress_size = count * block_size
             speed = int(progress_size / (1024 * duration))
             progress_mb = f"{progress_size / (1024 * 1024):.1f}"
             if total_size > 0:
@@ -205,9 +205,9 @@ def shinylive_cache_dir() -> str:
     Returns the directory used for caching Shinylive assets. This directory can contain
     multiple versions of Shinylive assets.
     """
-    import appdirs  # pyright: ignore[reportMissingTypeStubs]
+    import appdirs
 
-    return appdirs.user_cache_dir("shinylive")  # pyright: ignore
+    return appdirs.user_cache_dir("shinylive")
 
 
 def shinylive_assets_dir(version: Optional[str] = None) -> str:

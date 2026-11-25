@@ -36,7 +36,7 @@ git push --force origin refs/tags/actions/v1
 
 ## Makefile
 
-`make install-deps` (`uv sync`), `make test`, `make check` (`pyright`, `lint`,
+`make install-deps` (`uv sync`), `make test`, `make check` (`pyrefly`, `lint`,
 `ruff format --check`), `make lint` (`ruff check`), `make format` (`ruff check
 --fix` and `ruff format`), `make dist` (`uv build`), `make install`,
 `make coverage`, `make clean`.
@@ -54,7 +54,10 @@ git push --force origin refs/tags/actions/v1
   extras, so they are not part of the published package metadata.
 - ruff settings are in `pyproject.toml`: rules `E`, `F`, `I` (imports), and
   `B` (bugbear, carried over from flake8-bugbear), with `E501` (line length)
-  off because `ruff format` already wraps code. pyright settings are in `pyrightconfig.json` (strict).
+  off because `ruff format` already wraps code. pyrefly settings are in
+  `[tool.pyrefly]`, set up like py-shiny's: `implicit-any` is an error.
+  `types-chevron` is in the `dev` group because pyrefly, unlike pyright, does
+  not bundle third-party stubs.
 
 ## CHANGELOG
 
