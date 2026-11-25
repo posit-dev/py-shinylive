@@ -116,3 +116,6 @@ typings/
 !/.agents/skills/
 /.agents/skills/*
 !/.agents/skills/memory-bank/
+
+# uv
+uv.lock

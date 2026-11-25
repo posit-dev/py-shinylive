@@ -5,7 +5,7 @@ description: "How the pytest suite is laid out, which tests need the downloaded 
 
 # Testing
 
-Run `make test` (or `pytest`). `make check` runs pyright (strict), flake8,
+Run `make test` (or `uv run pytest`). `make check` runs pyright (strict), flake8,
 black, and isort.
 
 ## Layout
