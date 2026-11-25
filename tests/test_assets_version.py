@@ -464,7 +464,7 @@ def real_download(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
         copy.write_bytes(bundle.read_bytes())
         return str(copy), None
 
-    monkeypatch.setattr(assets.urllib.request, "urlretrieve", urlretrieve)
+    monkeypatch.setattr(assets, "_urlretrieve", urlretrieve)
     return bundle
 
 
@@ -573,14 +573,14 @@ def test_download_makes_extract_folder_after_download(
     cache = tmp_path / "cache"
     make_bundle(real_download, "0.10.16", "one")
     seen: list[str] = []
-    real_urlretrieve = assets.urllib.request.urlretrieve
+    real_urlretrieve = assets._urlretrieve
 
     def urlretrieve(url: str, reporthook: object = None) -> tuple[str, None]:
         # A cleanup during the download must find no extract folder to remove
         seen.extend(p.name for p in cache.iterdir())
         return real_urlretrieve(url, reporthook)  # type: ignore
 
-    monkeypatch.setattr(assets.urllib.request, "urlretrieve", urlretrieve)
+    monkeypatch.setattr(assets, "_urlretrieve", urlretrieve)
     assets.download_shinylive(destdir=cache, version="0.10.16")
     assert seen == []
 
@@ -767,3 +767,43 @@ def test_download_failure_leaves_newer_releases_out_of_versions_json(
     av._reset()
     use_quarto_assets_version()
     assert av.assets_version() == "0.10.16"
+
+
+def test_cli_bad_env_var_is_a_usage_error(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("SHINYLIVE_ASSETS_VERSION", "v0.10")
+    for args in [["assets", "version"], ["extension", "info"]]:
+        result = CliRunner().invoke(main, args)
+        assert result.exit_code == 2, result.output
+        assert "SHINYLIVE_ASSETS_VERSION environment variable" in result.output
+
+
+def test_ensure_with_url_never_uses_github(real_download: Path, tmp_path: Path):
+    # The mirror holds a newer 0.10.* release than any known version
+    cache = tmp_path / "cache"
+    make_bundle(real_download, "0.10.17", "mirror")
+    path = assets.ensure_shinylive_assets(cache, url="https://mirror/x.tar.gz")
+    assert path == cache / "shinylive-0.10.17"
+
+    # An exact version must match the tarball
+    with pytest.raises(RuntimeError, match="has no shinylive-0.10.16 folder"):
+        assets.ensure_shinylive_assets(cache, "0.10.16", url="https://mirror/x.tar.gz")
+
+
+def test_urlretrieve_times_out_and_removes_temp_file(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+):
+    import socket
+    import tempfile
+
+    timeouts: list[object] = []
+
+    def urlopen(url: str, timeout: object = None) -> object:
+        timeouts.append(timeout)
+        raise socket.timeout("stalled")
+
+    monkeypatch.setattr(assets.urllib.request, "urlopen", urlopen)
+    monkeypatch.setattr(tempfile, "tempdir", str(tmp_path))
+    with pytest.raises(socket.timeout):
+        assets._urlretrieve("https://x", lambda count, size, total: None)
+    assert timeouts == [assets.DOWNLOAD_TIMEOUT_SECONDS]
+    assert list(tmp_path.iterdir()) == []

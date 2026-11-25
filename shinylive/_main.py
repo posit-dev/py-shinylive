@@ -125,6 +125,14 @@ def check_exact_assets_version(
     return value
 
 
+def check_env_assets_version() -> None:
+    """Give a usage error, not a traceback, for a bad SHINYLIVE_ASSETS_VERSION."""
+    try:
+        assets_version_input()
+    except ValueError as e:
+        raise click.UsageError(str(e)) from e
+
+
 # #############################################################################
 # ## Main
 # #############################################################################
@@ -215,6 +223,8 @@ def export(
     template_params: str | None,
     assets_version: str | None,
 ) -> None:
+    if assets_version is None:
+        check_env_assets_version()
     template_params_dict = None
     if template_params is not None:
         if Path(template_params).exists():
@@ -249,7 +259,7 @@ def export(
     cls=OrderedGroup,
 )
 def assets() -> None:
-    pass
+    check_env_assets_version()
 
 
 def upgrade_dir(dir: str | Path | None) -> Path:
@@ -489,7 +499,7 @@ def version() -> None:
     cls=OrderedGroup,
 )
 def extension() -> None:
-    pass
+    check_env_assets_version()
 
 
 @extension.command(

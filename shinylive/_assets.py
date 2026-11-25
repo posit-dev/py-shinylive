@@ -9,7 +9,7 @@ import time
 import urllib.request
 import uuid
 from pathlib import Path
-from typing import Optional, cast
+from typing import Callable, Optional, cast
 
 from ._assets_version import (
     VERSIONS_TIME_FORMAT,
@@ -19,6 +19,7 @@ from ._assets_version import (
     assets_version_input,
     assets_version_matches,
     local_assets_versions,
+    max_version,
     parse_assets_version,
     read_versions_json,
     resolve_assets_version,
@@ -96,7 +97,7 @@ def download_shinylive(
             sys.stderr.flush()
             last_update_time = current_time
 
-        tmp_name, _ = urllib.request.urlretrieve(url, reporthook=reporthook)
+        tmp_name, _ = _urlretrieve(url, reporthook)
         sys.stderr.write("\n")
 
         print(f"Unzipping to {destdir}/", file=sys.stderr)
@@ -113,6 +114,31 @@ def download_shinylive(
             Path(tmp_name).unlink(missing_ok=True)
         if tmp_dir is not None:
             shutil.rmtree(tmp_dir, ignore_errors=True)
+
+
+DOWNLOAD_TIMEOUT_SECONDS = 60
+
+
+def _urlretrieve(
+    url: str, reporthook: Callable[[int, int, int], None]
+) -> tuple[str, None]:
+    """Like `urllib.request.urlretrieve()`, but a stalled connection times out instead
+    of hanging forever. The timeout is per read, so a slow download still finishes."""
+    fd, name = tempfile.mkstemp(suffix=".tar.gz")
+    try:
+        with os.fdopen(fd, "wb") as f, urllib.request.urlopen(
+            url, timeout=DOWNLOAD_TIMEOUT_SECONDS
+        ) as resp:
+            total = int(resp.headers.get("Content-Length") or -1)
+            count = 0
+            while block := resp.read(8192):
+                f.write(block)
+                count += 1
+                reporthook(count, 8192, total)
+    except BaseException:
+        Path(name).unlink(missing_ok=True)
+        raise
+    return name, None
 
 
 def _move_into_place(src: Path, target: Path, existed_before: bool) -> None:
@@ -303,9 +329,11 @@ def ensure_shinylive_assets(
         which names the folder to look for: `<destdir>/shinylive-<version>`. When
         `None`, the version used by this process (`assets_version()`) is used.
     url
-        A direct link to an assets tarball, such as a mirror. When set, a missing
-        folder is downloaded from `url`, never from GitHub. The tarball's top-level
-        folder must be `shinylive-<version>`; otherwise an error is raised.
+        A direct link to an assets tarball, such as a mirror. When set, GitHub is never
+        used: the version is chosen from `versions.json` and the downloaded folders,
+        and a missing folder is downloaded from `url`. For a series or "latest", the
+        tarball may hold any matching version; for an exact version, its top-level
+        folder must be `shinylive-<version>`. Otherwise an error is raised.
     """
 
     if destdir is None:
@@ -313,19 +341,30 @@ def ensure_shinylive_assets(
         if version is None and url is None:
             # The version used by this process (which also downloads it)
             version = assets_version()
+    spec = parse_assets_version(assets_version_input(version))
     # With no `url`, resolving downloads the chosen version from GitHub
     version = resolve_assets_version(
-        assets_version_input(version), dir=destdir, download=url is None
+        spec.value, dir=destdir, download=url is None, check=url is None
     )
 
     shinylive_bundle_dir = destdir / f"shinylive-{version}"
     if not shinylive_bundle_dir.exists():
         print(f"{shinylive_bundle_dir} does not exist.", file=sys.stderr)
+        before = local_assets_versions(destdir)
         download_shinylive(url=url, version=version, destdir=destdir)
         if not shinylive_bundle_dir.exists():
-            raise RuntimeError(
-                f"The tarball at {url} has no {shinylive_bundle_dir.name} folder."
-            )
+            # For a series, the tarball may hold a newer match than the one chosen
+            added = [
+                v
+                for v in local_assets_versions(destdir)
+                if v not in before and assets_version_matches(v, spec)
+            ]
+            if len(added) == 0:
+                raise RuntimeError(
+                    f"The tarball at {url} has no {shinylive_bundle_dir.name} folder."
+                )
+            version = max_version(added)
+            shinylive_bundle_dir = destdir / f"shinylive-{version}"
 
     return shinylive_bundle_dir
 
@@ -349,8 +388,8 @@ def cleanup_shinylive_assets(
 
     shinylive_dir = Path(shinylive_dir)
     if not keep:
-        env = os.environ.get("SHINYLIVE_ASSETS_VERSION")
-        keep = [SHINYLIVE_ASSETS_VERSION_DEFAULT] + ([env] if env else [])
+        # `assets_version_input()` also rejects a bad SHINYLIVE_ASSETS_VERSION
+        keep = [SHINYLIVE_ASSETS_VERSION_DEFAULT, assets_version_input()]
 
     versions = local_assets_versions(shinylive_dir)
     kept: list[str] = []
