@@ -6,6 +6,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [UNRELEASED]
 
+* The `dev` and `test` extras are removed. Contributors install the development tools with `uv sync`, which reads the new `dev` dependency group.
+
 * Shinylive web assets are no longer pinned to one version per package release, so new assets releases no longer need a new version of shinylive. By default, the newest release in the `0.10.*` series is used. GitHub is checked for new releases at most once a day (once an hour after a failed check), and the result is saved in `versions.json` in the assets cache folder. This file is shared with the R shinylive package, so Quarto documents with both `shinylive-python` and `shinylive-r` blocks use one version. Offline, the newest downloaded matching version is used. A new series, like `0.11.*`, is only used by default after a shinylive update. (#69)
 
 * `shinylive export` gains `--assets-version`. It, `shinylive assets download --version`, and the `SHINYLIVE_ASSETS_VERSION` environment variable accept an exact version (`0.10.16`), a series (`0.11.*`), or `latest`. Pin an exact version for builds that must repeat exactly, such as in CI.

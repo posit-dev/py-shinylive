@@ -40,21 +40,20 @@ Documentation = "https://github.com/posit-dev/py-shinylive"
 "Source Code" = "https://github.com/posit-dev/py-shinylive"
 Changelog = "https://github.com/posit-dev/py-shinylive/blob/main/CHANGELOG.md"
 
-[project.optional-dependencies]
-test = [
-    "pytest>=6.2.4",
-]
+[project.scripts]
+shinylive = "shinylive._main:main"
+
+# `uv sync` and `uv run` install the `dev` group by default.
+[dependency-groups]
 dev = [
-    "black>=22.3.0",
+    "pytest>=6.2.4",
     "coverage",
+    "black>=22.3.0",
     "flake8>=3.9.2",
     "flake8-bugbear>=22.6.22",
     "isort>=5.11.2",
     "pyright>=1.1.284",
 ]
-
-[project.scripts]
-shinylive = "shinylive._main:main"
 
 [tool.hatch.version]
 path = "shinylive/_version/__init__.py"

@@ -21,10 +21,10 @@ for line in sys.stdin:
 endef
 export PRINT_HELP_PYSCRIPT
 
-BROWSER := python -c "$$BROWSER_PYSCRIPT"
+BROWSER := python3 -c "$$BROWSER_PYSCRIPT"
 
 help:
-	@python -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
+	@python3 -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
 
 clean: clean-build clean-pyc clean-test ## remove all build, test, coverage and Python artifacts
 
@@ -48,35 +48,38 @@ clean-test: ## remove test and coverage artifacts
 	rm -fr .pytest_cache
 	rm -rf typings/
 
+install-deps: ## install the package and dev tools into .venv
+	uv sync
+
 pyright: ## type check with pyright
-	pyright
+	uv run pyright
 
 check: pyright lint ## check code quality with pyright, flake8, black and isort
 	echo "Checking code with black."
-	black --check .
+	uv run black --check .
 	echo "Sorting imports with isort."
-	isort --check-only --diff .
+	uv run isort --check-only --diff .
 
 lint: ## check style with flake8
-	flake8 --show-source --max-line-length=127 shinylive tests
+	uv run flake8 --show-source --max-line-length=127 shinylive tests
 
 test: ## run tests quickly with the default Python
-	pytest
+	uv run pytest
 
 coverage: ## check code coverage quickly with the default Python
-	coverage run --source shinylive -m pytest
-	coverage report -m
-	coverage html
+	uv run coverage run --source shinylive -m pytest
+	uv run coverage report -m
+	uv run coverage html
 	$(BROWSER) htmlcov/index.html
 
 release: dist ## package and upload a release
-	twine upload dist/*
+	uv publish
 
 dist: clean ## builds source and wheel package
-	python -c "import hatch" 2>/dev/null || pip install hatch
-	hatch build
+	uv build
 	ls -l dist
 
-## install the package to the active Python's site-packages
+## install the built wheel into .venv, replacing the editable install.
+## Run later commands with UV_NO_SYNC=1, or `uv run` reinstalls the editable copy.
 install: dist
-	python3 -m pip install --force-reinstall dist/shinylive*.whl
+	uv pip install --reinstall dist/shinylive*.whl

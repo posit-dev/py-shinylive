@@ -23,10 +23,10 @@ parts:
 ## Development commands
 
 ```sh
-pip install -e ".[dev,test]"
-make test     # pytest
-make check    # pyright, flake8, black --check, isort --check
-black . && isort .
+make install-deps  # uv sync: the package and dev tools into .venv
+make test          # pytest
+make check         # pyright, flake8, black --check, isort --check
+uv run black . && uv run isort .
 ```
 
 Some tests need the assets (a large download) and are skipped in CI unless the

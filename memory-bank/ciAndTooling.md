@@ -8,8 +8,9 @@ description: "GitHub Actions workflows (build and test, PyPI release, the reusab
 ## Workflows (`.github/workflows/`)
 
 - `build.yml` - on push to `main`/`rc-*`, pull requests, releases, and manual
-  runs. Tests Python 3.10 to 3.14: `pip install -e ".[dev,test]"`,
-  `make install` (builds a wheel and installs it), `make test`, `make check`.
+  runs. Tests Python 3.10 to 3.14 with uv: `uv sync`, `make install` (builds
+  a wheel and installs it over the editable copy), `make install-deps` (`uv sync`), `make test`, `make check`.
+  The job sets `UV_NO_SYNC=1` so `uv run` does not put the editable copy back.
   On a published release, the `deploy` job builds with `make dist` and
   publishes to PyPI: to TestPyPI if the release name starts with `TEST`, to
   PyPI if it starts with `shinylive`.
@@ -35,9 +36,9 @@ git push --force origin refs/tags/actions/v1
 
 ## Makefile
 
-`make test`, `make check` (`pyright`, `lint`, `black --check`,
+`make install-deps` (`uv sync`), `make test`, `make check` (`pyright`, `lint`, `black --check`,
 `isort --check-only`), `make lint` (flake8 on `shinylive` and `tests`),
-`make dist` (`hatch build`), `make install`,
+`make dist` (`uv build`), `make install`,
 `make coverage`, `make clean`.
 
 ## Packaging (`pyproject.toml`)
@@ -49,6 +50,8 @@ git push --force origin refs/tags/actions/v1
   sdist adds `tests/`, `CHANGELOG.md`, `README.md`, and `LICENSE`, so
   `memory-bank/`, `.agents/`, and `AGENTS.md` are in neither.
 - The `shinylive` console script is `shinylive._main:main`.
+- Dev tools are in the `dev` dependency group (`[dependency-groups]`), not in
+  extras, so they are not part of the published package metadata.
 - isort settings are in `pyproject.toml`. flake8 settings are in `.flake8`,
   because flake8 cannot read `pyproject.toml`. pyright settings are in
   `pyrightconfig.json` (strict).
@@ -65,7 +68,9 @@ change. A release renames it to the version and date.
 - **The "On push events" comment in `deploy-app.yaml` is out of date** (it
   deploys on `main` for any event). It is left as is so the tag need not move
   for a comment.
-- **`make check` needs the dev tools on `PATH`.** Run it from an activated
-  virtual environment, or a global `pyright` may be used.
+- **Every Makefile tool runs through `uv run`,** which installs the `dev`
+  dependency group into `.venv` first. No activated environment is needed.
+- **`uv.lock` is not committed** (see `.gitignore`), so CI tests against the
+  newest versions of dependencies, as users get them.
 - **Asset tests only run in CI on a release** (see `testing.md`), so a broken
   asset test shows up at release time.
