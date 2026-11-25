@@ -54,14 +54,15 @@ install-deps: ## install the package and dev tools into .venv
 pyright: ## type check with pyright
 	uv run pyright
 
-check: pyright lint ## check code quality with pyright, flake8, black and isort
-	echo "Checking code with black."
-	uv run black --check .
-	echo "Sorting imports with isort."
-	uv run isort --check-only --diff .
+check: pyright lint ## check code quality with pyright and ruff
+	uv run ruff format --check .
 
-lint: ## check style with flake8
-	uv run flake8 --show-source --max-line-length=127 shinylive tests
+lint: ## check style and import order with ruff
+	uv run ruff check .
+
+format: ## format code and sort imports with ruff
+	uv run ruff check --fix .
+	uv run ruff format .
 
 test: ## run tests quickly with the default Python
 	uv run pytest

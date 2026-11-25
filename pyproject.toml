@@ -48,10 +48,7 @@ shinylive = "shinylive._main:main"
 dev = [
     "pytest>=6.2.4",
     "coverage",
-    "black>=22.3.0",
-    "flake8>=3.9.2",
-    "flake8-bugbear>=22.6.22",
-    "isort>=5.11.2",
+    "ruff>=0.6.0",
     "pyright>=1.1.284",
 ]
 
@@ -72,5 +69,11 @@ only-include = [
     "CHANGELOG.md",
 ]
 
-[tool.isort]
-profile = "black"
+[tool.ruff]
+line-length = 88
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+# `ruff format` keeps code within 88 characters; long strings and comments
+# are left as they are.
+ignore = ["E501"]

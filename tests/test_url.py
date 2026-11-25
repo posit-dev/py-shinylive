@@ -1,6 +1,6 @@
 """Tests for shinylive.io URL encoding and decoding."""
 
-from shinylive._url import *
+from shinylive._url import FileContentJson, ShinyliveApp, url_decode
 
 LINKS = {
     "py": {

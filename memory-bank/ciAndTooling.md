@@ -36,9 +36,9 @@ git push --force origin refs/tags/actions/v1
 
 ## Makefile
 
-`make install-deps` (`uv sync`), `make test`, `make check` (`pyright`, `lint`, `black --check`,
-`isort --check-only`), `make lint` (flake8 on `shinylive` and `tests`),
-`make dist` (`uv build`), `make install`,
+`make install-deps` (`uv sync`), `make test`, `make check` (`pyright`, `lint`,
+`ruff format --check`), `make lint` (`ruff check`), `make format` (`ruff check
+--fix` and `ruff format`), `make dist` (`uv build`), `make install`,
 `make coverage`, `make clean`.
 
 ## Packaging (`pyproject.toml`)
@@ -52,9 +52,9 @@ git push --force origin refs/tags/actions/v1
 - The `shinylive` console script is `shinylive._main:main`.
 - Dev tools are in the `dev` dependency group (`[dependency-groups]`), not in
   extras, so they are not part of the published package metadata.
-- isort settings are in `pyproject.toml`. flake8 settings are in `.flake8`,
-  because flake8 cannot read `pyproject.toml`. pyright settings are in
-  `pyrightconfig.json` (strict).
+- ruff settings are in `pyproject.toml`: rules `E`, `F`, and `I` (imports), as
+  in shinyreact, with `E501` (line length) off because `ruff format` already
+  wraps code. pyright settings are in `pyrightconfig.json` (strict).
 
 ## CHANGELOG
 
