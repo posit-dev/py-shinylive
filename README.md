@@ -4,7 +4,7 @@ Shinylive Python package
 [![Build and test](https://github.com/posit-dev/py-shinylive/actions/workflows/build.yml/badge.svg)](https://github.com/posit-dev/py-shinylive/actions/)
 [![PyPI Latest Release](https://img.shields.io/pypi/v/shinylive.svg)](https://pypi.org/project/shinylive/)
 
-[Documentation site](https://github.com/posit-dev/py-shinylive)
+[Documentation site](https://shiny.posit.co/py/get-started/shinylive.html)
 
 The goal of the shinylive Python package is to help you create Shinylive applications from your [Shiny for Python](https://shiny.posit.co/py) applications.
 Shinylive runs Shiny entirely in the browser, without any need for a hosted server, using WebAssembly via [pyodide](https://pyodide.org/en/stable/).
@@ -15,13 +15,13 @@ The Shinylive project consists of four interdependent components that work toget
 
 1. Shinylive ([posit-dev/shinylive](https://github.com/posit-dev/shinylive)) is a web assets library that runs Shiny applications in the browser. You can try it out online at [shinylive.io/r](https://shinylive.io/r) or [shinylive.io/py](https://shinylive.io/py).
 
-2. The [shinylive Python package](https://shiny.posit.co/py/docs/shinylive.html) ([posit-dev/py-shinylive](https://github.com/posit-dev/py-shinylive)) helps you export your Shiny applications from local files to a directory that can be hosted on a static web server.
+2. The [shinylive Python package](https://shiny.posit.co/py/get-started/shinylive.html) ([posit-dev/py-shinylive](https://github.com/posit-dev/py-shinylive)) helps you export your Shiny applications from local files to a directory that can be hosted on a static web server.
 
    The Python package also downloads the Shinylive web assets mentioned above and manages them in a local cache. These assets are included in the exported Shinylive applications and are used to run your Shiny app in the browser.
 
 3. The shinylive R package ([posit-dev/r-shinylive](https://github.com/posit-dev/r-shinylive)) serves the same role as the shinylive Python package but for Shiny for R apps.
 
-4. The [shinylive Quarto extension](https://quarto-ext.github.io/shinylive/) ([quarto-ext/shinylive](https://github.com/quarto-ext/shinylive)) lets you write Shiny applications in [Quarto web documents and slides](https://quarto.org) and uses the Python or R package (or both) to translate `shinylive-py` or `shinylive-r` code blocks into Shinylive applications.
+4. The [shinylive Quarto extension](https://quarto-ext.github.io/shinylive/) ([quarto-ext/shinylive](https://github.com/quarto-ext/shinylive)) lets you write Shiny applications in [Quarto web documents and slides](https://quarto.org) and uses the Python or R package (or both) to translate `shinylive-python` or `shinylive-r` code blocks into Shinylive applications.
 
 ## Installation
 
@@ -38,7 +38,7 @@ pip install shinylive
 shiny create myapp
 ```
 
-Once you have a Shiny application in `myapp/` and would like turn it into a Shinylive app in `site/`:
+Once you have a Shiny application in `myapp/` and would like to turn it into a Shinylive app in `site/`:
 
 ```
 shinylive export myapp site
@@ -52,6 +52,8 @@ python3 -m http.server --directory site --bind localhost 8008
 
 At this point, you can deploy the `site/` directory to any static web hosting service.
 
+Keep the app and the export in separate folders. `site/` must not be the app folder or hold it. It may be inside the app folder (it is then left out of the app), but separate folders are clearer.
+
 
 ### Multiple applications
 
@@ -63,26 +65,45 @@ shinylive export myapp2 site --subdir app2
 ```
 
 
+### GitHub Pages
+
+`posit-dev/py-shinylive` has a workflow to automatically deploy the Shiny app in your GitHub repository (the root directory by default) to its GitHub Pages. Add it to your repo with:
+
+```bash
+mkdir -p .github/workflows
+curl -fsSL https://raw.githubusercontent.com/posit-dev/py-shinylive/actions/v1/examples/deploy-app.yaml \
+  -o .github/workflows/deploy-app.yaml
+```
+
+Then, in your repository's Settings > Pages, set the "Source" to "GitHub Actions".
+
+For more information, see the [examples folder](https://github.com/posit-dev/py-shinylive/tree/actions/v1/examples).
+
+
 ## Shinylive asset management
 
-Each version of the Shinylive Python package is associated with a particular version of the Shinylive web assets. ([See the releases here](https://github.com/posit-dev/shinylive/releases).)
+Each version of the Shinylive Python package uses a series of the Shinylive web assets, such as `0.10.*`. ([See the releases here](https://github.com/posit-dev/shinylive/releases).) By default, the newest release in the series is used, so new assets patch releases do not need a new version of this package. GitHub is checked for new releases at most once a day (once an hour after a failed check), and the result is saved in `versions.json` in the assets cache folder. The R shinylive package uses the same file, so both packages choose the same version. Offline, the newest downloaded matching version is used.
 
-To see which version of this Python package you have, and which version of the web assets it is associated with, simply run `shinylive` at the command prompt:
+To choose a different version, use `shinylive export --assets-version` or set the `SHINYLIVE_ASSETS_VERSION` environment variable. Both accept an exact version (`0.10.16`), a series (`0.11.*`), or `latest` (check GitHub every time). Pin an exact version for builds that must repeat exactly, such as in CI.
+
+To see which version of this Python package you have, and which series of the web assets it uses, simply run `shinylive` at the command prompt:
 
 ```
 $ shinylive
 Usage: shinylive [OPTIONS] COMMAND [ARGS]...
 
-  shinylive Python package version: 0.1.0
-  shinylive web assets version:     0.2.1
+  shinylive Python package version: 0.8.13
+  shinylive web assets series:      0.10.*
 ...
 ```
+
+`shinylive assets version` prints the exact version that will be used.
 
 The web assets will be downloaded and cached the first time you run `shinylive export`. Or, you can run `shinylive assets download` to fetch them.
 
 ```
 $ shinylive assets download
-Downloading https://github.com/posit-dev/shinylive/releases/download/v0.2.1/shinylive-0.2.1.tar.gz...
+Downloading https://github.com/posit-dev/shinylive/releases/download/v0.10.16/shinylive-0.10.16.tar.gz...
 Unzipping to /Users/username/Library/Caches/shinylive/
 ```
 
@@ -90,25 +111,31 @@ To see what versions you have installed, run `shinylive assets info`:
 
 ```
 $ shinylive assets info
+    shinylive web assets version: 0.10.16
+    Default assets series: 0.10.*
+    Last checked for new assets: 2026-11-25T15:54:25Z
+
     Local cached shinylive asset dir:
     /Users/username/Library/Caches/shinylive
 
     Installed versions:
-    /Users/username/Library/Caches/shinylive/shinylive-0.2.1
-    /Users/username/Library/Caches/shinylive/shinylive-0.0.6
+    /Users/username/Library/Caches/shinylive/shinylive-0.10.16
+    /Users/username/Library/Caches/shinylive/shinylive-0.10.15
+    /Users/username/Library/Caches/shinylive/shinylive-0.9.1
 ```
 
-You can remove old versions with `shinylive assets cleanup`. This will remove all versions except the one that the Python package wants to use:
+You can remove old versions with `shinylive assets cleanup`. By default, this keeps the newest downloaded version of the default series (and of `SHINYLIVE_ASSETS_VERSION`, if set). Use `--keep` to choose what to keep. It also removes temp files left by interrupted downloads.
 
 ```
 $ shinylive assets cleanup
-Keeping version 0.2.1
-Removing /Users/username/Library/Caches/shinylive/shinylive-0.0.6
+Keeping version 0.10.16
+Removing /Users/username/Library/Caches/shinylive/shinylive-0.10.15
+Removing /Users/username/Library/Caches/shinylive/shinylive-0.9.1
 ```
 
 If you want to force it to remove a specific version, use the `shinylive assets remove xxx`:
 
 ```
-$ shinylive assets remove 0.2.1
-Removing /Users/username/Library/Caches/shinylive/shinylive-0.2.1
+$ shinylive assets remove 0.10.15
+Removing /Users/username/Library/Caches/shinylive/shinylive-0.10.15
 ```

@@ -4,14 +4,24 @@ import collections
 import json
 import sys
 from pathlib import Path
-from typing import Literal, MutableMapping, Optional
+from typing import Any, Callable, Literal, MutableMapping, Optional
 
 import click
 
 from . import _assets, _deps, _export
+from ._assets_version import (
+    assets_version_input,
+    parse_assets_version,
+    resolve_assets_version,
+    set_assets_version,
+)
 from ._url import ShinyliveApp, detect_app_language, url_decode
 from ._utils import print_as_json
-from ._version import SHINYLIVE_ASSETS_VERSION, SHINYLIVE_PACKAGE_VERSION
+from ._version import (
+    SHINYLIVE_ASSETS_VERSION_DEFAULT,
+    SHINYLIVE_ASSETS_VERSION_FALLBACK,
+    SHINYLIVE_PACKAGE_VERSION,
+)
 
 
 # Make sure commands are listed in the order they are added in the code.
@@ -20,9 +30,23 @@ class OrderedGroup(click.Group):
         self,
         name: Optional[str] = None,
         commands: Optional[MutableMapping[str, click.Command]] = None,
+        invoke_without_command: bool = False,
+        no_args_is_help: bool | None = None,
+        subcommand_metavar: str | None = None,
+        chain: bool = False,
+        result_callback: Callable[..., Any] | None = None,
         **kwargs: object,
     ):
-        super(OrderedGroup, self).__init__(name, commands, **kwargs)
+        super(OrderedGroup, self).__init__(
+            name,
+            commands,
+            invoke_without_command=invoke_without_command,
+            no_args_is_help=no_args_is_help,
+            subcommand_metavar=subcommand_metavar,
+            chain=chain,
+            result_callback=result_callback,
+            **kwargs,
+        )
         #: the registered subcommands by their exported names.
         self.commands = commands or collections.OrderedDict()
 
@@ -33,22 +57,23 @@ class OrderedGroup(click.Group):
 version_txt = f"""
     \b
     shinylive Python package version: {SHINYLIVE_PACKAGE_VERSION}
-    shinylive web assets version:     {SHINYLIVE_ASSETS_VERSION}
+    shinylive web assets series:      {SHINYLIVE_ASSETS_VERSION_DEFAULT}
 """
 
 # CLI structure:
 # * shinylive
 #     * --version
-#     * export
-#         * Options: --subdir, --full-shinylive, --verbose
+#     * export APPDIR DESTDIR
+#         * Options: --subdir, --full-shinylive, --template-params, --template-dir,
+#           --assets-version, --verbose
 #     * assets
-#         * download
-#             * Options: --version, --dir, --url
-#         * cleanup
-#             * Options: --dir
-#         * remove VERSION
-#             * Options: --dir
 #         * info
+#             * Options: --dir
+#         * download
+#             * Options: --version, --dir, --url, --status/--no-status
+#         * cleanup
+#             * Options: --keep, --dir
+#         * remove VERSION
 #             * Options: --dir
 #         * install-from-local BUILD
 #             * Options: --version, --dir
@@ -63,6 +88,54 @@ version_txt = f"""
 #         * app-resources
 #             * Options: --json-file / stdin (required)
 #     * url
+#         * encode APP [FILES]...
+#             * Options: --mode, --language, --view, --json, --no-header
+#         * decode [URL]
+#             * Options: --dir, --json
+
+
+ASSETS_VERSION_HELP = f"""Shinylive assets version: an exact version
+("{SHINYLIVE_ASSETS_VERSION_FALLBACK}"), a series ("{SHINYLIVE_ASSETS_VERSION_DEFAULT}",
+the newest matching release, checked on GitHub at most once a day), or "latest".
+Defaults to the SHINYLIVE_ASSETS_VERSION environment variable if set, and otherwise
+"{SHINYLIVE_ASSETS_VERSION_DEFAULT}"."""
+
+
+def check_assets_version(
+    ctx: click.Context, param: click.Parameter, value: str | tuple[str, ...] | None
+) -> str | tuple[str, ...] | None:
+    """Click callback: reject a version input that is not an exact version, a series,
+    or "latest"."""
+    values: tuple[str, ...] = (
+        value if isinstance(value, tuple) else (() if value is None else (value,))
+    )
+    for v in values:
+        try:
+            parse_assets_version(v)
+        except ValueError as e:
+            raise click.BadParameter(str(e)) from e
+    return value
+
+
+def check_exact_assets_version(
+    ctx: click.Context, param: click.Parameter, value: str | None
+) -> str | None:
+    """Click callback: reject a version input that is not an exact version."""
+    check_assets_version(ctx, param, value)
+    if value is not None and parse_assets_version(value).kind != "exact":
+        raise click.BadParameter(
+            f"Use an exact version, such as {SHINYLIVE_ASSETS_VERSION_FALLBACK!r}, "
+            f"not {value!r}."
+        )
+    return value
+
+
+def check_env_assets_version() -> None:
+    """Give a usage error, not a traceback, for a bad SHINYLIVE_ASSETS_VERSION."""
+    try:
+        assets_version_input()
+    except ValueError as e:
+        raise click.UsageError(str(e)) from e
 
 
 # #############################################################################
@@ -97,7 +170,10 @@ APPDIR is the directory containing the Shiny application.
 DESTDIR is the destination directory where the output files will be written to. This
 directory can be deployed as a static web site.
 
-This command will not include the contents of venv/ or any files that start with '.'
+APPDIR and DESTDIR must be separate folders: DESTDIR must not be APPDIR or hold it.
+
+This command will not include folders named venv/, .venv/, or __pycache__/, or any
+files or folders that start with '.'
 
 After writing the output files, you can serve them locally with the following command:
 
@@ -132,6 +208,13 @@ After writing the output files, you can serve them locally with the following co
     help="Path to the directory containing the mustache templates for the exported shinylive files.",
 )
 @click.option(
+    "--assets-version",
+    type=str,
+    default=None,
+    help=ASSETS_VERSION_HELP,
+    callback=check_assets_version,
+)
+@click.option(
     "--verbose",
     is_flag=True,
     default=False,
@@ -146,11 +229,19 @@ def export(
     full_shinylive: bool,
     template_dir: str | None,
     template_params: str | None,
+    assets_version: str | None,
 ) -> None:
+    if assets_version is None:
+        check_env_assets_version()
     template_params_dict = None
     if template_params is not None:
-        if Path(template_params).exists():
-            with open(template_params, "r") as f:
+        try:
+            is_file = Path(template_params).is_file()
+        except OSError:
+            # Python < 3.14 raises for a JSON string longer than a file name can be
+            is_file = False
+        if is_file:
+            with open(template_params, "r", encoding="utf-8") as f:
                 template_params_dict = json.load(f)
         else:
             template_params_dict = json.loads(template_params)
@@ -163,6 +254,7 @@ def export(
         full_shinylive=full_shinylive,
         template_dir=template_dir,
         template_params=template_params_dict,
+        assets_version=assets_version,
     )
 
 
@@ -180,7 +272,7 @@ def export(
     cls=OrderedGroup,
 )
 def assets() -> None:
-    pass
+    check_env_assets_version()
 
 
 def upgrade_dir(dir: str | Path | None) -> Path:
@@ -210,9 +302,9 @@ def assets_info(
 @click.option(
     "--version",
     type=str,
-    default=SHINYLIVE_ASSETS_VERSION,
-    help="Shinylive version to download.",
-    show_default=True,
+    default=None,
+    help=ASSETS_VERSION_HELP,
+    callback=check_assets_version,
 )
 @click.option(
     "--dir",
@@ -224,7 +316,7 @@ def assets_info(
     "--url",
     type=str,
     default=None,
-    help="URL to download from. If used, this will override --version.",
+    help="A direct link to an assets tarball (such as a mirror) to download instead of the GitHub release. If used, --version is ignored; the folder made is the top-level folder of the tarball.",
 )
 @click.option(
     "--status/--no-status",
@@ -233,24 +325,33 @@ def assets_info(
     help="Enable/disable status output during download.",
 )
 def download(
-    version: str,
+    version: Optional[str],
     dir: Optional[str | Path],
     url: Optional[str],
     status: bool,
 ) -> None:
-    if version is None:  # pyright: ignore[reportUnnecessaryComparison]
-        version = SHINYLIVE_ASSETS_VERSION
     _assets.download_shinylive(
         destdir=upgrade_dir(dir), version=version, url=url, status=status
     )
 
 
-cleanup_help = f"Remove all versions of local assets except the currently-used version, {SHINYLIVE_ASSETS_VERSION}."
+cleanup_help = "Remove all versions of local assets except the ones to keep."
 
 
 @assets.command(
     short_help=cleanup_help,
-    help=cleanup_help,
+    help=f"""{cleanup_help} Also removes temp files left by interrupted downloads.""",
+)
+@click.option(
+    "--keep",
+    type=str,
+    multiple=True,
+    callback=check_assets_version,
+    help=f"""Version to keep: an exact version ("{SHINYLIVE_ASSETS_VERSION_FALLBACK}"),
+    a series ("{SHINYLIVE_ASSETS_VERSION_DEFAULT}"), or "latest". For a series, only
+    the newest downloaded match is kept. Can be used more than once. Defaults to
+    "{SHINYLIVE_ASSETS_VERSION_DEFAULT}", plus the SHINYLIVE_ASSETS_VERSION environment
+    variable if set.""",
 )
 @click.option(
     "--dir",
@@ -259,16 +360,17 @@ cleanup_help = f"Remove all versions of local assets except the currently-used v
     help="Directory where shinylive assets are stored (if not using the default).",
 )
 def cleanup(
+    keep: tuple[str, ...],
     dir: Optional[str | Path],
 ) -> None:
-    _assets.cleanup_shinylive_assets(shinylive_dir=upgrade_dir(dir))
+    _assets.cleanup_shinylive_assets(shinylive_dir=upgrade_dir(dir), keep=list(keep))
 
 
 @assets.command(
     short_help="Remove a specific version of local copies of assets.",
-    help=f"""Remove a specific version (`VERSION`) of local copies of assets."
+    help=f"""Remove a specific version (`VERSION`) of local copies of assets.
 
-    For example, `VERSION` might be `{SHINYLIVE_ASSETS_VERSION}`.
+    For example, `VERSION` might be `{SHINYLIVE_ASSETS_VERSION_FALLBACK}`.
     """,
     no_args_is_help=True,
 )
@@ -304,9 +406,9 @@ def remove(
 @click.option(
     "--version",
     type=str,
-    default=SHINYLIVE_ASSETS_VERSION,
-    help="Version of the shinylive assets being copied.",
-    show_default=True,
+    default=None,
+    help="Version to name the copied assets after. Defaults to the version in the `package.json` of the shinylive repository that holds BUILD.",
+    callback=check_exact_assets_version,
 )
 @click.option(
     "--dir",
@@ -321,14 +423,14 @@ def remove(
 )
 def install_from_local(
     build: str,
-    version: str,
+    version: Optional[str],
     dir: Optional[str | Path],
 ) -> None:
     dir = upgrade_dir(dir)
-    if version is None:  # pyright: ignore[reportUnnecessaryComparison]
-        version = SHINYLIVE_ASSETS_VERSION
+    version = _assets.local_build_target_version(build, version)
     print(f"Copying shinylive-{version} from {build} to {dir}")
     _assets.copy_shinylive_local(source_dir=build, destdir=dir, version=version)
+    print_use_local_build_hint(version)
 
 
 link_from_local_help = (
@@ -347,9 +449,9 @@ link_from_local_help = (
 @click.option(
     "--version",
     type=str,
-    default=SHINYLIVE_ASSETS_VERSION,
-    help="Version of shinylive assets being linked.",
-    show_default=True,
+    default=None,
+    help="Version to name the linked assets after. Defaults to the version in the `package.json` of the shinylive repository that holds BUILD.",
+    callback=check_exact_assets_version,
 )
 @click.option(
     "--dir",
@@ -364,23 +466,33 @@ link_from_local_help = (
 )
 def link_from_local(
     build: str,
-    version: str,
+    version: Optional[str],
     dir: Optional[str | Path],
 ) -> None:
     if build is None:  # pyright: ignore[reportUnnecessaryComparison]
         raise click.UsageError("Must specify BUILD")
     dir = upgrade_dir(dir)
-    if version is None:  # pyright: ignore[reportUnnecessaryComparison]
-        version = SHINYLIVE_ASSETS_VERSION
+    version = _assets.local_build_target_version(build, version)
     print(f"Creating symlink for shinylive-{version} from {build} to {dir}")
     _assets.link_shinylive_local(source_dir=build, destdir=dir, version=version)
+    print_use_local_build_hint(version)
+
+
+def print_use_local_build_hint(version: str) -> None:
+    # A series moves to newer releases, which would stop using the local build
+    print(
+        f"To use this build, set SHINYLIVE_ASSETS_VERSION={version}. Otherwise a newer "
+        "release in the default series is used once it is out."
+    )
 
 
 @assets.command(
-    help="Print the version of the Shinylive assets.",
+    help="""Print the exact version of the Shinylive assets to use. This is the newest
+    release in the default series (or in SHINYLIVE_ASSETS_VERSION, if set). GitHub is
+    checked for new releases at most once a day.""",
 )
 def version() -> None:
-    print(SHINYLIVE_ASSETS_VERSION)
+    print(resolve_assets_version(assets_version_input(), download=False))
 
 
 # #############################################################################
@@ -400,7 +512,7 @@ def version() -> None:
     cls=OrderedGroup,
 )
 def extension() -> None:
-    pass
+    check_env_assets_version()
 
 
 @extension.command(
@@ -417,16 +529,30 @@ def extension() -> None:
 """,
 )
 def extension_info() -> None:
+    # Only `info` checks GitHub (and saves `versions.json`). It also downloads, so the
+    # `codeblock-to-json` script it reports exists.
+    version = resolve_assets_version(assets_version_input())
     print_as_json(
         {
             "version": SHINYLIVE_PACKAGE_VERSION,
-            "assets_version": SHINYLIVE_ASSETS_VERSION,
+            "assets_version": version,
             "scripts": {
-                "codeblock-to-json": _assets.codeblock_to_json_file(),
+                "codeblock-to-json": _assets.codeblock_to_json_file(version),
             },
         }
     )
     return
+
+
+def use_quarto_assets_version() -> None:
+    """Set the assets version for the commands after `extension info`.
+
+    Quarto runs `extension info` first for each document, and only `info` checks
+    GitHub. The later commands, each in its own process, only read the `versions.json`
+    that `info` just saved. So one render uses one version, and the R package
+    (which shares `versions.json`) chooses the same one.
+    """
+    set_assets_version(resolve_assets_version(assets_version_input(), check=False))
 
 
 base_htmldeps_help = (
@@ -447,6 +573,7 @@ base_htmldeps_help = (
 def base_htmldeps(
     sw_dir: Optional[str] = None,
 ) -> None:
+    use_quarto_assets_version()
     print_as_json(
         _deps.shinylive_base_deps_htmldep(sw_dir=sw_dir, asset_type=("base",))
     )
@@ -461,6 +588,7 @@ language_resources_help = "Return HTML dependency resources for python, specific
     help=language_resources_help,
 )
 def language_resources() -> None:
+    use_quarto_assets_version()
     print_as_json(_deps.shinylive_python_resources())
     return
 
@@ -482,6 +610,7 @@ app_resources_help = "Return HTML dependency resources specific to a shiny app."
 def app_resources(
     json_file: Optional[str] = None,
 ) -> None:
+    use_quarto_assets_version()
     json_content: str | None = None
     if json_file is None:
         json_content = sys.stdin.read()
@@ -525,7 +654,10 @@ Create a shinylive.io URL for a Shiny app from local files.
 
 APP is the path to the primary Shiny app file.
 
-FILES are additional supporting files or directories for the app.
+FILES are additional supporting files or directories for the app. They are named by
+their path relative to APP's folder (or by file name when APP is `-`). A directory
+outside APP's folder (or any directory when APP is `-`) keeps its name, so `www` adds
+`www/style.css`.
 
 On macOS, you can copy the URL to the clipboard with:
 

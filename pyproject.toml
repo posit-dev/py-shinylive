@@ -10,18 +10,18 @@ authors = [
 ]
 description = "Run Shiny applications running Python in the browser."
 readme = "README.md"
-license = {text = "MIT"}
-requires-python = ">=3.8"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Intended Audience :: Developers",
-    "License :: OSI Approved :: MIT License",
     "Natural Language :: English",
-    "Programming Language :: Python :: 3.8",
-    "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
     "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
 ]
 dependencies = [
     "shiny",
@@ -34,9 +34,11 @@ dependencies = [
 ]
 
 [project.urls]
+Homepage = "https://github.com/posit-dev/py-shinylive"
 "Bug Tracker" = "https://github.com/posit-dev/py-shinylive/issues"
-"Documentation" = "https://github.com/posit-dev/py-shinylive"
+Documentation = "https://github.com/posit-dev/py-shinylive"
 "Source Code" = "https://github.com/posit-dev/py-shinylive"
+Changelog = "https://github.com/posit-dev/py-shinylive/blob/main/CHANGELOG.md"
 
 [project.optional-dependencies]
 test = [
@@ -44,6 +46,7 @@ test = [
 ]
 dev = [
     "black>=22.3.0",
+    "coverage",
     "flake8>=3.9.2",
     "flake8-bugbear>=22.6.22",
     "isort>=5.11.2",
@@ -57,21 +60,18 @@ shinylive = "shinylive._main:main"
 path = "shinylive/_version/__init__.py"
 pattern = "SHINYLIVE_PACKAGE_VERSION\\s*=\\s*['\"](?P<version>[^'\"]+)['\"]"
 
+# `shinylive/py.typed` ships because it is inside the package.
 [tool.hatch.build.targets.wheel]
 packages = ["shinylive"]
-include = ["py.typed"]
 
-
+# Tests and the changelog are included so packagers (e.g. conda-forge) can
+# run the tests from the sdist.
 [tool.hatch.build.targets.sdist]
-include = [
+only-include = [
     "shinylive",
-    "LICENSE",
-    "README.md",
+    "tests",
+    "CHANGELOG.md",
 ]
-
-[tool.flake8]
-ignore = ["E302", "E501", "E704", "F403", "F405", "W503"]
-exclude = ["docs", ".venv", "_dev"]
 
 [tool.isort]
 profile = "black"
