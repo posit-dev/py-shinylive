@@ -6,7 +6,6 @@ import shutil
 import sys
 import tempfile
 import time
-import urllib.error
 import urllib.request
 import uuid
 from pathlib import Path
@@ -512,25 +511,3 @@ def print_shinylive_local_info(
             print("    (None)")
     else:
         print("    (Cache dir does not exist)")
-
-
-def _check_assets_url(
-    version: str = SHINYLIVE_ASSETS_VERSION_FALLBACK, url: Optional[str] = None
-) -> bool:
-    """Checks if the URL for the Shinylive assets bundle is valid.
-
-    Returns True if the URL is valid (with a 200 status code), False otherwise.
-
-    The reason it has both the `version` and `url` parameters is so that it behaves the
-    same as `download_shinylive()` and `ensure_shinylive_assets()`.
-    """
-    if url is None:
-        url = shinylive_bundle_url(version)
-
-    req = urllib.request.Request(url, method="HEAD")
-    try:
-        with urllib.request.urlopen(req, timeout=DOWNLOAD_TIMEOUT_SECONDS) as resp:
-            return resp.getcode() == 200
-    except urllib.error.HTTPError:
-        # Such as a 404 for a missing release
-        return False

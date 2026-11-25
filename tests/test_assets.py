@@ -26,7 +26,15 @@ def test_assets_available():
     pass during development due to changing version numbers, it must pass before making
     a release.
     """
-    assert shinylive._assets._check_assets_url() is True
+    import urllib.request
+
+    from shinylive._version import SHINYLIVE_ASSETS_VERSION_FALLBACK
+
+    url = shinylive._assets.shinylive_bundle_url(SHINYLIVE_ASSETS_VERSION_FALLBACK)
+    req = urllib.request.Request(url, method="HEAD")
+    # Raises `HTTPError` for a missing release
+    with urllib.request.urlopen(req, timeout=60) as resp:
+        assert resp.getcode() == 200
 
 
 def test_copy_local_build_keeps_old_folder_when_source_is_missing(tmp_path: Path):
@@ -77,13 +85,3 @@ def test_download_progress_without_size(
     assert "MB" in err
     assert "-" not in err.split("Unzipping")[0].split("...")[1]
     assert (tmp_path / "shinylive-0.10.16" / "file.txt").exists()
-
-
-def test_check_assets_url_is_false_for_missing_release(monkeypatch: pytest.MonkeyPatch):
-    import urllib.error
-
-    def not_found(*args: object, **kwargs: object):
-        raise urllib.error.HTTPError("https://x", 404, "Not Found", {}, None)  # type: ignore
-
-    monkeypatch.setattr(shinylive._assets.urllib.request, "urlopen", not_found)
-    assert shinylive._assets._check_assets_url(url="https://x") is False
