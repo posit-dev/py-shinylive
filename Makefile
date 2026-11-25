@@ -67,6 +67,9 @@ format: ## format code and sort imports with ruff
 test: ## run tests quickly with the default Python
 	uv run pytest
 
+test-all: ## run tests against the built wheel on Python 3.10 to 3.14 with tox
+	uv run tox run-parallel
+
 coverage: ## check code coverage quickly with the default Python
 	uv run coverage run --source shinylive -m pytest
 	uv run coverage report -m
@@ -81,6 +84,6 @@ dist: clean ## builds source and wheel package
 	ls -l dist
 
 ## install the built wheel into .venv, replacing the editable install.
-## Run later commands with UV_NO_SYNC=1, or `uv run` reinstalls the editable copy.
+## The next `uv run` puts the editable install back.
 install: dist
 	uv pip install --reinstall dist/shinylive*.whl

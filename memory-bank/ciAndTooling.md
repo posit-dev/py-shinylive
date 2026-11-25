@@ -8,9 +8,8 @@ description: "GitHub Actions workflows (build and test, PyPI release, the reusab
 ## Workflows (`.github/workflows/`)
 
 - `build.yml` - on push to `main`/`rc-*`, pull requests, releases, and manual
-  runs. Tests Python 3.10 to 3.14 with uv: `uv sync`, `make install` (builds
-  a wheel and installs it over the editable copy), `make install-deps` (`uv sync`), `make test`, `make check`.
-  The job sets `UV_NO_SYNC=1` so `uv run` does not put the editable copy back.
+  runs. One job: `uv sync`, `make test-all` (tox tests the built wheel on
+  Python 3.10 to 3.14 in parallel), `make check`.
   On a published release, the `deploy` job builds with `make dist` and
   publishes to PyPI: to TestPyPI if the release name starts with `TEST`, to
   PyPI if it starts with `shinylive`.
@@ -36,7 +35,8 @@ git push --force origin refs/tags/actions/v1
 
 ## Makefile
 
-`make install-deps` (`uv sync`), `make test`, `make check` (`pyrefly`, `lint`,
+`make install-deps` (`uv sync`), `make test`, `make test-all` (tox),
+`make check` (`pyrefly`, `lint`,
 `ruff format --check`), `make lint` (`ruff check`), `make format` (`ruff check
 --fix` and `ruff format`), `make dist` (`uv build`), `make install`,
 `make coverage`, `make clean`.
@@ -58,6 +58,13 @@ git push --force origin refs/tags/actions/v1
   `[tool.pyrefly]`, set up like py-shiny's: `implicit-any` is an error.
   `types-chevron` is in the `dev` group because pyrefly, unlike pyright, does
   not bundle third-party stubs.
+- tox settings are in `[tool.tox]`. Each environment installs the built wheel
+  and the `test` group (pytest only; `dev` includes it), and runs pytest with
+  `--import-mode=importlib`. Without that flag, pytest puts the repo root on
+  `sys.path` and the tests import the source folder instead of the wheel.
+  tox passes only a few environment variables to the tests, so `pass_env`
+  adds `CI` and `GITHUB_EVENT_NAME`. Without them, the asset tests do not
+  know they are in CI and download the assets on every PR.
 
 ## CHANGELOG
 
