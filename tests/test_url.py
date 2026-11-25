@@ -195,3 +195,12 @@ def test_decode_language_and_mode_on_other_hosts():
     assert app._language == "r"
     assert app.mode == "app"
     assert app.host == "http://localhost:8080"
+
+
+def test_files_folder_holding_the_app_skips_the_app(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    app_py = make_url_app(tmp_path)
+    monkeypatch.chdir(tmp_path)
+    app = ShinyliveApp.from_local(app_py, ["."])
+    assert names(app) == ["app.py", "x.txt", "www/s.css"]

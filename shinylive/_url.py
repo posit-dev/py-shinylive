@@ -414,14 +414,15 @@ class ShinyliveApp:
         if isinstance(files, (str, Path)):
             files = [files]
 
+        app_path = (
+            os.path.abspath(self._app_path) if self._app_path is not None else None
+        )
         for file in files or []:
-            if self._app_path is not None and Path(file) == self._app_path:
-                continue
-            if Path(file).is_dir():
-                for dir_file in listdir_recursive(file):
-                    self.add_file(dir_file)
-            else:
-                self.add_file(file)
+            file_paths = listdir_recursive(file) if Path(file).is_dir() else [file]
+            for file_path in file_paths:
+                # The app file is already in the bundle
+                if os.path.abspath(file_path) != app_path:
+                    self.add_file(file_path)
 
         return self
 
@@ -735,8 +736,13 @@ def listdir_recursive(dir: str | Path) -> list[str]:
 
     for root, dirs, files in os.walk(dir):
         # Exclude files and directories that start with `.` or `__`
-        dirs[:] = [d for d in dirs if not (d.startswith(".") or d.startswith("__"))]
-        files[:] = [f for f in files if not (f.startswith(".") or f.startswith("__"))]
+        # Sort, so files are added in the same order on every run
+        dirs[:] = sorted(
+            d for d in dirs if not (d.startswith(".") or d.startswith("__"))
+        )
+        files[:] = sorted(
+            f for f in files if not (f.startswith(".") or f.startswith("__"))
+        )
 
         for file in files:
             if not (file.startswith(".") or file.startswith("__")):
