@@ -13,25 +13,26 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - uses: actions/checkout@v6
+      - name: 📥 Check out the code
+        uses: actions/checkout@v6
 
       # `setup-uv` stopped publishing floating major tags after v7.6, so this
       # is pinned to an exact release and needs bumping by hand.
-      - name: Set up uv
+      - name: 🚀 Install uv
         uses: astral-sh/setup-uv@v10.2.0
 
-      - name: Install dependencies
+      - name: 📦 Install dependencies
         id: install
         run: |
           uv sync
 
       # tox builds the wheel once and tests it on Python 3.10 to 3.14 in
       # parallel. tox-uv downloads the Python versions as needed.
-      - name: Run unit tests on all Python versions
+      - name: 🧪 Run tests on all Python versions
         run: |
           make test-all
 
-      - name: pyrefly and ruff
+      - name: 📐 Check types, style, and formatting
         if: steps.install.outcome == 'success' && (success() || failure())
         run: |
           make check
@@ -42,26 +43,27 @@ jobs:
     if: github.event_name == 'release'
     needs: [build]
     steps:
-      - uses: actions/checkout@v6
-      - name: "Set up uv and Python"
+      - name: 📥 Check out the code
+        uses: actions/checkout@v6
+      - name: 🚀 Install uv and Python
         uses: astral-sh/setup-uv@v10.2.0
         with:
           python-version: "3.10"
-      - name: Install dependencies
+      - name: 📦 Install dependencies
         run: |
           uv sync
-      - name: "Build Package"
+      - name: 🧳 Build package
         run: |
           make dist
-      - name: Run unit tests
+      - name: 🧪 Run tests
         run: |
           make test
-      - name: pyrefly and ruff
+      - name: 📐 Check types, style, and formatting
         run: |
           make check
 
       # test deploy ----
-      - name: "Test Deploy to PyPI"
+      - name: 🧪 Publish to TestPyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         if: startsWith(github.event.release.name, 'TEST')
         with:
@@ -70,7 +72,7 @@ jobs:
           repository_url: https://test.pypi.org/legacy/
 
       ## prod deploy ----
-      - name: "Deploy to PyPI"
+      - name: 🚢 Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         if: startsWith(github.event.release.name, 'shinylive')
         with:

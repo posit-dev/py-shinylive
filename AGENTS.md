@@ -23,7 +23,7 @@ parts:
 ## Development commands
 
 ```sh
-make install-deps  # uv sync: the package and dev tools into .venv
+make setup         # uv sync and pre-commit install
 make test          # pytest
 make test-all      # tox: pytest on Python 3.10 to 3.14 against the wheel
 make check         # pyrefly, ruff check, ruff format --check

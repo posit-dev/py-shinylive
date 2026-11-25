@@ -35,7 +35,8 @@ git push --force origin refs/tags/actions/v1
 
 ## Makefile
 
-`make install-deps` (`uv sync`), `make test`, `make test-all` (tox),
+`make help` (list targets), `make setup` (`uv sync --upgrade` and
+`pre-commit install`), `make test`, `make test-all` (tox),
 `make check` (`pyrefly`, `lint`,
 `ruff format --check`), `make lint` (`ruff check`), `make format` (`ruff check
 --fix` and `ruff format`), `make dist` (`uv build`), `make install`,
@@ -65,6 +66,9 @@ git push --force origin refs/tags/actions/v1
   tox passes only a few environment variables to the tests, so `pass_env`
   adds `CI` and `GITHUB_EVENT_NAME`. Without them, the asset tests do not
   know they are in CI and download the assets on every PR.
+- pre-commit hooks are in `.pre-commit-config.yaml`: basic file checks plus
+  `ruff-check` and `ruff-format`. Keep the ruff `rev` in step with the ruff
+  version in the `dev` group.
 
 ## CHANGELOG
 
@@ -80,6 +84,9 @@ change. A release renames it to the version and date.
   for a comment.
 - **Every Makefile tool runs through `uv run`,** which installs the `dev`
   dependency group into `.venv` first. No activated environment is needed.
+- **Git worktrees share one `.git/hooks` folder.** `make setup` (`pre-commit
+  install`) in one worktree turns the hook on in all of them, and commits fail
+  in any worktree whose branch has no `.pre-commit-config.yaml`.
 - **`uv.lock` is not committed** (see `.gitignore`), so CI tests against the
   newest versions of dependencies, as users get them.
 - **Asset tests only run in CI on a release** (see `testing.md`), so a broken
