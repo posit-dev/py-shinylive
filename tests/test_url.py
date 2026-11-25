@@ -104,3 +104,94 @@ def test_encode_r_app_content():
     ]
     assert "## file: app.R" in app.to_chunk_contents()
     assert app_code in app.to_chunk_contents()
+
+
+# Files ------------------------------------------------------------------------------
+import os  # noqa: E402
+from pathlib import Path  # noqa: E402
+
+import pytest  # noqa: E402
+
+
+def make_url_app(dir: Path) -> Path:
+    (dir / "www").mkdir(parents=True)
+    (dir / "app.py").write_text("from shiny import App\n")
+    (dir / "x.txt").write_text("1")
+    (dir / "www" / "s.css").write_text("p {}")
+    return dir / "app.py"
+
+
+def names(app: ShinyliveApp) -> list[str]:
+    return [f["name"] for f in app._bundle]
+
+
+def test_files_can_be_folders(tmp_path: Path):
+    app_py = make_url_app(tmp_path)
+    app = ShinyliveApp.from_local(app_py, [tmp_path / "www", tmp_path / "x.txt"])
+    assert names(app) == ["app.py", "www/s.css", "x.txt"]
+
+
+def test_add_file_overwrite_replaces(tmp_path: Path):
+    app_py = make_url_app(tmp_path)
+    app = ShinyliveApp.from_local(app_py, [tmp_path / "x.txt"])
+    (tmp_path / "x.txt").write_text("2")
+    app.add_file(tmp_path / "x.txt", overwrite=True)
+    assert names(app) == ["app.py", "x.txt"]
+    assert app._bundle[1]["content"] == "2"
+
+
+def test_remove_file_removes(tmp_path: Path):
+    app_py = make_url_app(tmp_path)
+    app = ShinyliveApp.from_local(app_py, [tmp_path / "x.txt", tmp_path / "www"])
+    assert names(app - "x.txt") == ["app.py", "www/s.css"]
+    assert names(app - (tmp_path / "www" / "s.css")) == ["app.py", "x.txt"]
+    app.remove_file("x.txt")
+    assert names(app) == ["app.py", "www/s.css"]
+    with pytest.raises(ValueError, match="not found"):
+        app.remove_file("nope.txt")
+
+
+def test_mixed_relative_and_absolute_paths(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+):
+    app_py = make_url_app(tmp_path / "app")
+    monkeypatch.chdir(tmp_path)
+    app = ShinyliveApp.from_local(
+        os.path.join("app", "app.py"), [app_py.parent / "x.txt"]
+    )
+    assert names(app) == ["app.py", "x.txt"]
+
+
+def test_add_dir_outside_the_app_folder(tmp_path: Path):
+    app_py = make_url_app(tmp_path / "app")
+    other = tmp_path / "other" / "assets"
+    other.mkdir(parents=True)
+    (other / "z.css").write_text("z")
+    app = ShinyliveApp.from_local(app_py).add_dir(other)
+    assert names(app) == ["app.py", "assets/z.css"]
+
+
+def test_write_files_makes_folders(tmp_path: Path):
+    bundle: list[FileContentJson] = [
+        {"name": "app.py", "content": "from shiny import App\n"},
+        {"name": "www/s.css", "content": "p { content: 'é' }"},
+    ]
+    out = ShinyliveApp(bundle, "py").write_files(tmp_path / "out")
+    assert (out / "www" / "s.css").read_bytes().decode("utf-8") == "p { content: 'é' }"
+
+
+@pytest.mark.parametrize("name", ["../evil.txt", "a/../../evil.txt", "/tmp/evil.txt"])
+def test_write_files_stays_inside_dest(tmp_path: Path, name: str):
+    bundle: list[FileContentJson] = [{"name": name, "content": "x"}]
+    with pytest.raises(ValueError, match="outside"):
+        ShinyliveApp(bundle, "py").write_files(tmp_path / "out")
+    assert not (tmp_path / "evil.txt").exists()
+
+
+def test_decode_language_and_mode_on_other_hosts():
+    bundle: list[FileContentJson] = [{"name": "app.R", "content": "library(shiny)"}]
+    url = ShinyliveApp(bundle, "r", mode="app", host="http://localhost:8080").to_url()
+    app = url_decode(url)
+    assert app._language == "r"
+    assert app.mode == "app"
+    assert app.host == "http://localhost:8080"

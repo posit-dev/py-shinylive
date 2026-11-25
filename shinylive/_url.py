@@ -198,10 +198,14 @@ class ShinyliveApp:
 
         url = url.strip()
         bundle = bundle_from_url(url)
-        language = "r" if "shinylive.io/r/" in url else "py"
-        mode = "app" if f"{language}/app/" in url else "editor"
+        scheme, netloc, path, *_ = urlparse(url)
+        # The path ends in `/<language>/<mode>/`, on shinylive.io or any other host
+        m = re.search(r"/(py|r)/(editor|app)/?$", path)
+        language: Literal["py", "r"] = "r" if m and m.group(1) == "r" else "py"
+        mode: Literal["editor", "app"] = (
+            "app" if m and m.group(2) == "app" else "editor"
+        )
         header = False if "h=0" in url else True
-        scheme, netloc, *_ = urlparse(url)
 
         return cls(
             bundle,
@@ -363,15 +367,23 @@ class ShinyliveApp:
             The directory that the files were written to.
         """
         out_dir = Path(dest)
+        # Check every name first, so nothing is written for a bad bundle. The names
+        # may come from a URL, so they must not write outside `dest`.
+        for file in self._bundle:
+            name = Path(file["name"])
+            if name.is_absolute() or name.drive or name.root or ".." in name.parts:
+                raise ValueError(
+                    f"Can't write '{file['name']}': it is outside '{dest}'."
+                )
         out_dir.mkdir(parents=True, exist_ok=True)
         for file in self._bundle:
+            out_file = out_dir / file["name"]
+            out_file.parent.mkdir(parents=True, exist_ok=True)
             if "type" in file and file["type"] == "binary":
-                import base64
-
-                with open(out_dir / file["name"], "wb") as f_out:
+                with open(out_file, "wb") as f_out:
                     f_out.write(base64.b64decode(file["content"]))
             else:
-                with open(out_dir / file["name"], "w") as f_out:
+                with open(out_file, "w", encoding="utf-8") as f_out:
                     f_out.write(
                         file["content"].encode("utf-8", errors="ignore").decode("utf-8")
                     )
@@ -405,7 +417,11 @@ class ShinyliveApp:
         for file in files or []:
             if self._app_path is not None and Path(file) == self._app_path:
                 continue
-            self.add_file(file)
+            if Path(file).is_dir():
+                for dir_file in listdir_recursive(file):
+                    self.add_file(dir_file)
+            else:
+                self.add_file(file)
 
         return self
 
@@ -440,14 +456,11 @@ class ShinyliveApp:
                 # The contents of the directory are added into the "root" of the app
                 # bundle, e.g. `"../some_dir/www"` adds its contents to the bundle,
                 # i.e. the bundle will have `styles.css` and `app.js`, etc.
-                name = str(Path(file).relative_to(dir))
+                name = Path(file).relative_to(dir).as_posix()
             else:
                 # The directory is added into the bundle, e.g. `"../some_dir/www"`
                 # is added as `www/` in the bundle.
-                name = os.path.join(
-                    os.path.basename(dir),
-                    str(Path(file).relative_to(dir)),
-                )
+                name = (Path(dir.name) / Path(file).relative_to(dir)).as_posix()
             self.add_file(file, name, overwrite=overwrite)
 
         return self
@@ -494,16 +507,20 @@ class ShinyliveApp:
             Whether or not to overwrite an existing file with the same name. Defaults
             to ``False``.
         """
-        file_new = read_file(file, self._root_dir)
-        if name is not None:
-            file_new["name"] = str(name)
+        if name is None:
+            file_new = read_file(file, self._root_dir)
+        else:
+            # The name is given, so the file need not be inside the app folder
+            file_new = read_file(file)
+            file_new["name"] = Path(name).as_posix()
 
         file_names = [file["name"] for file in self._bundle]
 
-        if any([name == file_new["name"] for name in file_names]):
+        if file_new["name"] in file_names:
             if overwrite:
                 index = file_names.index(file_new["name"])
                 self._bundle[index] = file_new
+                return self
             else:
                 raise ValueError(
                     f"File '{file_new['name']}' already exists in app bundle and `overwrite` was `False`."
@@ -514,23 +531,28 @@ class ShinyliveApp:
         return self
 
     def remove_file(self, file: str | Path) -> ShinyliveApp:
+        """
+        Remove a file from the Shinylive application.
+
+        Parameters
+        ----------
+        file
+            The name of the file in the app bundle, or, for apps created from local
+            files, the path to the local file.
+        """
         file_names = [file["name"] for file in self._bundle]
-        index = None
+        name = file if isinstance(file, str) else None
 
-        if file in file_names and isinstance(file, str):
-            # find the index of the file to remove
-            index = file_names.index(file)
+        if name not in file_names and self._root_dir is not None:
+            try:
+                name = _relative_name(file, self._root_dir)
+            except ValueError:
+                pass
 
-        if self._root_dir is not None:
-            root_dir = self._root_dir.absolute()
-
-            other_path = str(Path(file).absolute().relative_to(root_dir))
-            if other_path in file_names:
-                index = file_names.index(other_path)
-
-        if index is None:
+        if name not in file_names:
             raise ValueError(f"File '{file}' not found in app bundle.")
 
+        del self._bundle[file_names.index(name)]
         return self
 
     def __add__(self, other: str | Path) -> ShinyliveApp:
@@ -739,13 +761,28 @@ def read_file(file: str | Path, root_dir: str | Path | None = None) -> FileConte
             file_content = base64.b64encode(file_content_bin).decode("utf-8")
             type = "binary"
 
-    file_name = str(file.relative_to(root_dir)) if root_dir else file.name
+    file_name = _relative_name(file, root_dir) if root_dir else file.name
 
     return {
         "name": file_name,
         "content": file_content,
         "type": type,
     }
+
+
+def _relative_name(file: str | Path, root_dir: str | Path) -> str:
+    """Return the name of `file` relative to `root_dir`, with `/`. The two may be a mix
+    of relative and absolute paths. Raises `ValueError` if `file` is not inside
+    `root_dir`."""
+    file = Path(os.path.abspath(file))
+    root_dir = Path(os.path.abspath(root_dir))
+    try:
+        return file.relative_to(root_dir).as_posix()
+    except ValueError:
+        raise ValueError(
+            f"File '{file}' is not inside the app folder '{root_dir}'. Use "
+            "`add_file(file, name=...)` to add it with another name."
+        ) from None
 
 
 def lzstring_file_bundle(file_bundle: list[FileContentJson]) -> str:
