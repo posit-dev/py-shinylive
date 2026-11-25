@@ -63,16 +63,17 @@ version_txt = f"""
 # CLI structure:
 # * shinylive
 #     * --version
-#     * export
-#         * Options: --subdir, --full-shinylive, --assets-version, --verbose
+#     * export APPDIR DESTDIR
+#         * Options: --subdir, --full-shinylive, --template-params, --template-dir,
+#           --assets-version, --verbose
 #     * assets
+#         * info
+#             * Options: --dir
 #         * download
-#             * Options: --version, --dir, --url
+#             * Options: --version, --dir, --url, --status/--no-status
 #         * cleanup
 #             * Options: --keep, --dir
 #         * remove VERSION
-#             * Options: --dir
-#         * info
 #             * Options: --dir
 #         * install-from-local BUILD
 #             * Options: --version, --dir
@@ -87,6 +88,10 @@ version_txt = f"""
 #         * app-resources
 #             * Options: --json-file / stdin (required)
 #     * url
+#         * encode APP [FILES]...
+#             * Options: --mode, --language, --view, --json, --no-header
+#         * decode [URL]
+#             * Options: --dir, --json
 
 
 ASSETS_VERSION_HELP = f"""Shinylive assets version: an exact version
@@ -165,7 +170,10 @@ APPDIR is the directory containing the Shiny application.
 DESTDIR is the destination directory where the output files will be written to. This
 directory can be deployed as a static web site.
 
-This command will not include the contents of venv/ or any files that start with '.'
+APPDIR and DESTDIR must be separate folders: DESTDIR must not be APPDIR or hold it.
+
+This command will not include folders named venv/, .venv/, or __pycache__/, or any
+files or folders that start with '.'
 
 After writing the output files, you can serve them locally with the following command:
 
@@ -646,7 +654,8 @@ Create a shinylive.io URL for a Shiny app from local files.
 
 APP is the path to the primary Shiny app file.
 
-FILES are additional supporting files or directories for the app.
+FILES are additional supporting files or directories for the app. They are named by
+their path relative to APP's folder (or by file name when APP is `-`).
 
 On macOS, you can copy the URL to the clipboard with:
 

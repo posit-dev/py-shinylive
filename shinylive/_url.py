@@ -156,7 +156,7 @@ class ShinyliveApp:
 
         Parameters
         ----------
-        app_code
+        app_text
             The text contents of the main app file for the Shinylive application. This file
             will be renamed `app.py` or `app.R` for shinylive.
         files
@@ -166,7 +166,7 @@ class ShinyliveApp:
             The language of the application, or None to autodetect the language. Defaults
             to None.
         root_dir
-            The root directory of the application,used to determine the relative
+            The root directory of the application, used to determine the relative
             path of supporting files to the main ``app`` file. Defaults to ``None``, meaning
             that additional files are added in a flattened structure.
         """
@@ -502,7 +502,7 @@ class ShinyliveApp:
         name
             The name of the file to be used in the app. If not provided, the file name
             will be used, using the relative path from the main ``app`` file if the
-            ``ShinyliveIoApp`` was created from local files.
+            ``ShinyliveApp`` was created from local files.
         overwrite
             Whether or not to overwrite an existing file with the same name. Defaults
             to ``False``.
@@ -602,7 +602,8 @@ def url_encode(
 
     Returns
     -------
-        A ShinyliveApp object. Use the `.url()` method to retrieve the Shinylive URL.
+        The Shinylive URL. Use `ShinyliveApp` to make other outputs, such as a Quarto
+        code block.
     """
 
     if language is not None and language not in ["py", "r"]:
@@ -624,7 +625,7 @@ def url_encode(
 
 def url_decode(url: str) -> ShinyliveApp:
     """
-    Decode a Shinylive URL into a ShinyliveIoApp object.
+    Decode a Shinylive URL into a ShinyliveApp object.
 
     Parameters
     ----------
@@ -633,7 +634,7 @@ def url_decode(url: str) -> ShinyliveApp:
 
     Returns
     -------
-        A ShinyliveIoApp object.
+        A ShinyliveApp object.
     """
     return ShinyliveApp.from_url(url)
 

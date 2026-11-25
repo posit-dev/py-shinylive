@@ -4,7 +4,7 @@ Shinylive Python package
 [![Build and test](https://github.com/posit-dev/py-shinylive/actions/workflows/build.yml/badge.svg)](https://github.com/posit-dev/py-shinylive/actions/)
 [![PyPI Latest Release](https://img.shields.io/pypi/v/shinylive.svg)](https://pypi.org/project/shinylive/)
 
-[Documentation site](https://github.com/posit-dev/py-shinylive)
+[Documentation site](https://shiny.posit.co/py/get-started/shinylive.html)
 
 The goal of the shinylive Python package is to help you create Shinylive applications from your [Shiny for Python](https://shiny.posit.co/py) applications.
 Shinylive runs Shiny entirely in the browser, without any need for a hosted server, using WebAssembly via [pyodide](https://pyodide.org/en/stable/).
@@ -21,7 +21,7 @@ The Shinylive project consists of four interdependent components that work toget
 
 3. The shinylive R package ([posit-dev/r-shinylive](https://github.com/posit-dev/r-shinylive)) serves the same role as the shinylive Python package but for Shiny for R apps.
 
-4. The [shinylive Quarto extension](https://quarto-ext.github.io/shinylive/) ([quarto-ext/shinylive](https://github.com/quarto-ext/shinylive)) lets you write Shiny applications in [Quarto web documents and slides](https://quarto.org) and uses the Python or R package (or both) to translate `shinylive-py` or `shinylive-r` code blocks into Shinylive applications.
+4. The [shinylive Quarto extension](https://quarto-ext.github.io/shinylive/) ([quarto-ext/shinylive](https://github.com/quarto-ext/shinylive)) lets you write Shiny applications in [Quarto web documents and slides](https://quarto.org) and uses the Python or R package (or both) to translate `shinylive-python` or `shinylive-r` code blocks into Shinylive applications.
 
 ## Installation
 
@@ -38,7 +38,7 @@ pip install shinylive
 shiny create myapp
 ```
 
-Once you have a Shiny application in `myapp/` and would like turn it into a Shinylive app in `site/`:
+Once you have a Shiny application in `myapp/` and would like to turn it into a Shinylive app in `site/`:
 
 ```
 shinylive export myapp site
@@ -51,6 +51,8 @@ python3 -m http.server --directory site --bind localhost 8008
 ```
 
 At this point, you can deploy the `site/` directory to any static web hosting service.
+
+Keep the app and the export in separate folders. `site/` must not be the app folder or hold it. It may be inside the app folder (it is then left out of the app), but separate folders are clearer.
 
 
 ### Multiple applications
@@ -65,7 +67,7 @@ shinylive export myapp2 site --subdir app2
 
 ### GitHub Pages
 
-`posit-dev/py-shinylive` has a workflow to automatically deploy the Shiny app in the root directory of your GitHub repository to its GitHub Pages. Add it to your repo with:
+`posit-dev/py-shinylive` has a workflow to automatically deploy the Shiny app in your GitHub repository (the root directory by default) to its GitHub Pages. Add it to your repo with:
 
 ```bash
 mkdir -p .github/workflows

@@ -4,13 +4,13 @@
 
 ## Deploy App
 
-Reusable workflow that will deploy the root Shiny app dir to GitHub Pages.
+Reusable workflow that will deploy a Shiny app to GitHub Pages.
 
 The agreed upon contract is:
 
 - Install Python and the `shinylive` package
-- Export the Shiny app in the root directory to `./site`
-- On push events, deploy the exported app to GitHub Pages
+- Export the Shiny app in the root directory (or `app-dir`) to `./site`
+- On the `main` branch, deploy the exported app to GitHub Pages
 
 Your app's own dependencies do not need to be installed by the workflow. They
 are read from the app's `requirements.txt` at export time and installed in the
@@ -41,11 +41,11 @@ Actions".
 
 # Contributing
 
-If any changes are made to the reusable workflows in `.github/workflows/`, please force update the tag `actions/v1` to the latest appropriate git sha. This will allow users to easily reference the latest version of the workflow.
+If any changes are made to the reusable workflows in `.github/workflows/` or to `examples/`, please force update the tag `actions/v1` to the latest appropriate git sha. This will allow users to easily reference the latest version of the workflow.
 
 ```bash
 git tag -f actions/v1
 git push --force origin refs/tags/actions/v1
 ```
 
-This update is not necessary for changes in `examples/` as these files are copied within each of the user's repositories.
+This is also needed for changes in `examples/`: the README tells users to download `examples/deploy-app.yaml` from the `actions/v1` tag.
