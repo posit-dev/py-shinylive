@@ -4,6 +4,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 
+## [UNRELEASED]
+
+* Shinylive web assets are no longer pinned to one version per package release, so new assets releases no longer need a new version of shinylive. By default, the newest release in the `0.10.*` series is used. GitHub is checked for new releases at most once a day (once an hour after a failed check), and the result is saved in `versions.json` in the assets cache folder. This file is shared with the R shinylive package, so Quarto documents with both `shinylive-python` and `shinylive-r` blocks use one version. Offline, the newest downloaded matching version is used. A new series, like `0.11.*`, is only used by default after a shinylive update. (#69)
+
+* `shinylive export` gains `--assets-version`. It, `shinylive assets download --version`, and the `SHINYLIVE_ASSETS_VERSION` environment variable accept an exact version (`0.10.16`), a series (`0.11.*`), or `latest`. Pin an exact version for builds that must repeat exactly, such as in CI.
+
+* In the Quarto extension, only `shinylive extension info` checks GitHub, and it downloads the chosen version. The later `extension` commands only read `versions.json`, so one render uses one version.
+
+* `shinylive assets install-from-local` and `link-from-local` now name the assets after the version in the `package.json` of the shinylive repository that holds the build, instead of the assets version in use. Set `SHINYLIVE_ASSETS_VERSION` to that version to use the build. Their `--version` must be an exact version.
+
+* `shinylive._version.SHINYLIVE_ASSETS_VERSION` now gives a `FutureWarning`. It is no longer the assets version in use; it is the fallback version. Run `shinylive assets version` to get the version in use.
+
+* `shinylive assets cleanup` gains `--keep`. By default it keeps the newest downloaded version of the default series and of `SHINYLIVE_ASSETS_VERSION`. It also removes temp files left by interrupted downloads. `shinylive assets info` shows the version in use, the default series, and the last check. Downloads now extract to a temp folder and then move into place.
+
 ## [0.8.13] - 2026-10-29
 
 * Updated to Shinylive web assets 0.10.16, which bundles Shiny for Python 1.9.0.
