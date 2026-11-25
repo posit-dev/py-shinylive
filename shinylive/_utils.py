@@ -48,7 +48,7 @@ def path_length(path: str | Path) -> int:
 
     # On Windows, replace backslashes with forward slashes.
     if os.name == "nt":
-        path.replace("\\", "/")
+        path = path.replace("\\", "/")
 
     return len(path.split("/"))
 

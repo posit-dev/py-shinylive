@@ -93,3 +93,15 @@ def test_export_subdir_dot_is_no_subdir(fake_assets: Path, tmp_path: Path):
     app = make_app(tmp_path / "myapp")
     export(app, tmp_path / "site", subdir=".")
     assert (tmp_path / "site" / "edit" / "index.html").read_text() == ""
+
+
+def test_path_length_windows(monkeypatch: pytest.MonkeyPatch):
+    import ntpath
+
+    from shinylive import _utils
+
+    monkeypatch.setattr(_utils.os, "path", ntpath)
+    monkeypatch.setattr(_utils.os, "name", "nt")
+    assert _utils.path_length("a/b/c") == 3
+    assert _utils.path_length("a\\b") == 2
+    assert _utils.path_length(".") == 0
