@@ -227,8 +227,13 @@ def export(
         check_env_assets_version()
     template_params_dict = None
     if template_params is not None:
-        if Path(template_params).exists():
-            with open(template_params, "r") as f:
+        try:
+            is_file = Path(template_params).is_file()
+        except OSError:
+            # Python < 3.14 raises for a JSON string longer than a file name can be
+            is_file = False
+        if is_file:
+            with open(template_params, "r", encoding="utf-8") as f:
                 template_params_dict = json.load(f)
         else:
             template_params_dict = json.loads(template_params)
@@ -355,7 +360,7 @@ def cleanup(
 
 @assets.command(
     short_help="Remove a specific version of local copies of assets.",
-    help=f"""Remove a specific version (`VERSION`) of local copies of assets."
+    help=f"""Remove a specific version (`VERSION`) of local copies of assets.
 
     For example, `VERSION` might be `{SHINYLIVE_ASSETS_VERSION_FALLBACK}`.
     """,
