@@ -8,7 +8,7 @@ description: "GitHub Actions workflows (build and test, PyPI release, the reusab
 ## Workflows (`.github/workflows/`)
 
 - `build.yml` - on push to `main`/`rc-*`, pull requests, releases, and manual
-  runs. One job: `uv sync`, `make test-all` (tox tests the built wheel on
+  runs. The `check` job: `uv sync`, `make test-all` (tox tests the built wheel on
   Python 3.10 to 3.14 in parallel), `make check`.
   On a published release, the `deploy` job builds with `make dist` and
   publishes to PyPI: to TestPyPI if the release name starts with `TEST`, to

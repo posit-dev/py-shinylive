@@ -9,7 +9,7 @@ on:
     types: [published]
 
 jobs:
-  build:
+  check:
     runs-on: ubuntu-latest
 
     steps:
@@ -41,7 +41,7 @@ jobs:
     name: "Deploy to PyPI"
     runs-on: ubuntu-latest
     if: github.event_name == 'release'
-    needs: [build]
+    needs: [check]
     steps:
       - name: 📥 Check out the code
         uses: actions/checkout@v6
