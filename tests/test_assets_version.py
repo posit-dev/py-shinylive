@@ -8,8 +8,9 @@ import os
 import tarfile
 import time
 from datetime import datetime, timedelta, timezone
+from email.message import Message
 from pathlib import Path
-from typing import Any, Iterator
+from typing import Any, Callable, Iterator
 
 import pytest
 from click.testing import CliRunner
@@ -87,6 +88,12 @@ def check_and_save(dir: Path, **kw: Any) -> av.VersionsInfo | None:
     return info
 
 
+def read_saved(dir: Path) -> av.VersionsInfo:
+    info = av.read_versions_json(dir)
+    assert info is not None
+    return info
+
+
 def test_parse_assets_version():
     assert av.parse_assets_version("0.10.16") == ("exact", "0.10.16", (0, 10, 16))
     assert av.parse_assets_version("0.10.*") == ("pattern", "0.10.*", (0, 10))
@@ -130,7 +137,7 @@ def test_versions_json_round_trip_and_r_format(tmp_path: Path):
     (tmp_path / "versions.json").write_text(
         '{"checked_at": "2026-11-20T17:03:00Z", "versions": "0.10.17"}'
     )
-    assert av.read_versions_json(tmp_path).versions == []  # type: ignore
+    assert read_saved(tmp_path).versions == []
 
 
 def test_versions_check_due():
@@ -165,7 +172,7 @@ def test_check_versions_info_fetches_list_only_for_new_latest(
     fake_github(monkeypatch, offline, "0.10.18", ["0.10.18", "0.10.17"])
     check_and_save(tmp_path, force=True, now=NOW + timedelta(hours=26))
     assert offline.versions == 2
-    assert av.read_versions_json(tmp_path).versions[0] == "0.10.18"  # type: ignore
+    assert read_saved(tmp_path).versions[0] == "0.10.18"
 
 
 def test_check_versions_info_failure_keeps_old_list(
@@ -216,7 +223,7 @@ def test_resolve_offline_uses_local_then_fallback(tmp_path: Path):
     with pytest.warns(UserWarning, match="may not be the newest"):
         v = av.resolve_assets_version("0.10.*", tmp_path, now=NOW)
     assert v == "0.10.15"
-    assert av.read_versions_json(tmp_path).error  # type: ignore
+    assert read_saved(tmp_path).error
 
     av._reset()
     empty = tmp_path / "empty"
@@ -349,7 +356,7 @@ def test_fetch_assets_versions_retries_without_bad_token(
     def get(url: str, token: str | None) -> list[dict[str, object]]:
         tokens.append(token)
         if token is not None:
-            raise urllib.error.HTTPError(url, 401, "Bad credentials", {}, None)  # type: ignore
+            raise urllib.error.HTTPError(url, 401, "Bad credentials", Message(), None)
         return [{"tag_name": "v0.10.17"}, {"tag_name": "v0.10.18", "draft": True}]
 
     monkeypatch.setattr(av, "_get_github_json", get)
@@ -459,7 +466,9 @@ def real_download(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
     monkeypatch.setattr(assets, "download_shinylive", REAL_DOWNLOAD)
     bundle = tmp_path / "bundle.tar.gz"
 
-    def urlretrieve(url: str, reporthook: object = None) -> tuple[str, None]:
+    def urlretrieve(
+        url: str, reporthook: Callable[[int, int, int], None]
+    ) -> tuple[str, None]:
         copy = tmp_path / "download.tar.gz"
         copy.write_bytes(bundle.read_bytes())
         return str(copy), None
@@ -575,10 +584,12 @@ def test_download_makes_extract_folder_after_download(
     seen: list[str] = []
     real_urlretrieve = assets._urlretrieve
 
-    def urlretrieve(url: str, reporthook: object = None) -> tuple[str, None]:
+    def urlretrieve(
+        url: str, reporthook: Callable[[int, int, int], None]
+    ) -> tuple[str, None]:
         # A cleanup during the download must find no extract folder to remove
         seen.extend(p.name for p in cache.iterdir())
-        return real_urlretrieve(url, reporthook)  # type: ignore
+        return real_urlretrieve(url, reporthook)
 
     monkeypatch.setattr(assets, "_urlretrieve", urlretrieve)
     assets.download_shinylive(destdir=cache, version="0.10.16")
@@ -729,13 +740,13 @@ def test_check_saved_only_once_chosen_version_is_downloaded(
 
     # Not downloaded: the new check is not saved
     assert av.resolve_assets_version("0.10.*", tmp_path, download=False) == "0.10.17"
-    assert av.read_versions_json(tmp_path).versions == ["0.10.16"]  # type: ignore
+    assert read_saved(tmp_path).versions == ["0.10.16"]
 
     # Downloaded: it is saved
     av._reset()
     assert av.resolve_assets_version("0.10.*", tmp_path) == "0.10.17"
     assert offline.downloads == ["0.10.17"]
-    assert av.read_versions_json(tmp_path).versions == ["0.10.17", "0.10.16"]  # type: ignore
+    assert read_saved(tmp_path).versions == ["0.10.17", "0.10.16"]
 
 
 def test_download_failure_leaves_newer_releases_out_of_versions_json(

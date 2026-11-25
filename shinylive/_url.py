@@ -649,16 +649,14 @@ def url_decode(url: str) -> ShinyliveApp:
 
 
 def bundle_from_url(url: str) -> list[FileContentJson]:
-    from lzstring import LZString  # type: ignore[reportMissingTypeStubs]
+    from lzstring import LZString  # pyrefly: ignore[untyped-import]
 
     url = url.strip()
 
     try:
         bundle_json = cast(
             str,
-            LZString.decompressFromEncodedURIComponent(  # type: ignore
-                url.split("code=")[1]
-            ),
+            LZString.decompressFromEncodedURIComponent(url.split("code=")[1]),
         )
         bundle = json.loads(bundle_json)
     except Exception as e:
@@ -674,7 +672,7 @@ def bundle_from_url(url: str) -> list[FileContentJson]:
             "The Shinylive URL was not formatted correctly: `code` did not decode to a list."
         )
 
-    for file in bundle:  # type: ignore
+    for file in bundle:
         if not isinstance(file, dict):
             raise ValueError(
                 "Invalid Shinylive URL: `code` did not decode to a list of dictionaries."
@@ -705,7 +703,7 @@ def bundle_from_url(url: str) -> list[FileContentJson]:
                     f"Invalid Shinylive URL: unexpected file type '{file['type']}' in '{file['name']}'."
                 )
 
-        if not all(isinstance(value, str) for value in file.values()):  # type: ignore
+        if not all(isinstance(value, str) for value in file.values()):
             raise ValueError(
                 f"Invalid Shinylive URL: not all items in '{file['name']}' were strings."
             )
@@ -809,8 +807,8 @@ def _is_inside(path: str | Path, root_dir: str | Path) -> bool:
 
 
 def lzstring_file_bundle(file_bundle: list[FileContentJson]) -> str:
-    from lzstring import LZString  # type: ignore[reportMissingTypeStubs]
+    from lzstring import LZString  # pyrefly: ignore[untyped-import]
 
     file_json = json.dumps(file_bundle)
-    file_lz = LZString.compressToEncodedURIComponent(file_json)  # type: ignore[reportUnknownMemberType]
+    file_lz = LZString.compressToEncodedURIComponent(file_json)
     return file_lz

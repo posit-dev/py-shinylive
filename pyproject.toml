@@ -49,7 +49,8 @@ dev = [
     "pytest>=6.2.4",
     "coverage",
     "ruff>=0.6.0",
-    "pyright>=1.1.284",
+    "pyrefly>=1.5.0",
+    "types-chevron>=0.14.2.20260408",
 ]
 
 [tool.hatch.version]
@@ -77,3 +78,19 @@ select = ["E", "F", "I", "B"]
 # `ruff format` keeps code within 88 characters; long strings and comments
 # are left as they are.
 ignore = ["E501"]
+
+[tool.pyrefly]
+infer-with-first-use = false
+project-excludes = [
+    # A fixture Shiny app for the deploy-app workflow. It imports packages that
+    # are not dependencies of this repo and is never run here.
+    "tests/app",
+    "build",
+    "dist",
+    "_dev",
+    ".context",
+]
+
+[tool.pyrefly.errors]
+unused-ignore = "error"
+implicit-any = "error"

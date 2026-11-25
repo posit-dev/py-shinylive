@@ -25,7 +25,7 @@ parts:
 ```sh
 make install-deps  # uv sync: the package and dev tools into .venv
 make test          # pytest
-make check         # pyright, ruff check, ruff format --check
+make check         # pyrefly, ruff check, ruff format --check
 make format        # ruff check --fix, ruff format
 ```
 

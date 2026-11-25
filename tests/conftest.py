@@ -40,7 +40,7 @@ FAKE_PACKAGES: dict[str, dict[str, Any]] = {
         "imports": ["numpy"],
     },
 }
-FAKE_LOCK = {"info": {}, "packages": FAKE_PACKAGES}
+FAKE_LOCK: dict[str, object] = {"info": {}, "packages": FAKE_PACKAGES}
 
 
 def _write(path: Path, content: str = "x") -> None:

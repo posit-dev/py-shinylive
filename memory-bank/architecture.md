@@ -118,7 +118,9 @@ Other folders:
   that are already there, and only prints a message if an asset file differs.
 - **Plain dicts with `TypedDict` types** are used for file contents, app info,
   and HTML dependencies, so they turn into JSON with `json.dumps()`.
-- **Strict typing.** `pyrightconfig.json` uses `"typeCheckingMode": "strict"`.
+- **Typed code.** pyrefly checks types (settings in `[tool.pyrefly]` in
+  `pyproject.toml`). `implicit-any` is an error, so untyped empty containers
+  and lambda parameters fail the check.
 
 ## Where to read next
 

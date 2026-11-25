@@ -5,7 +5,7 @@ description: "How the pytest suite is laid out, which tests need the downloaded 
 
 # Testing
 
-Run `make test` (or `uv run pytest`). `make check` runs pyright (strict) and ruff
+Run `make test` (or `uv run pytest`). `make check` runs pyrefly and ruff
 (lint and format check).
 
 ## Layout
@@ -20,7 +20,7 @@ Run `make test` (or `uv run pytest`). `make check` runs pyright (strict) and ruf
 | `tests/test_assets.py` | The release's assets URL (one release-only test uses the network); local builds; download progress | Mostly no |
 
 `tests/app/` is a fixture app for the deploy-app workflow test; pytest and
-pyright ignore it.
+pyrefly ignore it.
 
 ## Tests that need assets
 

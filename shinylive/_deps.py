@@ -26,6 +26,7 @@ from ._assets import (
     shinylive_assets_dir,
 )
 from ._assets_version import assets_version
+from ._utils import print_nothing
 
 # Files in Pyodide that should always be included.
 BASE_PYODIDE_FILES = {
@@ -275,7 +276,7 @@ def shinylive_common_files(
             dirs.remove("export_template")
             if not has_base:
                 # No files to add here
-                files = []
+                files.clear()
         elif rel_root == Path("shinylive"):
             files.remove("examples.json")
             # Remove webr folder as it is only needed for R support
@@ -286,7 +287,7 @@ def shinylive_common_files(
                 dirs.remove("pyright")
             if not has_base:
                 # No files to add here
-                files = []
+                files.clear()
         elif rel_root == Path("shinylive/pyodide"):
             dirs.remove("fonts")
             files[:] = sorted(BASE_PYODIDE_FILES)
@@ -355,7 +356,7 @@ def shinylive_app_resources(
 
 def find_package_deps(
     app_contents: list[FileContentJson],
-    verbose_print: Callable[..., None] = lambda *args: None,
+    verbose_print: Callable[..., None] = print_nothing,
 ) -> list[PyodidePackageInfo]:
     """
     Find package dependencies from the contents of an app.json file. The returned data
@@ -401,7 +402,7 @@ def base_package_deps() -> list[PyodidePackageInfo]:
 # =============================================================================
 def _find_recursive_deps(
     dep_names: Iterable[str],
-    verbose_print: Callable[..., None] = lambda *args: None,
+    verbose_print: Callable[..., None] = print_nothing,
 ) -> list[str]:
     """
     Given a list of packages, recursively find all dependencies that are contained in

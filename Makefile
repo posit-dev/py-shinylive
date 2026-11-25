@@ -51,10 +51,10 @@ clean-test: ## remove test and coverage artifacts
 install-deps: ## install the package and dev tools into .venv
 	uv sync
 
-pyright: ## type check with pyright
-	uv run pyright
+pyrefly: ## type check with pyrefly
+	uv run pyrefly check
 
-check: pyright lint ## check code quality with pyright and ruff
+check: pyrefly lint ## check code quality with pyrefly and ruff
 	uv run ruff format --check .
 
 lint: ## check style and import order with ruff
