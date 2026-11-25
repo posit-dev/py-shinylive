@@ -130,9 +130,10 @@ def _urlretrieve(
     of hanging forever. The timeout is per read, so a slow download still finishes."""
     fd, name = tempfile.mkstemp(suffix=".tar.gz")
     try:
-        with os.fdopen(fd, "wb") as f, urllib.request.urlopen(
-            url, timeout=DOWNLOAD_TIMEOUT_SECONDS
-        ) as resp:
+        with (
+            os.fdopen(fd, "wb") as f,
+            urllib.request.urlopen(url, timeout=DOWNLOAD_TIMEOUT_SECONDS) as resp,
+        ):
             total = int(resp.headers.get("Content-Length") or -1)
             count = 0
             while block := resp.read(8192):
