@@ -52,9 +52,9 @@ git push --force origin refs/tags/actions/v1
 - The `shinylive` console script is `shinylive._main:main`.
 - Dev tools are in the `dev` dependency group (`[dependency-groups]`), not in
   extras, so they are not part of the published package metadata.
-- ruff settings are in `pyproject.toml`: rules `E`, `F`, and `I` (imports), as
-  in shinyreact, with `E501` (line length) off because `ruff format` already
-  wraps code. pyright settings are in `pyrightconfig.json` (strict).
+- ruff settings are in `pyproject.toml`: rules `E`, `F`, `I` (imports), and
+  `B` (bugbear, carried over from flake8-bugbear), with `E501` (line length)
+  off because `ruff format` already wraps code. pyright settings are in `pyrightconfig.json` (strict).
 
 ## CHANGELOG
 

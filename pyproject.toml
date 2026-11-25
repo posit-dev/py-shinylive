@@ -73,7 +73,7 @@ only-include = [
 line-length = 88
 
 [tool.ruff.lint]
-select = ["E", "F", "I"]
+select = ["E", "F", "I", "B"]
 # `ruff format` keeps code within 88 characters; long strings and comments
 # are left as they are.
 ignore = ["E501"]

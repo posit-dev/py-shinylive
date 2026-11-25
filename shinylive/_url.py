@@ -661,8 +661,10 @@ def bundle_from_url(url: str) -> list[FileContentJson]:
             ),
         )
         bundle = json.loads(bundle_json)
-    except Exception:
-        raise ValueError("Could not parse and decode the Shinylive URL code payload.")
+    except Exception as e:
+        raise ValueError(
+            "Could not parse and decode the Shinylive URL code payload."
+        ) from e
 
     ret: list[FileContentJson] = []
 
