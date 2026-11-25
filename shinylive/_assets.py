@@ -14,6 +14,7 @@ from typing import Optional, cast
 from ._assets_version import (
     VERSIONS_TIME_FORMAT,
     _is_version,
+    _warn_outside_default,
     assets_version,
     assets_version_input,
     assets_version_matches,
@@ -120,11 +121,25 @@ def _move_into_place(src: Path, target: Path, existed_before: bool) -> None:
             # Another process (R or Python) just finished the same download. Keep its
             # folder, which it may be reading from.
             return
-        # A re-download replaces the old folder. Move it aside first, so the folder is
-        # missing only between two renames, not during a delete.
+        # A re-download replaces the old folder. Move it aside, move the new one in,
+        # and only then delete the old one, so the folder is missing only between two
+        # renames, not during a delete.
         old = target.parent / f"old-{uuid.uuid4().hex}"
         os.rename(target, old)
-        _remove_path(old)
+        try:
+            _rename_into_place(src, target)
+        finally:
+            # `assets cleanup` (R or Python) may remove it first: `rename` keeps the
+            # old folder's mtime, so it can look like an old leftover.
+            if old.is_symlink():
+                old.unlink(missing_ok=True)
+            else:
+                shutil.rmtree(old, ignore_errors=True)
+        return
+    _rename_into_place(src, target)
+
+
+def _rename_into_place(src: Path, target: Path) -> None:
     try:
         os.rename(src, target)
     except OSError:
@@ -143,7 +158,9 @@ def _remove_path(path: Path) -> None:
 def shinylive_bundle_url(version: Optional[str] = None) -> str:
     """
     Returns the URL for the Shinylive assets bundle. `version` may also be a series or
-    "latest"; building a URL never downloads the assets.
+    "latest". Building a URL never downloads the assets, but for a series or "latest"
+    (including the default, when `version` is `None`) it may check GitHub for new
+    releases and update `versions.json`.
     """
     version = resolve_assets_version(assets_version_input(version), download=False)
     return (
@@ -212,17 +229,21 @@ def local_build_version(build: str | Path) -> str:
     )
 
 
-def local_build_target_version(
-    source_dir: str | Path, destdir: Optional[str | Path], version: Optional[str]
-) -> str:
+def local_build_target_version(source_dir: str | Path, version: Optional[str]) -> str:
     """Return the exact version to name a local build's folder after. When `version`
-    is `None`, it is the build's own version."""
+    is `None`, it is the build's own version.
+
+    Only an exact version is allowed. A series or "latest" would pick a release
+    version, and the local build would replace that downloaded release."""
     if version is None:
         return local_build_version(source_dir)
-    if destdir is None:
-        destdir = shinylive_cache_dir()
-    # Name the folder after an exact version, so a series can find it
-    return resolve_assets_version(version, dir=destdir, download=False)
+    if parse_assets_version(version).kind != "exact":
+        raise ValueError(
+            f"A local build needs an exact version, such as "
+            f"{SHINYLIVE_ASSETS_VERSION_FALLBACK!r}, not {version!r}."
+        )
+    _warn_outside_default(version)
+    return version
 
 
 def _local_target_dir(
@@ -230,7 +251,7 @@ def _local_target_dir(
 ) -> Path:
     if destdir is None:
         destdir = Path(shinylive_cache_dir())
-    version = local_build_target_version(source_dir, destdir, version)
+    version = local_build_target_version(source_dir, version)
     return Path(destdir) / f"shinylive-{version}"
 
 

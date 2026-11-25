@@ -112,6 +112,19 @@ def check_assets_version(
     return value
 
 
+def check_exact_assets_version(
+    ctx: click.Context, param: click.Parameter, value: str | None
+) -> str | None:
+    """Click callback: reject a version input that is not an exact version."""
+    check_assets_version(ctx, param, value)
+    if value is not None and parse_assets_version(value).kind != "exact":
+        raise click.BadParameter(
+            f"Use an exact version, such as {SHINYLIVE_ASSETS_VERSION_FALLBACK!r}, "
+            f"not {value!r}."
+        )
+    return value
+
+
 # #############################################################################
 # ## Main
 # #############################################################################
@@ -372,7 +385,7 @@ def remove(
     type=str,
     default=None,
     help="Version to name the copied assets after. Defaults to the version in the `package.json` of the shinylive repository that holds BUILD.",
-    callback=check_assets_version,
+    callback=check_exact_assets_version,
 )
 @click.option(
     "--dir",
@@ -391,7 +404,7 @@ def install_from_local(
     dir: Optional[str | Path],
 ) -> None:
     dir = upgrade_dir(dir)
-    version = _assets.local_build_target_version(build, dir, version)
+    version = _assets.local_build_target_version(build, version)
     print(f"Copying shinylive-{version} from {build} to {dir}")
     _assets.copy_shinylive_local(source_dir=build, destdir=dir, version=version)
     print_use_local_build_hint(version)
@@ -415,7 +428,7 @@ link_from_local_help = (
     type=str,
     default=None,
     help="Version to name the linked assets after. Defaults to the version in the `package.json` of the shinylive repository that holds BUILD.",
-    callback=check_assets_version,
+    callback=check_exact_assets_version,
 )
 @click.option(
     "--dir",
@@ -436,7 +449,7 @@ def link_from_local(
     if build is None:  # pyright: ignore[reportUnnecessaryComparison]
         raise click.UsageError("Must specify BUILD")
     dir = upgrade_dir(dir)
-    version = _assets.local_build_target_version(build, dir, version)
+    version = _assets.local_build_target_version(build, version)
     print(f"Creating symlink for shinylive-{version} from {build} to {dir}")
     _assets.link_shinylive_local(source_dir=build, destdir=dir, version=version)
     print_use_local_build_hint(version)

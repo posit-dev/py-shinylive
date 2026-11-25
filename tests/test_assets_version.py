@@ -80,6 +80,13 @@ def write_info(dir: Path, versions: list[str], *, hours_ago: float = 0, **kw: st
     av.write_versions_json(info, dir)
 
 
+def check_and_save(dir: Path, **kw: Any) -> av.VersionsInfo | None:
+    info = av.check_versions_info(av.read_versions_json(dir), **kw)
+    if info is not None:
+        av.write_versions_json(info, dir)
+    return info
+
+
 def test_parse_assets_version():
     assert av.parse_assets_version("0.10.16") == ("exact", "0.10.16", (0, 10, 16))
     assert av.parse_assets_version("0.10.*") == ("pattern", "0.10.*", (0, 10))
@@ -138,30 +145,30 @@ def test_versions_check_due():
     assert av.versions_check_due(info(-1), NOW)
 
 
-def test_update_versions_info_fetches_list_only_for_new_latest(
+def test_check_versions_info_fetches_list_only_for_new_latest(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, offline: Calls
 ):
     fake_github(monkeypatch, offline, "0.10.17", ["0.10.17", "0.10.16"])
-    av.update_versions_info(tmp_path, now=NOW)
+    check_and_save(tmp_path, now=NOW)
     assert (offline.latest, offline.versions) == (1, 1)
 
     # Not due yet
-    av.update_versions_info(tmp_path, now=NOW + timedelta(hours=1))
+    check_and_save(tmp_path, now=NOW + timedelta(hours=1))
     assert (offline.latest, offline.versions) == (1, 1)
 
     # Due, same latest tag: only the HEAD request
-    info = av.update_versions_info(tmp_path, now=NOW + timedelta(hours=25))
+    info = check_and_save(tmp_path, now=NOW + timedelta(hours=25))
     assert (offline.latest, offline.versions) == (2, 1)
     assert info is not None and info.versions == ["0.10.17", "0.10.16"]
 
     # New latest tag: the full list again
     fake_github(monkeypatch, offline, "0.10.18", ["0.10.18", "0.10.17"])
-    av.update_versions_info(tmp_path, force=True, now=NOW + timedelta(hours=26))
+    check_and_save(tmp_path, force=True, now=NOW + timedelta(hours=26))
     assert offline.versions == 2
     assert av.read_versions_json(tmp_path).versions[0] == "0.10.18"  # type: ignore
 
 
-def test_update_versions_info_failure_keeps_old_list(
+def test_check_versions_info_failure_keeps_old_list(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path
 ):
     write_info(tmp_path, ["0.10.17", "0.10.16"], hours_ago=30)
@@ -171,13 +178,12 @@ def test_update_versions_info_failure_keeps_old_list(
         raise OSError("rate limited")
 
     monkeypatch.setattr(av, "fetch_assets_versions", fail)
-    info = av.update_versions_info(tmp_path, now=NOW)
+    info = av.check_versions_info(av.read_versions_json(tmp_path), now=NOW)
     assert info is not None
     assert info.error == "rate limited"
     # The old latest is kept, so the next check fetches the full list
     assert info.latest == "0.10.17"
     assert info.versions == ["0.10.18", "0.10.17", "0.10.16"]
-    assert av.read_versions_json(tmp_path) == info
 
 
 def test_resolve_series_uses_versions_json(tmp_path: Path, offline: Calls):
@@ -238,8 +244,10 @@ def test_resolve_download_failure_uses_local_match(
 
     av._reset()
     (tmp_path / "shinylive-0.10.12").rmdir()
-    with pytest.raises(RuntimeError, match="Can't download"):
-        av.resolve_assets_version("0.10.*", tmp_path, now=NOW)
+    # The failed download is saved, so the next call warns that its result may be old
+    with pytest.warns(UserWarning, match="check for new .* failed"):
+        with pytest.raises(RuntimeError, match="Can't download"):
+            av.resolve_assets_version("0.10.*", tmp_path, now=NOW)
 
 
 def test_resolve_download_failure_tries_fallback(
@@ -295,21 +303,21 @@ def test_local_assets_versions(tmp_path: Path):
     assert av.local_assets_versions(tmp_path / "missing") == []
 
 
-def test_update_versions_info_read_only_cache_returns_saved(
+def test_read_only_cache_later_commands_agree(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, offline: Calls
 ):
     write_info(tmp_path, ["0.10.16"], hours_ago=30)
+    (tmp_path / "shinylive-0.10.16").mkdir()
     fake_github(monkeypatch, offline, "0.10.17", ["0.10.17", "0.10.16"])
 
-    def read_only(info: av.VersionsInfo, dir: Path) -> None:
+    def read_only(*args: object, **kwargs: object) -> None:
         raise PermissionError("read-only")
 
     monkeypatch.setattr(av, "write_versions_json", read_only)
-    # The check finds 0.10.17, but it can't be saved. Return what is saved, so later
-    # `check=False` calls (like Quarto's) choose the same version.
-    info = av.update_versions_info(tmp_path, now=NOW)
-    assert info is not None and info.versions == ["0.10.16"]
-    checked = av.resolve_assets_version("0.10.*", tmp_path, now=NOW, download=False)
+    monkeypatch.setattr(assets, "download_shinylive", read_only)
+    # The check finds 0.10.17, but it can't be downloaded or saved
+    with pytest.warns(UserWarning, match="Using downloaded v0.10.16"):
+        checked = av.resolve_assets_version("0.10.*", tmp_path, now=NOW)
     saved = av.resolve_assets_version("0.10.*", tmp_path, check=False, download=False)
     assert checked == saved == "0.10.16"
 
@@ -412,7 +420,7 @@ def test_update_versions_info_skips_list_for_same_latest(
     # the latest tag changes. Change this test only on purpose.
     write_info(tmp_path, ["0.11.0", "0.10.16"], hours_ago=30)
     fake_github(monkeypatch, offline, "0.11.0", ["0.11.0", "0.10.17", "0.10.16"])
-    info = av.update_versions_info(tmp_path, now=NOW)
+    info = av.check_versions_info(av.read_versions_json(tmp_path), now=NOW)
     assert info is not None and info.versions == ["0.11.0", "0.10.16"]
     assert offline.versions == 0
 
@@ -507,15 +515,16 @@ def test_extension_commands_agree_with_read_only_cache(
     (tmp_path / "shinylive-0.10.16").mkdir()
     fake_github(monkeypatch, offline, "0.10.17", ["0.10.17", "0.10.16"])
 
-    def read_only(info: av.VersionsInfo, dir: Path) -> None:
+    def read_only(*args: object, **kwargs: object) -> None:
         raise PermissionError("read-only")
 
     monkeypatch.setattr(av, "write_versions_json", read_only)
-    assert run_extension_info()["assets_version"] == "0.10.16"
+    monkeypatch.setattr(assets, "download_shinylive", read_only)
+    with pytest.warns(UserWarning, match="Using downloaded v0.10.16"):
+        assert run_extension_info()["assets_version"] == "0.10.16"
     av._reset()
     use_quarto_assets_version()
     assert av.assets_version() == "0.10.16"
-    assert offline.downloads == []
 
 
 def test_ensure_assets_with_url_does_not_use_github(
@@ -664,3 +673,97 @@ def test_ensure_assets_with_url_errors_on_wrong_folder(
         assets.ensure_shinylive_assets(
             tmp_path, version="0.10.16", url="https://example.com/x.tar.gz"
         )
+
+
+def test_redownload_keeps_folder_while_old_one_is_removed(
+    monkeypatch: pytest.MonkeyPatch, real_download: Path, tmp_path: Path
+):
+    cache = tmp_path / "cache"
+    make_bundle(real_download, "0.10.16", "one")
+    assets.download_shinylive(destdir=cache, version="0.10.16")
+
+    seen: list[str] = []
+    real_rmtree = assets.shutil.rmtree
+
+    def rmtree(path: Path, ignore_errors: bool = False) -> None:
+        if Path(path).name.startswith("old-"):
+            # The new folder is already in place while the old one is removed
+            seen.append((cache / "shinylive-0.10.16" / "file.txt").read_text())
+            # A parallel `assets cleanup` removed it first
+            real_rmtree(path)
+            if not ignore_errors:
+                raise FileNotFoundError(path)
+            return
+        real_rmtree(path, ignore_errors=ignore_errors)
+
+    monkeypatch.setattr(assets.shutil, "rmtree", rmtree)
+    make_bundle(real_download, "0.10.16", "two")
+    assets.download_shinylive(destdir=cache, version="0.10.16")
+    assert seen == ["two"]
+    assert (cache / "shinylive-0.10.16" / "file.txt").read_text() == "two"
+
+
+def test_local_build_needs_exact_version(tmp_path: Path):
+    build = make_local_build(tmp_path, "0.10.18")
+    cache = tmp_path / "cache"
+    (cache / "shinylive-0.10.17").mkdir(parents=True)
+    for version in ["0.10.*", "latest"]:
+        with pytest.raises(ValueError, match="needs an exact version"):
+            assets.copy_shinylive_local(build, cache, version=version)
+        result = CliRunner().invoke(
+            main,
+            ["assets", "link-from-local", "--dir", str(cache), "--version", version]
+            + [str(build)],
+        )
+        assert result.exit_code == 2, result.output
+        assert "Use an exact version" in result.output
+    # The downloaded release is untouched
+    assert av.local_assets_versions(cache) == ["0.10.17"]
+
+
+def test_check_saved_only_once_chosen_version_is_downloaded(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, offline: Calls
+):
+    write_info(tmp_path, ["0.10.16"], hours_ago=30)
+    fake_github(monkeypatch, offline, "0.10.17", ["0.10.17", "0.10.16"])
+
+    # Not downloaded: the new check is not saved
+    assert av.resolve_assets_version("0.10.*", tmp_path, download=False) == "0.10.17"
+    assert av.read_versions_json(tmp_path).versions == ["0.10.16"]  # type: ignore
+
+    # Downloaded: it is saved
+    av._reset()
+    assert av.resolve_assets_version("0.10.*", tmp_path) == "0.10.17"
+    assert offline.downloads == ["0.10.17"]
+    assert av.read_versions_json(tmp_path).versions == ["0.10.17", "0.10.16"]  # type: ignore
+
+
+def test_download_failure_leaves_newer_releases_out_of_versions_json(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, offline: Calls
+):
+    (tmp_path / "shinylive-0.10.16").mkdir()
+    fake_github(
+        monkeypatch, offline, "0.11.0", ["0.11.0", "0.10.18", "0.10.17", "0.10.16"]
+    )
+
+    def fail(**kwargs: object) -> None:
+        raise OSError("offline")
+
+    monkeypatch.setattr(assets, "download_shinylive", fail)
+    with pytest.warns(UserWarning, match="Using downloaded v0.10.16"):
+        assert av.resolve_assets_version("0.10.*", tmp_path, now=NOW) == "0.10.16"
+
+    info = av.read_versions_json(tmp_path)
+    assert info is not None
+    # Other series are kept. `latest` is cleared, so the retry fetches the full list.
+    assert info.versions == ["0.11.0", "0.10.16"]
+    assert info.latest is None
+    assert info.error is not None and "v0.10.18" in info.error
+    assert av.versions_check_due(info, NOW + timedelta(hours=1))
+
+    # Later Quarto commands only read versions.json and choose the downloaded version,
+    # even once the download would work
+    monkeypatch.setattr(assets, "download_shinylive", REAL_DOWNLOAD)
+    av._reset()
+    use_quarto_assets_version()
+    assert av.assets_version() == "0.10.16"

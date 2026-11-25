@@ -156,13 +156,14 @@ def versions_check_due(info: VersionsInfo | None, now: datetime) -> bool:
     return hours >= wait
 
 
-def update_versions_info(
-    dir: str | Path, *, force: bool = False, now: Optional[datetime] = None
+def check_versions_info(
+    info: VersionsInfo | None, *, force: bool = False, now: Optional[datetime] = None
 ) -> VersionsInfo | None:
-    """Run the GitHub check when due (or when `force=True`) and return the versions
-    info. A failed check records `error` but keeps the old versions."""
+    """Run the GitHub check when due (or when `force=True`) and return the new
+    versions info, or `info` itself when no check is due. A failed check records
+    `error` but keeps the old versions. Nothing is saved; see
+    `save_versions_json()`."""
     now = now or datetime.now(timezone.utc)
-    info = read_versions_json(dir)
     if not force and not versions_check_due(info, now):
         return info
 
@@ -188,15 +189,36 @@ def update_versions_info(
             versions=list(dict.fromkeys(known)),
             error=str(e) or type(e).__name__,
         )
-
-    try:
-        write_versions_json(new_info, dir)
-    except OSError:
-        # A read-only cache (such as in a Docker image) must not stop the export. Use
-        # what is saved, so that later commands that only read `versions.json` (like
-        # the Quarto ones) choose the same version.
-        return read_versions_json(dir)
     return new_info
+
+
+def save_versions_json(info: VersionsInfo, dir: str | Path) -> None:
+    """Save `versions.json`, ignoring a read-only cache (such as in a Docker image),
+    which must not stop the export. Later commands then read the old file. Since it
+    too only names downloaded versions, they still choose a downloaded version."""
+    try:
+        write_versions_json(info, dir)
+    except OSError:
+        pass
+
+
+def drop_versions_newer_than(
+    info: VersionsInfo, spec: VersionSpec, chosen: str, error: str, now: datetime
+) -> VersionsInfo:
+    """Return `info` without the releases matching `spec` that are newer than
+    `chosen`, as after they failed to download. `latest` is cleared, so the next
+    check (in `VERSIONS_RETRY_HOURS`, since `error` is set) fetches the full list
+    again."""
+    return VersionsInfo(
+        checked_at=now,
+        latest=None,
+        versions=[
+            v
+            for v in info.versions
+            if not (assets_version_matches(v, spec) and _parts(v) > _parts(chosen))
+        ],
+        error=error,
+    )
 
 
 class _NoRedirect(urllib.request.HTTPRedirectHandler):
@@ -342,8 +364,11 @@ def resolve_assets_version(
 
     When `download=True`, the chosen version is downloaded if needed. For a series or
     `"latest"`, if that fails, the highest downloaded match is used instead. When
-    `check=False`, only the saved `versions.json` is read (no network). When
-    `warn=False`, an exact version outside the default series does not warn.
+    `check=False`, only the saved `versions.json` is read (no network), and it is
+    never written. Otherwise, a new check is saved only when the chosen version is
+    downloaded; if it fails to download, the newer matching releases are left out of
+    the saved list. When `warn=False`, an exact version outside the default series
+    does not warn.
     """
     from ._assets import shinylive_cache_dir
 
@@ -356,14 +381,34 @@ def resolve_assets_version(
     if key in _memo:
         return _memo[key]
 
+    info = read_versions_json(dir)
+    saved_info = info
     if check:
-        info = update_versions_info(dir, force=spec.kind == "latest", now=now)
-    else:
-        info = read_versions_json(dir)
+        info = check_versions_info(info, force=spec.kind == "latest", now=now)
     local = local_assets_versions(dir)
     chosen = _choose_version(spec, info, local, check=check)
     if download and chosen not in local:
-        chosen = _download_or_fall_back(spec, chosen, dir, local)
+        wanted = chosen
+        chosen, error = _download_or_fall_back(spec, chosen, dir, local)
+        if error is not None and check and info is not None:
+            info = drop_versions_newer_than(
+                info,
+                spec,
+                chosen,
+                error=f"Can't download Shinylive assets v{wanted}: {error}",
+                now=now or datetime.now(timezone.utc),
+            )
+
+    # Save only once the chosen version is downloaded. Later commands that only read
+    # `versions.json` (like the Quarto ones, here or in the R package) then choose
+    # this downloaded version, and never one they would have to download.
+    if (
+        check
+        and info is not None
+        and info is not saved_info
+        and chosen in local_assets_versions(dir)
+    ):
+        save_versions_json(info, dir)
 
     _memo[key] = chosen
     return chosen
@@ -404,9 +449,9 @@ def _choose_version(
         matches = [fallback]
     chosen = max_version(matches)
 
-    # The last check failed and no known release matches, so the result may be old
-    # ("latest" matches every release). Every process warns until the next check, as
-    # each of them may use an old version.
+    # The last check (or the download after it) failed and no known release matches,
+    # so the result may be old ("latest" matches every release). Every process warns
+    # until the next check, as each of them may use an old version.
     old = spec.kind == "latest" or not released_match
     if check and info is not None and info.error is not None and old:
         retry_at = info.checked_at + timedelta(hours=VERSIONS_RETRY_HOURS)
@@ -422,14 +467,15 @@ def _choose_version(
 
 def _download_or_fall_back(
     spec: VersionSpec, chosen: str, dir: Path, local: list[str]
-) -> str:
+) -> tuple[str, Optional[Exception]]:
     """Download `chosen`. If that fails, use the highest downloaded match, or download
-    the fallback version when nothing matching is downloaded."""
+    the fallback version when nothing matching is downloaded. Also return the error
+    of the failed download of `chosen`, if any."""
     from ._assets import download_shinylive
 
     try:
         download_shinylive(destdir=dir, version=chosen)
-        return chosen
+        return chosen, None
     except Exception as e:
         error = e
 
@@ -457,7 +503,7 @@ def _download_or_fall_back(
         f"Can't download Shinylive assets v{chosen}. Using downloaded "
         f"v{used} instead. ({error})"
     )
-    return used
+    return used, error
 
 
 def _warn_outside_default(version: str) -> None:
