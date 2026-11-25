@@ -614,3 +614,53 @@ def test_old_assets_version_constant_warns():
 
     with pytest.warns(FutureWarning, match="no longer the Shinylive assets version"):
         assert version.SHINYLIVE_ASSETS_VERSION == SHINYLIVE_ASSETS_VERSION_FALLBACK
+
+
+def make_local_build(tmp_path: Path, version: str) -> Path:
+    repo = tmp_path / "shinylive-repo"
+    (repo / "build").mkdir(parents=True)
+    (repo / "build" / "file.txt").write_text("dev")
+    (repo / "package.json").write_text(
+        json.dumps({"name": "shinylive", "version": version})
+    )
+    return repo / "build"
+
+
+def test_local_build_version(tmp_path: Path):
+    build = make_local_build(tmp_path, "0.10.18")
+    assert assets.local_build_version(build) == "0.10.18"
+    assert assets.local_build_version(build.parent) == "0.10.18"
+
+    (build.parent / "package.json").write_text('{"name": "other", "version": "1.0"}')
+    with pytest.raises(RuntimeError, match="Can't find the shinylive version"):
+        assets.local_build_version(build)
+
+
+def test_install_and_link_from_local_use_build_version(tmp_path: Path):
+    build = make_local_build(tmp_path, "0.10.18")
+    cache = tmp_path / "cache"
+    runner = CliRunner()
+    for command in ["install-from-local", "link-from-local"]:
+        result = runner.invoke(
+            main, ["assets", command, "--dir", str(cache), str(build)]
+        )
+        assert result.exit_code == 0, result.output
+        assert "SHINYLIVE_ASSETS_VERSION=0.10.18" in result.output
+        assert (cache / "shinylive-0.10.18" / "file.txt").read_text() == "dev"
+
+    # An explicit version still wins
+    assets.copy_shinylive_local(build, cache, version="0.10.17")
+    assert av.local_assets_versions(cache) == ["0.10.18", "0.10.17"]
+
+
+def test_ensure_assets_with_url_errors_on_wrong_folder(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+):
+    def download(destdir: Path, **kw: object) -> None:
+        (Path(destdir) / "shinylive-other").mkdir()
+
+    monkeypatch.setattr(assets, "download_shinylive", download)
+    with pytest.raises(RuntimeError, match="has no shinylive-0.10.16 folder"):
+        assets.ensure_shinylive_assets(
+            tmp_path, version="0.10.16", url="https://example.com/x.tar.gz"
+        )

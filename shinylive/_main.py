@@ -280,7 +280,7 @@ def assets_info(
     "--url",
     type=str,
     default=None,
-    help="URL to download from. If used, this will override --version.",
+    help="A direct link to an assets tarball (such as a mirror) to download instead of the GitHub release. If used, --version is ignored; the folder made is the top-level folder of the tarball.",
 )
 @click.option(
     "--status/--no-status",
@@ -371,7 +371,7 @@ def remove(
     "--version",
     type=str,
     default=None,
-    help="Version of the shinylive assets being copied. Defaults to the newest known version in the default series.",
+    help="Version to name the copied assets after. Defaults to the version in the `package.json` of the shinylive repository that holds BUILD.",
     callback=check_assets_version,
 )
 @click.option(
@@ -391,11 +391,10 @@ def install_from_local(
     dir: Optional[str | Path],
 ) -> None:
     dir = upgrade_dir(dir)
-    version = resolve_assets_version(
-        assets_version_input(version), dir=dir, download=False
-    )
+    version = _assets.local_build_target_version(build, dir, version)
     print(f"Copying shinylive-{version} from {build} to {dir}")
     _assets.copy_shinylive_local(source_dir=build, destdir=dir, version=version)
+    print_use_local_build_hint(version)
 
 
 link_from_local_help = (
@@ -415,7 +414,7 @@ link_from_local_help = (
     "--version",
     type=str,
     default=None,
-    help="Version of shinylive assets being linked. Defaults to the newest known version in the default series.",
+    help="Version to name the linked assets after. Defaults to the version in the `package.json` of the shinylive repository that holds BUILD.",
     callback=check_assets_version,
 )
 @click.option(
@@ -437,11 +436,18 @@ def link_from_local(
     if build is None:  # pyright: ignore[reportUnnecessaryComparison]
         raise click.UsageError("Must specify BUILD")
     dir = upgrade_dir(dir)
-    version = resolve_assets_version(
-        assets_version_input(version), dir=dir, download=False
-    )
+    version = _assets.local_build_target_version(build, dir, version)
     print(f"Creating symlink for shinylive-{version} from {build} to {dir}")
     _assets.link_shinylive_local(source_dir=build, destdir=dir, version=version)
+    print_use_local_build_hint(version)
+
+
+def print_use_local_build_hint(version: str) -> None:
+    # A series moves to newer releases, which would stop using the local build
+    print(
+        f"To use this build, set SHINYLIVE_ASSETS_VERSION={version}. Otherwise a newer "
+        "release in the default series is used once it is out."
+    )
 
 
 @assets.command(

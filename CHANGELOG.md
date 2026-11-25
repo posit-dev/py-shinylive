@@ -12,6 +12,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * In the Quarto extension, only `shinylive extension info` checks GitHub, and it downloads the chosen version. The later `extension` commands only read `versions.json`, so one render uses one version.
 
+* `shinylive assets install-from-local` and `link-from-local` now name the assets after the version in the `package.json` of the shinylive repository that holds the build, instead of the assets version in use. Set `SHINYLIVE_ASSETS_VERSION` to that version to use the build.
+
 * `shinylive._version.SHINYLIVE_ASSETS_VERSION` now gives a `FutureWarning`. It is no longer the assets version in use; it is the fallback version. Run `shinylive assets version` to get the version in use.
 
 * `shinylive assets cleanup` gains `--keep`. By default it keeps the newest downloaded version of the default series and of `SHINYLIVE_ASSETS_VERSION`. It also removes temp files left by interrupted downloads. `shinylive assets info` shows the version in use, the default series, and the last check. Downloads now extract to a temp folder and then move into place.

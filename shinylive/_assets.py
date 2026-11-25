@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import shutil
 import sys
@@ -8,10 +9,11 @@ import time
 import urllib.request
 import uuid
 from pathlib import Path
-from typing import Optional
+from typing import Optional, cast
 
 from ._assets_version import (
     VERSIONS_TIME_FORMAT,
+    _is_version,
     assets_version,
     assets_version_input,
     assets_version_matches,
@@ -33,8 +35,23 @@ def download_shinylive(
     url: Optional[str] = None,
     status: bool = True,
 ) -> None:
-    """Download the assets. `version` may be an exact version, a series, or "latest".
-    When `None`, `SHINYLIVE_ASSETS_VERSION` or the default series is used."""
+    """Download the Shinylive assets into `destdir`.
+
+    Parameters
+    ----------
+    destdir
+        The assets cache folder. Defaults to `shinylive_cache_dir()`.
+    version
+        The version to download from GitHub: an exact version, a series, or "latest".
+        When `None`, `SHINYLIVE_ASSETS_VERSION` or the default series is used. Ignored
+        when `url` is set.
+    url
+        A direct link to an assets tarball, such as a mirror. When set, `version` is
+        not used. The folder made in `destdir` is the top-level folder of the tarball
+        (`shinylive-<version>` for a release tarball).
+    status
+        Whether to show download progress.
+    """
     if destdir is None:
         # Note that this is the cache directory, which is the parent of the assets
         # directory. The tarball will have the assets directory as the top-level subdir.
@@ -169,15 +186,52 @@ def codeblock_to_json_file(version: Optional[str] = None) -> str:
     return str(p)
 
 
-def _local_target_dir(destdir: Optional[str | Path], version: Optional[str]) -> Path:
+def local_build_version(build: str | Path) -> str:
+    """Return the version of a local shinylive build.
+
+    It is read from the `package.json` of the shinylive repository: in `build`, or in
+    its parent (when `build` is the repository's `./build` folder).
+    """
+    build = Path(build).absolute()
+    for dir in (build, build.parent):
+        try:
+            with open(dir / "package.json", encoding="utf-8") as f:
+                package: object = json.load(f)
+        except (OSError, ValueError):
+            continue
+        if not isinstance(package, dict):
+            continue
+        package = cast("dict[str, object]", package)
+        version = package.get("version")
+        if package.get("name") == "shinylive" and isinstance(version, str):
+            if _is_version(version):
+                return version
+    raise RuntimeError(
+        f"Can't find the shinylive version of {build}: no shinylive `package.json` "
+        "in it or its parent folder. Pass the version to use."
+    )
+
+
+def local_build_target_version(
+    source_dir: str | Path, destdir: Optional[str | Path], version: Optional[str]
+) -> str:
+    """Return the exact version to name a local build's folder after. When `version`
+    is `None`, it is the build's own version."""
+    if version is None:
+        return local_build_version(source_dir)
+    if destdir is None:
+        destdir = shinylive_cache_dir()
+    # Name the folder after an exact version, so a series can find it
+    return resolve_assets_version(version, dir=destdir, download=False)
+
+
+def _local_target_dir(
+    source_dir: str | Path, destdir: Optional[str | Path], version: Optional[str]
+) -> Path:
     if destdir is None:
         destdir = Path(shinylive_cache_dir())
-    destdir = Path(destdir)
-    # Name the folder after an exact version, so the default series can find it
-    version = resolve_assets_version(
-        assets_version_input(version), dir=destdir, download=False
-    )
-    return destdir / f"shinylive-{version}"
+    version = local_build_target_version(source_dir, destdir, version)
+    return Path(destdir) / f"shinylive-{version}"
 
 
 def copy_shinylive_local(
@@ -185,7 +239,9 @@ def copy_shinylive_local(
     destdir: Optional[str | Path] = None,
     version: Optional[str] = None,
 ):
-    target_dir = _local_target_dir(destdir, version)
+    """Copy a local shinylive build into `destdir`, as `shinylive-<version>`.
+    `version` defaults to the build's own version (see `local_build_version()`)."""
+    target_dir = _local_target_dir(source_dir, destdir, version)
     source_dir = Path(source_dir)
     _remove_path(target_dir)
     shutil.copytree(source_dir, target_dir)
@@ -196,7 +252,9 @@ def link_shinylive_local(
     destdir: Optional[str | Path] = None,
     version: Optional[str] = None,
 ):
-    target_dir = _local_target_dir(destdir, version)
+    """Link a local shinylive build into `destdir`, as `shinylive-<version>`.
+    `version` defaults to the build's own version (see `local_build_version()`)."""
+    target_dir = _local_target_dir(source_dir, destdir, version)
 
     source_dir = Path(source_dir).absolute()
     if not source_dir.is_dir():
@@ -213,10 +271,20 @@ def ensure_shinylive_assets(
     version: Optional[str] = None,
     url: Optional[str] = None,
 ) -> Path:
-    """Ensure that there is a local copy of shinylive.
+    """Ensure that there is a local copy of the Shinylive assets, and return its folder.
 
-    `version` names the folder (`shinylive-<version>`) to look for. When `url` is set,
-    a missing folder is downloaded from `url` instead of from GitHub.
+    Parameters
+    ----------
+    destdir
+        The assets cache folder. Defaults to `shinylive_cache_dir()`.
+    version
+        An exact version, a series, or "latest". It is resolved to an exact version,
+        which names the folder to look for: `<destdir>/shinylive-<version>`. When
+        `None`, the version used by this process (`assets_version()`) is used.
+    url
+        A direct link to an assets tarball, such as a mirror. When set, a missing
+        folder is downloaded from `url`, never from GitHub. The tarball's top-level
+        folder must be `shinylive-<version>`; otherwise an error is raised.
     """
 
     if destdir is None:
@@ -233,6 +301,10 @@ def ensure_shinylive_assets(
     if not shinylive_bundle_dir.exists():
         print(f"{shinylive_bundle_dir} does not exist.", file=sys.stderr)
         download_shinylive(url=url, version=version, destdir=destdir)
+        if not shinylive_bundle_dir.exists():
+            raise RuntimeError(
+                f"The tarball at {url} has no {shinylive_bundle_dir.name} folder."
+            )
 
     return shinylive_bundle_dir
 
