@@ -6,7 +6,12 @@ from pathlib import Path
 
 from . import _deps, _utils
 from ._app_json import AppInfo, read_app_files, write_app_json
-from ._assets import shinylive_assets_dir
+from ._assets import ensure_shinylive_assets, shinylive_assets_dir
+from ._assets_version import (
+    assets_version_input,
+    resolve_assets_version,
+    set_assets_version,
+)
 
 
 def export(
@@ -18,6 +23,7 @@ def export(
     full_shinylive: bool = False,
     template_dir: str | Path | None = None,
     template_params: dict[str, object] | None = None,
+    assets_version: str | None = None,
 ):
     def verbose_print(*args: object) -> None:
         if verbose:
@@ -36,6 +42,11 @@ def export(
         raise ValueError(
             f"subdir {subdir} is absolute, but only relative paths are allowed."
         )
+
+    # Resolve after the argument checks: it may use the network or download. All
+    # later lookups of the assets folder in this process use this version.
+    set_assets_version(resolve_assets_version(assets_version_input(assets_version)))
+    ensure_shinylive_assets()
 
     if template_dir is None:
         template_dir = Path(shinylive_assets_dir()) / "export_template"

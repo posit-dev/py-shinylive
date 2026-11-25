@@ -25,7 +25,7 @@ from ._assets import (
     pyodide_lock_json_file,
     shinylive_assets_dir,
 )
-from ._version import SHINYLIVE_ASSETS_VERSION
+from ._assets_version import assets_version
 
 # Files in Pyodide that should always be included.
 BASE_PYODIDE_FILES = {
@@ -246,7 +246,7 @@ def _shinylive_common_dep_htmldep(
 
     return {
         "name": "shinylive",
-        "version": SHINYLIVE_ASSETS_VERSION,
+        "version": assets_version(),
         "scripts": scripts,
         "stylesheets": stylesheets,
         "resources": resources,
@@ -302,7 +302,7 @@ def shinylive_common_files(
 def _serviceworker_dep(sw_dir: Optional[str] = None) -> QuartoHtmlDependency:
     dep: QuartoHtmlDependency = {
         "name": "shinylive-serviceworker",
-        "version": SHINYLIVE_ASSETS_VERSION,
+        "version": assets_version(),
         "serviceworkers": [
             {
                 "source": shinylive_assets_dir() + "/shinylive-sw.js",

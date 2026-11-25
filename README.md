@@ -80,24 +80,28 @@ For more information, see the [examples folder](https://github.com/posit-dev/py-
 
 ## Shinylive asset management
 
-Each version of the Shinylive Python package is associated with a particular version of the Shinylive web assets. ([See the releases here](https://github.com/posit-dev/shinylive/releases).)
+Each version of the Shinylive Python package uses a series of the Shinylive web assets, such as `0.10.*`. ([See the releases here](https://github.com/posit-dev/shinylive/releases).) By default, the newest release in the series is used, so new assets patch releases do not need a new version of this package. GitHub is checked for new releases at most once a day (once an hour after a failed check), and the result is saved in `versions.json` in the assets cache folder. The R shinylive package uses the same file, so both packages choose the same version. Offline, the newest downloaded matching version is used.
 
-To see which version of this Python package you have, and which version of the web assets it is associated with, simply run `shinylive` at the command prompt:
+To choose a different version, use `shinylive export --assets-version` or set the `SHINYLIVE_ASSETS_VERSION` environment variable. Both accept an exact version (`0.10.16`), a series (`0.11.*`), or `latest` (check GitHub every time). Pin an exact version for builds that must repeat exactly, such as in CI.
+
+To see which version of this Python package you have, and which series of the web assets it uses, simply run `shinylive` at the command prompt:
 
 ```
 $ shinylive
 Usage: shinylive [OPTIONS] COMMAND [ARGS]...
 
-  shinylive Python package version: 0.1.0
-  shinylive web assets version:     0.2.1
+  shinylive Python package version: 0.8.13
+  shinylive web assets series:      0.10.*
 ...
 ```
+
+`shinylive assets version` prints the exact version that will be used.
 
 The web assets will be downloaded and cached the first time you run `shinylive export`. Or, you can run `shinylive assets download` to fetch them.
 
 ```
 $ shinylive assets download
-Downloading https://github.com/posit-dev/shinylive/releases/download/v0.2.1/shinylive-0.2.1.tar.gz...
+Downloading https://github.com/posit-dev/shinylive/releases/download/v0.10.16/shinylive-0.10.16.tar.gz...
 Unzipping to /Users/username/Library/Caches/shinylive/
 ```
 
@@ -105,25 +109,31 @@ To see what versions you have installed, run `shinylive assets info`:
 
 ```
 $ shinylive assets info
+    shinylive web assets version: 0.10.16
+    Default assets series: 0.10.*
+    Last checked for new assets: 2026-11-25T15:54:25Z
+
     Local cached shinylive asset dir:
     /Users/username/Library/Caches/shinylive
 
     Installed versions:
-    /Users/username/Library/Caches/shinylive/shinylive-0.2.1
-    /Users/username/Library/Caches/shinylive/shinylive-0.0.6
+    /Users/username/Library/Caches/shinylive/shinylive-0.10.16
+    /Users/username/Library/Caches/shinylive/shinylive-0.10.15
+    /Users/username/Library/Caches/shinylive/shinylive-0.9.1
 ```
 
-You can remove old versions with `shinylive assets cleanup`. This will remove all versions except the one that the Python package wants to use:
+You can remove old versions with `shinylive assets cleanup`. By default, this keeps the newest downloaded version of the default series (and of `SHINYLIVE_ASSETS_VERSION`, if set). Use `--keep` to choose what to keep. It also removes temp files left by interrupted downloads.
 
 ```
 $ shinylive assets cleanup
-Keeping version 0.2.1
-Removing /Users/username/Library/Caches/shinylive/shinylive-0.0.6
+Keeping version 0.10.16
+Removing /Users/username/Library/Caches/shinylive/shinylive-0.10.15
+Removing /Users/username/Library/Caches/shinylive/shinylive-0.9.1
 ```
 
 If you want to force it to remove a specific version, use the `shinylive assets remove xxx`:
 
 ```
-$ shinylive assets remove 0.2.1
-Removing /Users/username/Library/Caches/shinylive/shinylive-0.2.1
+$ shinylive assets remove 0.10.15
+Removing /Users/username/Library/Caches/shinylive/shinylive-0.10.15
 ```

@@ -2,18 +2,26 @@
 
 from __future__ import annotations
 
+import io
+import json
+import os
+import tarfile
+import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Iterator
 
 import pytest
+from click.testing import CliRunner
 
 import shinylive._assets as assets
 import shinylive._assets_version as av
+from shinylive._main import main
 from shinylive._version import SHINYLIVE_ASSETS_VERSION_FALLBACK
 
 # Saved before the `offline` fixture replaces it
 real_fetch_assets_versions = av.fetch_assets_versions
+REAL_DOWNLOAD = assets.download_shinylive
 
 NOW = datetime(2026, 11, 20, 17, 3, 0, tzinfo=timezone.utc)
 
@@ -275,6 +283,7 @@ def test_assets_version_input_and_session(
     monkeypatch.setenv("SHINYLIVE_ASSETS_VERSION", "0.10.16")
     # One process uses one version
     assert av.assets_version() == "0.10.15"
+    assert assets.shinylive_assets_dir() == str(tmp_path / "shinylive-0.10.15")
 
 
 def test_local_assets_versions(tmp_path: Path):
@@ -406,3 +415,84 @@ def test_update_versions_info_skips_list_for_same_latest(
     info = av.update_versions_info(tmp_path, now=NOW)
     assert info is not None and info.versions == ["0.11.0", "0.10.16"]
     assert offline.versions == 0
+
+
+def test_cleanup_keeps_newest_of_series(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+):
+    for v in ["0.9.1", "0.10.12", "0.10.15", "0.10.16"]:
+        (tmp_path / f"shinylive-{v}").mkdir()
+    old_tmp = tmp_path / "extract-abc"
+    old_tmp.mkdir()
+    os.utime(old_tmp, (time.time() - 3600, time.time() - 3600))
+    new_tmp = tmp_path / "versions-xyz.json"
+    new_tmp.write_text("")
+
+    monkeypatch.setenv("SHINYLIVE_ASSETS_VERSION", "0.10.12")
+    assets.cleanup_shinylive_assets(tmp_path)
+    assert av.local_assets_versions(tmp_path) == ["0.10.16", "0.10.12"]
+    assert not old_tmp.exists()
+    assert new_tmp.exists()
+
+    assets.cleanup_shinylive_assets(tmp_path, keep=["0.10.12"])
+    assert av.local_assets_versions(tmp_path) == ["0.10.12"]
+
+
+def make_bundle(path: Path, version: str, content: str) -> None:
+    with tarfile.open(path, "w:gz") as tar:
+        data = content.encode()
+        info = tarfile.TarInfo(f"shinylive-{version}/file.txt")
+        info.size = len(data)
+        tar.addfile(info, io.BytesIO(data))
+
+
+@pytest.fixture
+def real_download(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Path:
+    monkeypatch.setattr(assets, "download_shinylive", REAL_DOWNLOAD)
+    bundle = tmp_path / "bundle.tar.gz"
+
+    def urlretrieve(url: str, reporthook: object = None) -> tuple[str, None]:
+        copy = tmp_path / "download.tar.gz"
+        copy.write_bytes(bundle.read_bytes())
+        return str(copy), None
+
+    monkeypatch.setattr(assets.urllib.request, "urlretrieve", urlretrieve)
+    return bundle
+
+
+def test_download_moves_into_place(real_download: Path, tmp_path: Path):
+    cache = tmp_path / "cache"
+    make_bundle(real_download, "0.10.16", "one")
+    assets.download_shinylive(destdir=cache, version="0.10.16")
+    assert (cache / "shinylive-0.10.16" / "file.txt").read_text() == "one"
+
+    # A re-download replaces the folder
+    make_bundle(real_download, "0.10.16", "two")
+    assets.download_shinylive(destdir=cache, version="0.10.16")
+    assert (cache / "shinylive-0.10.16" / "file.txt").read_text() == "two"
+    assert sorted(p.name for p in cache.iterdir()) == ["shinylive-0.10.16"]
+
+
+def test_extension_commands_use_one_version(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, offline: Calls
+):
+    fake_github(monkeypatch, offline, "0.10.17", ["0.10.17", "0.10.16"])
+    runner = CliRunner()
+    result = runner.invoke(main, ["extension", "info"])
+    assert result.exit_code == 0, result.output
+    info = json.loads(result.stdout)
+    assert info["assets_version"] == "0.10.17"
+    assert info["scripts"]["codeblock-to-json"] == str(
+        tmp_path / "shinylive-0.10.17" / "scripts" / "codeblock-to-json.js"
+    )
+    # `info` checks GitHub but does not download
+    assert offline.latest == 1 and offline.downloads == []
+
+    # Later commands only read versions.json, even when a new release is out
+    fake_github(monkeypatch, offline, "0.10.18", ["0.10.18", "0.10.17"])
+    av._reset()
+    from shinylive._main import use_quarto_assets_version
+
+    use_quarto_assets_version()
+    assert av.assets_version() == "0.10.17"
+    assert offline.latest == 1 and offline.downloads == ["0.10.17"]
