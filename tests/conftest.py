@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Iterator
+from typing import Any, Iterator
 
 import pytest
 
@@ -11,38 +11,36 @@ import shinylive._assets_version as av
 from shinylive._deps import clear_pyodide_caches
 from shinylive._version import SHINYLIVE_ASSETS_VERSION_FALLBACK
 
-FAKE_LOCK = {
-    "info": {},
-    "packages": {
-        "micropip": {
-            "name": "micropip",
-            "version": "1.0",
-            "file_name": "micropip-1.0-py3-none-any.whl",
-            "install_dir": "site",
-            "sha256": "",
-            "depends": ["packaging"],
-            "imports": ["micropip"],
-        },
-        "packaging": {
-            "name": "packaging",
-            "version": "1.0",
-            "file_name": "packaging-1.0-py3-none-any.whl",
-            "install_dir": "site",
-            "sha256": "",
-            "depends": [],
-            "imports": ["packaging"],
-        },
-        "numpy": {
-            "name": "numpy",
-            "version": "1.0",
-            "file_name": "numpy-1.0-py3-none-any.whl",
-            "install_dir": "site",
-            "sha256": "",
-            "depends": [],
-            "imports": ["numpy"],
-        },
+FAKE_PACKAGES: dict[str, dict[str, Any]] = {
+    "micropip": {
+        "name": "micropip",
+        "version": "1.0",
+        "file_name": "micropip-1.0-py3-none-any.whl",
+        "install_dir": "site",
+        "sha256": "",
+        "depends": ["packaging"],
+        "imports": ["micropip"],
+    },
+    "packaging": {
+        "name": "packaging",
+        "version": "1.0",
+        "file_name": "packaging-1.0-py3-none-any.whl",
+        "install_dir": "site",
+        "sha256": "",
+        "depends": [],
+        "imports": ["packaging"],
+    },
+    "numpy": {
+        "name": "numpy",
+        "version": "1.0",
+        "file_name": "numpy-1.0-py3-none-any.whl",
+        "install_dir": "site",
+        "sha256": "",
+        "depends": [],
+        "imports": ["numpy"],
     },
 }
+FAKE_LOCK = {"info": {}, "packages": FAKE_PACKAGES}
 
 
 def _write(path: Path, content: str = "x") -> None:
@@ -70,14 +68,18 @@ def fake_assets(monkeypatch: pytest.MonkeyPatch, tmp_path: Path) -> Iterator[Pat
     for f in ["pyodide.asm.js", "pyodide.asm.wasm", "python_stdlib.zip"]:
         _write(sl / "pyodide" / f)
     _write(sl / "pyodide" / "pyodide-lock.json", json.dumps(FAKE_LOCK))
-    for pkg in FAKE_LOCK["packages"].values():
+    for pkg in FAKE_PACKAGES.values():
         _write(sl / "pyodide" / pkg["file_name"])
 
     av._reset()
     clear_pyodide_caches()
     monkeypatch.setenv("SHINYLIVE_ASSETS_VERSION", SHINYLIVE_ASSETS_VERSION_FALLBACK)
     monkeypatch.setattr(assets, "shinylive_cache_dir", lambda: str(cache))
-    monkeypatch.setattr(av, "_warn_outside_default", lambda version: None)
+
+    def no_warning(version: str) -> None:
+        pass
+
+    monkeypatch.setattr(av, "_warn_outside_default", no_warning)
     yield root
     av._reset()
     clear_pyodide_caches()

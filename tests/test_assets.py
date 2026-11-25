@@ -1,6 +1,9 @@
 """Tests for Shinylive assets."""
 
+from __future__ import annotations
+
 import os
+from pathlib import Path
 
 import pytest
 
@@ -26,10 +29,8 @@ def test_assets_available():
     assert shinylive._assets._check_assets_url() is True
 
 
-def test_copy_local_build_keeps_old_folder_when_source_is_missing(tmp_path):
-    from pathlib import Path
-
-    old = Path(tmp_path) / "shinylive-0.10.16"
+def test_copy_local_build_keeps_old_folder_when_source_is_missing(tmp_path: Path):
+    old = tmp_path / "shinylive-0.10.16"
     old.mkdir()
     with pytest.raises(RuntimeError, match="does not exist"):
         shinylive._assets.copy_shinylive_local(
@@ -38,7 +39,9 @@ def test_copy_local_build_keeps_old_folder_when_source_is_missing(tmp_path):
     assert old.exists()
 
 
-def test_download_progress_without_size(monkeypatch, tmp_path, capsys):
+def test_download_progress_without_size(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+):
     import io
     import tarfile
     import time
@@ -56,7 +59,7 @@ def test_download_progress_without_size(monkeypatch, tmp_path, capsys):
         def read(self, n: int) -> bytes:
             return data.read(n)
 
-        def __enter__(self):
+        def __enter__(self) -> Response:
             return self
 
         def __exit__(self, *args: object) -> None:
@@ -64,9 +67,11 @@ def test_download_progress_without_size(monkeypatch, tmp_path, capsys):
 
     clock = iter(range(0, 1000, 2))
     monkeypatch.setattr(time, "time", lambda: next(clock))
-    monkeypatch.setattr(
-        shinylive._assets.urllib.request, "urlopen", lambda *a, **k: Response()
-    )
+
+    def urlopen(*args: object, **kwargs: object) -> Response:
+        return Response()
+
+    monkeypatch.setattr(shinylive._assets.urllib.request, "urlopen", urlopen)
     shinylive._assets.download_shinylive(tmp_path, url="https://example.com/x.tar.gz")
     err = capsys.readouterr().err
     assert "MB" in err
@@ -74,7 +79,7 @@ def test_download_progress_without_size(monkeypatch, tmp_path, capsys):
     assert (tmp_path / "shinylive-0.10.16" / "file.txt").exists()
 
 
-def test_check_assets_url_is_false_for_missing_release(monkeypatch):
+def test_check_assets_url_is_false_for_missing_release(monkeypatch: pytest.MonkeyPatch):
     import urllib.error
 
     def not_found(*args: object, **kwargs: object):

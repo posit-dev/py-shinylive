@@ -7,12 +7,12 @@ from pathlib import Path
 from . import _deps, _utils
 from ._app_json import AppInfo, read_app_files, write_app_json
 from ._assets import shinylive_assets_dir
-from ._utils import comparable_path, is_relative_to
 from ._assets_version import (
     assets_version_input,
     resolve_assets_version,
     set_assets_version,
 )
+from ._utils import comparable_path, is_relative_to
 
 
 def export(

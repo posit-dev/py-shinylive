@@ -1,6 +1,7 @@
 """Tests for Shinylive dependency detection."""
 
 import os
+from pathlib import Path
 
 import pytest
 
@@ -117,7 +118,9 @@ def test_find_recursive_deps():
 def test_relative_imports_are_not_packages():
     from shinylive._deps import _find_imports
 
-    source = "from .numpy import x\nfrom . import y\nfrom ..pandas import z\nimport json\n"
+    source = (
+        "from .numpy import x\nfrom . import y\nfrom ..pandas import z\nimport json\n"
+    )
     assert _find_imports(source) == ["json"]
 
 
@@ -136,7 +139,7 @@ def test_requirements_txt_skips_options_and_urls():
     assert _find_packages_in_requirements(requirements_txt) == ["shiny", "pkg"]
 
 
-def test_package_lists_are_sorted(fake_assets):
+def test_package_lists_are_sorted(fake_assets: Path):
     from shinylive._deps import _find_recursive_deps, shinylive_common_files
 
     files = shinylive_common_files(asset_type=("base", "python"))
