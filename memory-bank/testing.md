@@ -5,7 +5,8 @@ description: "How the pytest suite is laid out, which tests need the downloaded 
 
 # Testing
 
-Run `make test` (or `uv run pytest`). `make check` runs pyrefly and ruff
+Run `make test` (or `uv run pytest`). `make test-all` runs the tests on Python
+3.10 to 3.14 against the built wheel with tox. `make check` runs pyrefly and ruff
 (lint and format check).
 
 ## Layout

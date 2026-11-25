@@ -51,6 +51,8 @@ dev = [
     "ruff>=0.6.0",
     "pyrefly>=1.5.0",
     "types-chevron>=0.14.2.20260408",
+    "tox>=4.22",
+    "tox-uv>=1.0.0",
 ]
 
 [tool.hatch.version]
@@ -94,3 +96,17 @@ project-excludes = [
 [tool.pyrefly.errors]
 unused-ignore = "error"
 implicit-any = "error"
+
+# `make test-all` (and CI) runs the tests on every supported Python version.
+# tox-uv lets uv download any missing Python versions.
+[tool.tox]
+env_list = ["py310", "py311", "py312", "py313", "py314"]
+
+[tool.tox.env_run_base]
+package = "wheel"
+wheel_build_env = ".pkg"
+dependency_groups = ["dev"]
+# With pytest's default import mode, the repo root is put first on `sys.path`
+# and the tests import `shinylive/` from the source folder. `importlib` mode
+# leaves `sys.path` alone, so the tests run against the installed wheel.
+commands = [["pytest", "--import-mode=importlib", { replace = "posargs", extend = true }]]
