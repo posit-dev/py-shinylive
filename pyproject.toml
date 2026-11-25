@@ -44,9 +44,13 @@ Changelog = "https://github.com/posit-dev/py-shinylive/blob/main/CHANGELOG.md"
 shinylive = "shinylive._main:main"
 
 # `uv sync` and `uv run` install the `dev` group by default.
+# tox installs only the `test` group.
 [dependency-groups]
-dev = [
+test = [
     "pytest>=6.2.4",
+]
+dev = [
+    {include-group = "test"},
     "coverage",
     "ruff>=0.6.0",
     "pyrefly>=1.5.0",
@@ -104,8 +108,10 @@ env_list = ["py310", "py311", "py312", "py313", "py314"]
 
 [tool.tox.env_run_base]
 package = "wheel"
-wheel_build_env = ".pkg"
-dependency_groups = ["dev"]
+dependency_groups = ["test"]
+# The asset tests use these to skip themselves in CI, except on releases.
+# tox does not pass them on by default.
+pass_env = ["CI", "GITHUB_EVENT_NAME"]
 # With pytest's default import mode, the repo root is put first on `sys.path`
 # and the tests import `shinylive/` from the source folder. `importlib` mode
 # leaves `sys.path` alone, so the tests run against the installed wheel.

@@ -59,9 +59,12 @@ git push --force origin refs/tags/actions/v1
   `types-chevron` is in the `dev` group because pyrefly, unlike pyright, does
   not bundle third-party stubs.
 - tox settings are in `[tool.tox]`. Each environment installs the built wheel
-  and the `dev` group, and runs pytest with `--import-mode=importlib`. Without
-  that flag, pytest puts the repo root on `sys.path` and the tests import the
-  source folder instead of the wheel.
+  and the `test` group (pytest only; `dev` includes it), and runs pytest with
+  `--import-mode=importlib`. Without that flag, pytest puts the repo root on
+  `sys.path` and the tests import the source folder instead of the wheel.
+  tox passes only a few environment variables to the tests, so `pass_env`
+  adds `CI` and `GITHUB_EVENT_NAME`. Without them, the asset tests do not
+  know they are in CI and download the assets on every PR.
 
 ## CHANGELOG
 
