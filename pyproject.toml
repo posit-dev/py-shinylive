@@ -92,6 +92,5 @@ project-excludes = [
 ]
 
 [tool.pyrefly.errors]
-no-access = "ignore"
 unused-ignore = "error"
 implicit-any = "error"

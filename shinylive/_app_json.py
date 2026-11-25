@@ -69,10 +69,8 @@ def read_app_files(appdir: Path, destdir: Path) -> list[FileContentJson]:
 
         # Add the file to the app_files list.
         for filename in files:
-            if rel_dir == ".":
-                output_filename = filename
-            else:
-                output_filename = (rel_dir / filename).as_posix()
+            # For the top folder, `rel_dir` is `Path(".")`, which this drops.
+            output_filename = (rel_dir / filename).as_posix()
 
             if filename == "shinylive.js":
                 print(
