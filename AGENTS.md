@@ -25,8 +25,8 @@ parts:
 ```sh
 make install-deps  # uv sync: the package and dev tools into .venv
 make test          # pytest
-make check         # pyright, flake8, black --check, isort --check
-uv run black . && uv run isort .
+make check         # pyright, ruff check, ruff format --check
+make format        # ruff check --fix, ruff format
 ```
 
 Some tests need the assets (a large download) and are skipped in CI unless the

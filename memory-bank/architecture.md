@@ -130,7 +130,7 @@ Other folders:
 | `_deps.py` HTML dependencies, `_main` `extension` commands | `quartoExtension.md` |
 | `_url.py`, `_main` `url` commands | `shinyliveUrls.md` |
 | `tests/` | `testing.md` |
-| `.github/`, `examples/`, `Makefile`, `pyproject.toml`, `.flake8`, `CHANGELOG.md` | `ciAndTooling.md` |
+| `.github/`, `examples/`, `Makefile`, `pyproject.toml`, `CHANGELOG.md` | `ciAndTooling.md` |
 
 ## Pitfalls
 
