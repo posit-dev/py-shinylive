@@ -289,14 +289,15 @@ def shinylive_common_files(
                 files = []
         elif rel_root == Path("shinylive/pyodide"):
             dirs.remove("fonts")
-            files[:] = BASE_PYODIDE_FILES
+            files[:] = sorted(BASE_PYODIDE_FILES)
 
         for file in files:
             if file.startswith("."):
                 continue
             base_files.append(str(rel_root / file))
 
-    return base_files
+    # Sort, so the order is the same on every run
+    return sorted(base_files)
 
 
 def _serviceworker_dep(sw_dir: Optional[str] = None) -> QuartoHtmlDependency:
@@ -434,7 +435,8 @@ def _find_recursive_deps(
         dep_names.extend(new_depnames)
         i += 1
 
-    return dep_names
+    # Sort, so the order is the same on every run
+    return sorted(dep_names)
 
 
 def dep_name_to_dep_key(name: str) -> str | None:
@@ -605,7 +607,9 @@ def _find_imports(source: str) -> list[str]:
                 imports.add(node_name.split(".")[0])
         elif isinstance(node, ast.ImportFrom):
             module_name = node.module
-            if module_name is None:
+            if module_name is None or node.level > 0:
+                # A relative import, like `from .utils import x`, is a module of the
+                # app, not a package
                 continue
             imports.add(module_name.split(".")[0])
     return list(sorted(imports))
@@ -637,11 +641,15 @@ def _find_packages_in_requirements(req_txt: str) -> list[str]:
     lines = req_txt.split("\n")
 
     for line in lines:
-        line = line.strip()
-        if line == "" or line.startswith("#"):
+        line = re.sub(r"(^|\s)#.*", "", line).strip()
+        if line == "":
             continue
-        # If it's a URL, then it must be a wheel file. Ignore it.
-        if line.startswith("http://") or line.startswith("https://"):
+        # Options, like `-r other.txt` or `--index-url URL`, are not packages
+        if line.startswith("-"):
+            continue
+        # If it's a URL (`https://`, `git+https://`, ...), then it can't be a Pyodide
+        # package. Ignore it.
+        if re.match(r"[a-zA-Z][a-zA-Z0-9+.-]*://", line):
             continue
         else:
             # If we got here, it's a package specification.
