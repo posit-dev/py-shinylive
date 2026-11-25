@@ -21,7 +21,7 @@ import urllib.error
 import urllib.request
 import warnings
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any, Literal, NamedTuple, Optional, cast
 
@@ -220,7 +220,7 @@ def fetch_latest_assets_version() -> str:
 
 
 def latest_tag_version(url: str) -> str:
-    m = re.search(r"/releases/tag/v([0-9.]+)$", url)
+    m = re.search(r"/releases/tag/v([0-9]+(?:\.[0-9]+)*)$", url)
     if m is None:
         raise RuntimeError(f"Can't find the latest Shinylive assets version in {url}")
     return m.group(1)
@@ -281,9 +281,16 @@ def assets_version_input(version: Optional[str] = None) -> str:
     `SHINYLIVE_ASSETS_VERSION` environment variable, then the package default."""
     if version is not None:
         return version
-    return (
-        os.environ.get("SHINYLIVE_ASSETS_VERSION") or SHINYLIVE_ASSETS_VERSION_DEFAULT
-    )
+    env = os.environ.get("SHINYLIVE_ASSETS_VERSION")
+    if not env:
+        return SHINYLIVE_ASSETS_VERSION_DEFAULT
+    try:
+        parse_assets_version(env)
+    except ValueError as e:
+        raise ValueError(
+            f"Bad SHINYLIVE_ASSETS_VERSION environment variable. {e}"
+        ) from None
+    return env
 
 
 def assets_version() -> str:
@@ -338,22 +345,12 @@ def resolve_assets_version(
     `check=False`, only the saved `versions.json` is read (no network). When
     `warn=False`, an exact version outside the default series does not warn.
     """
-    from ._assets import download_shinylive, shinylive_cache_dir
+    from ._assets import shinylive_cache_dir
 
     spec = parse_assets_version(version)
     dir = Path(dir) if dir is not None else Path(shinylive_cache_dir())
     if spec.kind == "exact":
-        if warn:
-            _warn_outside_default(spec.value)
-        if download and spec.value not in local_assets_versions(dir):
-            try:
-                download_shinylive(destdir=dir, version=spec.value)
-            except Exception as e:
-                raise RuntimeError(
-                    f"Can't download Shinylive assets v{spec.value}. Check that this "
-                    "version exists and that you are online."
-                ) from e
-        return spec.value
+        return _resolve_exact(spec.value, dir, download=download, warn=warn)
 
     key = (spec.value, str(dir), download, check)
     if key in _memo:
@@ -363,23 +360,39 @@ def resolve_assets_version(
         info = update_versions_info(dir, force=spec.kind == "latest", now=now)
     else:
         info = read_versions_json(dir)
-    released = info.versions if info else []
     local = local_assets_versions(dir)
-    local_matches = [v for v in local if assets_version_matches(v, spec)]
+    chosen = _choose_version(spec, info, local, check=check)
+    if download and chosen not in local:
+        chosen = _download_or_fall_back(spec, chosen, dir, local)
+
+    _memo[key] = chosen
+    return chosen
+
+
+def _resolve_exact(version: str, dir: Path, *, download: bool, warn: bool) -> str:
+    from ._assets import download_shinylive
+
+    if warn:
+        _warn_outside_default(version)
+    if download and version not in local_assets_versions(dir):
+        try:
+            download_shinylive(destdir=dir, version=version)
+        except Exception as e:
+            raise RuntimeError(
+                f"Can't download Shinylive assets v{version}. Check that this "
+                "version exists and that you are online."
+            ) from e
+    return version
+
+
+def _choose_version(
+    spec: VersionSpec, info: VersionsInfo | None, local: list[str], *, check: bool
+) -> str:
+    """Return the highest known or downloaded match, else the fallback version."""
+    released = info.versions if info else []
+    released_match = any(assets_version_matches(v, spec) for v in released)
     known = list(dict.fromkeys(released + local))
     matches = [v for v in known if assets_version_matches(v, spec)]
-    # The check failed and no known release matches, so the result may be old. Every
-    # known release matches "latest", so any failed check makes it old.
-    stale = (
-        check
-        and info is not None
-        and info.error is not None
-        and (
-            spec.kind == "latest"
-            or not any(assets_version_matches(v, spec) for v in released)
-        )
-    )
-
     fallback = SHINYLIVE_ASSETS_VERSION_FALLBACK
     if len(matches) == 0:
         if not assets_version_matches(fallback, spec):
@@ -391,42 +404,60 @@ def resolve_assets_version(
         matches = [fallback]
     chosen = max_version(matches)
 
-    if stale:
+    # The last check failed and no known release matches, so the result may be old
+    # ("latest" matches every release). Every process warns until the next check, as
+    # each of them may use an old version.
+    old = spec.kind == "latest" or not released_match
+    if check and info is not None and info.error is not None and old:
+        retry_at = info.checked_at + timedelta(hours=VERSIONS_RETRY_HOURS)
         _warn(
-            "Can't check GitHub for new Shinylive assets releases. Using "
-            f"v{chosen}, which may not be the newest {spec.value!r} release. "
-            f"({info.error if info else ''}) Set GITHUB_PAT if GitHub is limiting "
-            "requests, or pass an exact version."
+            f"The check for new Shinylive assets releases at "
+            f"{info.checked_at.strftime(VERSIONS_TIME_FORMAT)} failed: {info.error}. "
+            f"Using v{chosen}, which may not be the newest {spec.value!r} release. "
+            f"GitHub is checked again after {retry_at.strftime(VERSIONS_TIME_FORMAT)}. "
+            "Set GITHUB_PAT if GitHub is limiting requests, or pass an exact version."
         )
-
-    if download and chosen not in local:
-        try:
-            download_shinylive(destdir=dir, version=chosen)
-        except Exception as e:
-            if (
-                len(local_matches) == 0
-                and chosen != fallback
-                and assets_version_matches(fallback, spec)
-            ):
-                try:
-                    download_shinylive(destdir=dir, version=fallback)
-                    local_matches = [fallback]
-                except Exception:
-                    pass
-            if len(local_matches) == 0:
-                raise RuntimeError(
-                    f"Can't download Shinylive assets v{chosen}. Shinylive assets "
-                    "must be downloaded once while online. Or pass the exact version "
-                    "of downloaded assets."
-                ) from e
-            failed, chosen = chosen, max_version(local_matches)
-            _warn(
-                f"Can't download Shinylive assets v{failed}. Using downloaded "
-                f"v{chosen} instead. ({e})"
-            )
-
-    _memo[key] = chosen
     return chosen
+
+
+def _download_or_fall_back(
+    spec: VersionSpec, chosen: str, dir: Path, local: list[str]
+) -> str:
+    """Download `chosen`. If that fails, use the highest downloaded match, or download
+    the fallback version when nothing matching is downloaded."""
+    from ._assets import download_shinylive
+
+    try:
+        download_shinylive(destdir=dir, version=chosen)
+        return chosen
+    except Exception as e:
+        error = e
+
+    local_matches = [v for v in local if assets_version_matches(v, spec)]
+    fallback = SHINYLIVE_ASSETS_VERSION_FALLBACK
+    fallback_note = ""
+    if (
+        len(local_matches) == 0
+        and chosen != fallback
+        and assets_version_matches(fallback, spec)
+    ):
+        try:
+            download_shinylive(destdir=dir, version=fallback)
+            local_matches = [fallback]
+        except Exception as e:
+            fallback_note = f" The fallback v{fallback} also failed: {e}."
+    if len(local_matches) == 0:
+        raise RuntimeError(
+            f"Can't download Shinylive assets v{chosen}.{fallback_note} Shinylive assets "
+            "must be downloaded once while online. Or pass the exact version "
+            "of downloaded assets."
+        ) from error
+    used = max_version(local_matches)
+    _warn(
+        f"Can't download Shinylive assets v{chosen}. Using downloaded "
+        f"v{used} instead. ({error})"
+    )
+    return used
 
 
 def _warn_outside_default(version: str) -> None:
@@ -443,7 +474,7 @@ def _warn_outside_default(version: str) -> None:
 
 def _warn(message: str) -> None:
     """Warn, pointing at the first caller outside the shinylive package."""
-    package_dir = str(Path(__file__).parent)
+    package_dir = str(Path(__file__).parent) + os.sep  # not `shinylive_extra/`
     frame = sys._getframe(1)
     stacklevel = 2
     while frame.f_back is not None and frame.f_code.co_filename.startswith(package_dir):

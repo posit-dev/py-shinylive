@@ -199,7 +199,7 @@ def test_resolve_offline_uses_local_then_fallback(tmp_path: Path):
     # The failed check is recorded, and the newest downloaded match is used
     (tmp_path / "shinylive-0.10.12").mkdir()
     (tmp_path / "shinylive-0.10.15").mkdir()
-    with pytest.warns(UserWarning, match="Can't check GitHub"):
+    with pytest.warns(UserWarning, match="may not be the newest"):
         v = av.resolve_assets_version("0.10.*", tmp_path, now=NOW)
     assert v == "0.10.15"
     assert av.read_versions_json(tmp_path).error  # type: ignore
@@ -358,3 +358,51 @@ def test_warnings_point_outside_the_package(monkeypatch: pytest.MonkeyPatch):
     with pytest.warns(UserWarning, match="outside the default") as record:
         av.assets_version()
     assert record[0].filename == __file__
+
+
+def test_bad_env_var_names_the_env_var(monkeypatch: pytest.MonkeyPatch):
+    monkeypatch.setenv("SHINYLIVE_ASSETS_VERSION", "v0.10")
+    with pytest.raises(ValueError, match="SHINYLIVE_ASSETS_VERSION environment"):
+        av.assets_version_input()
+
+
+def test_latest_tag_version():
+    url = "https://github.com/posit-dev/shinylive/releases/tag/v0.10.17"
+    assert av.latest_tag_version(url) == "0.10.17"
+    for bad in ["v0.10.", "v..", "v0..10", ""]:
+        with pytest.raises(RuntimeError):
+            av.latest_tag_version(f"https://x/releases/tag/{bad}")
+
+
+def test_stale_warning_names_the_next_check(tmp_path: Path):
+    write_info(tmp_path, [], error="rate limited")
+    with pytest.warns(UserWarning, match="rate limited") as record:
+        av.resolve_assets_version("0.10.*", tmp_path, now=NOW, download=False)
+    assert "checked again after 2026-11-20T18:03:00Z" in str(record[0].message)
+
+
+def test_failed_fallback_download_is_reported(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+):
+    write_info(tmp_path, ["0.10.99"])
+
+    def fail(destdir: Path, version: str, **kwargs: object) -> None:
+        raise OSError(f"no v{version}")
+
+    monkeypatch.setattr(assets, "download_shinylive", fail)
+    match = f"fallback v{SHINYLIVE_ASSETS_VERSION_FALLBACK} also failed: no v"
+    with pytest.raises(RuntimeError, match=match):
+        av.resolve_assets_version("0.10.*", tmp_path, now=NOW)
+
+
+def test_update_versions_info_skips_list_for_same_latest(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, offline: Calls
+):
+    # Releases are assumed to only move forward. With the latest tag unchanged, a new
+    # patch release in an older series (here 0.10.17 after 0.11.0) is not seen until
+    # the latest tag changes. Change this test only on purpose.
+    write_info(tmp_path, ["0.11.0", "0.10.16"], hours_ago=30)
+    fake_github(monkeypatch, offline, "0.11.0", ["0.11.0", "0.10.17", "0.10.16"])
+    info = av.update_versions_info(tmp_path, now=NOW)
+    assert info is not None and info.versions == ["0.11.0", "0.10.16"]
+    assert offline.versions == 0
