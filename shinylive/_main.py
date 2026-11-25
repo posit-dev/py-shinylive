@@ -655,7 +655,9 @@ Create a shinylive.io URL for a Shiny app from local files.
 APP is the path to the primary Shiny app file.
 
 FILES are additional supporting files or directories for the app. They are named by
-their path relative to APP's folder (or by file name when APP is `-`).
+their path relative to APP's folder (or by file name when APP is `-`). A directory
+outside APP's folder (or any directory when APP is `-`) keeps its name, so `www` adds
+`www/style.css`.
 
 On macOS, you can copy the URL to the clipboard with:
 

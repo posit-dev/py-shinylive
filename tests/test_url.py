@@ -171,6 +171,23 @@ def test_add_dir_outside_the_app_folder(tmp_path: Path):
     assert names(app) == ["app.py", "assets/z.css"]
 
 
+def test_files_folder_outside_the_app_keeps_its_name(tmp_path: Path):
+    app_py = make_url_app(tmp_path / "app")
+    shared = tmp_path / "shared" / "www"
+    (shared / "a").mkdir(parents=True)
+    (shared / "b").mkdir()
+    (shared / "a" / "x.css").write_text("1")
+    (shared / "b" / "x.css").write_text("2")
+    app = ShinyliveApp.from_local(app_py, [shared])
+    assert names(app) == ["app.py", "www/a/x.css", "www/b/x.css"]
+
+
+def test_files_folder_in_text_app_keeps_its_name(tmp_path: Path):
+    make_url_app(tmp_path)
+    app = ShinyliveApp.from_text("from shiny import App\n", [tmp_path / "www"])
+    assert names(app) == ["app.py", "www/s.css"]
+
+
 def test_write_files_makes_folders(tmp_path: Path):
     bundle: list[FileContentJson] = [
         {"name": "app.py", "content": "from shiny import App\n"},

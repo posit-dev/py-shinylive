@@ -406,7 +406,9 @@ class ShinyliveApp:
             ``add_file`` method to add a single file if you need to rename the files.
             In app bundles created from local files, added files will be stored relative
             to the location of the local ``app`` file. In app bundles created from text,
-            files paths are flattened to include only the file name.
+            files paths are flattened to include only the file name. A directory
+            outside the app's folder (or any directory, for apps created from text)
+            is added with its name, like ``add_dir()``: ``www`` adds ``www/s.css``.
         """
         if files is None:
             return self
@@ -417,7 +419,13 @@ class ShinyliveApp:
         app_path = (
             os.path.abspath(self._app_path) if self._app_path is not None else None
         )
-        for file in files or []:
+        for file in files:
+            if Path(file).is_dir() and not (
+                self._root_dir is not None and _is_inside(file, self._root_dir)
+            ):
+                # Keep the folder name, so `www` adds `www/s.css`, not `s.css`
+                self.add_dir(file)
+                continue
             file_paths = listdir_recursive(file) if Path(file).is_dir() else [file]
             for file_path in file_paths:
                 # The app file is already in the bundle
@@ -790,6 +798,12 @@ def _relative_name(file: str | Path, root_dir: str | Path) -> str:
             f"File '{file}' is not inside the app folder '{root_dir}'. Use "
             "`add_file(file, name=...)` to add it with another name."
         ) from None
+
+
+def _is_inside(path: str | Path, root_dir: str | Path) -> bool:
+    """Whether `path` is `root_dir` or inside it. The two may be a mix of relative and
+    absolute paths."""
+    return Path(os.path.abspath(path)).is_relative_to(os.path.abspath(root_dir))
 
 
 def lzstring_file_bundle(file_bundle: list[FileContentJson]) -> str:
