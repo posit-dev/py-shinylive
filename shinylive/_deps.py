@@ -550,6 +550,12 @@ def _module_to_package_key_mappings() -> dict[str, str]:
     return module_to_package
 
 
+def clear_pyodide_caches() -> None:
+    _dep_name_to_dep_key_mappings.cache_clear()
+    _module_to_package_key_mappings.cache_clear()
+    _pyodide_lock_data.cache_clear()
+
+
 @functools.lru_cache
 def _pyodide_lock_data() -> PyodideLockFile:
     """
