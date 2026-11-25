@@ -38,7 +38,7 @@ git push --force origin refs/tags/actions/v1
 `make test`, `make check` (`pyright`, `lint`, `black --check`,
 `isort --check-only`), `make lint` (flake8 on `shinylive` and `tests`),
 `make dist` (`setup.py sdist` and `bdist_wheel`), `make install`,
-`make clean`.
+`make coverage`, `make clean`.
 
 ## Packaging (`setup.cfg`)
 
@@ -57,12 +57,12 @@ change. A release renames it to the version and date.
 
 ## Pitfalls
 
-- **`examples/README.md` says the tag does not need to move for changes in
-  `examples/`.** It does: users `curl` `examples/deploy-app.yaml` from the
-  tag.
-- **`make test-all` and `make coverage` don't work as is.** There is no tox
-  config, and `coverage` is not a dev dependency.
-- **`setup.cfg` has deprecated keys**: `license_file`, `tests_require`,
-  `test_suite`, and `setup_requires`.
+- **Move the `actions/v1` tag for changes in `examples/` too.** Users `curl`
+  `examples/deploy-app.yaml` from the tag.
+- **The "On push events" comment in `deploy-app.yaml` is out of date** (it
+  deploys on `main` for any event). It is left as is so the tag need not move
+  for a comment.
+- **`make check` needs the dev tools on `PATH`.** Run it from an activated
+  virtual environment, or a global `pyright` may be used.
 - **Asset tests only run in CI on a release** (see `testing.md`), so a broken
   asset test shows up at release time.

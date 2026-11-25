@@ -55,7 +55,7 @@ Shared with r-shinylive, same format:
   clock went backwards (`versions_check_due()`).
 - `check_versions_info()` reads where `/releases/latest` redirects to (no rate
   limit), and fetches the full release list from the GitHub API only when the
-  latest tag changed. `GITHUB_PAT` or `GITHUB_TOKEN` is used if set; a 401
+  latest tag changed or the saved list is empty. `GITHUB_PAT` or `GITHUB_TOKEN` is used if set; a 401
   retries without it.
 - A failed check keeps the old list and records `error`.
 - `write_versions_json()` writes a temp file and renames it. A read-only cache
@@ -72,7 +72,8 @@ Shared with r-shinylive, same format:
   warns. The new `versions.json` is saved only once the chosen version is
   downloaded, so later commands that only read it never pick a version they
   would have to download.
-- Results are memoized per `(input, dir, download, check)` in `_memo`.
+- Series and `"latest"` results are memoized per `(input, dir, download,
+  check)` in `_memo`. Exact versions return before the memo.
 
 `assets_version()` resolves once per process (`_session_version`).
 `set_assets_version()` sets it and clears the `_deps.py` caches when it
@@ -122,14 +123,11 @@ version. A local build is treated like any other installed version.
 - **The cache is shared with r-shinylive.** Folder names, `versions.json`, and
   the temp prefixes must stay the same in both packages. Changes must be
   released in both at about the same time.
-- **`install-from-local` deletes the old folder before copying.** If `BUILD`
-  does not exist, the copy fails after the existing `shinylive-<version>` is
-  already gone.
-- **Download progress without a size.** A server (such as a mirror) that sends
-  no `Content-Length` makes the progress line show negative percents and sizes.
-- **`_check_assets_url()` never returns `False`.** `urlopen()` raises
-  `HTTPError` for a 404. Only `tests/test_assets.py` calls it.
-- **`assets remove --help`** shows a stray `"` at the end of its first line.
+- **Check inputs before removing anything.** `copy_shinylive_local()` and
+  `link_shinylive_local()` check that `BUILD` is a folder before they remove
+  the old `shinylive-<version>`.
+- **A server may send no size.** Mirrors may leave out `Content-Length`, so
+  `_urlretrieve()` passes `-1` and the progress line shows only the MB so far.
 - **Tests must not touch your real cache.** Monkeypatch
   `assets.shinylive_cache_dir` and call `_assets_version._reset()`; see the
   `offline` fixture in `tests/test_assets_version.py`.

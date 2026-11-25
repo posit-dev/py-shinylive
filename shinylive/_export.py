@@ -12,6 +12,7 @@ from ._assets_version import (
     resolve_assets_version,
     set_assets_version,
 )
+from ._utils import comparable_path
 
 
 def export(
@@ -27,7 +28,7 @@ def export(
 ):
     def verbose_print(*args: object) -> None:
         if verbose:
-            print(*args)
+            print(*args, file=sys.stderr)
 
     appdir = Path(appdir)
     destdir = Path(destdir)
@@ -35,13 +36,14 @@ def export(
     if not (appdir / "app.py").exists():
         raise ValueError(f"Directory {appdir}/ must contain a file named app.py.")
 
-    if subdir is None:
-        subdir = ""
-    subdir = Path(subdir)
-    if subdir.is_absolute():
+    if comparable_path(appdir).is_relative_to(comparable_path(destdir)):
+        # Every app file would be skipped as part of the export
         raise ValueError(
-            f"subdir {subdir} is absolute, but only relative paths are allowed."
+            f"destdir {destdir}/ is or holds appdir {appdir}/. Export to a separate "
+            "folder, such as `shinylive export myapp site`."
         )
+
+    subdir = check_subdir(subdir)
 
     # Resolve after the argument checks: it may use the network, and it downloads the
     # chosen version if needed. All later lookups of the assets folder in this process
@@ -57,7 +59,7 @@ def export(
 
     if not destdir.exists():
         print(f"Creating {destdir}/", file=sys.stderr)
-        destdir.mkdir()
+        destdir.mkdir(parents=True)
 
     copy_fn = _utils.create_copy_fn(overwrite=False, verbose_print=verbose_print)
 
@@ -107,7 +109,9 @@ def export(
         ]
 
     else:
-        deps = _deps.base_package_deps() + _deps.find_package_deps(app_info["files"])
+        deps = _deps.base_package_deps() + _deps.find_package_deps(
+            app_info["files"], verbose_print
+        )
 
         package_files: list[str] = [dep["file_name"] for dep in deps]
 
@@ -141,3 +145,18 @@ def export(
         f"  python3 -m http.server --directory {destdir} --bind localhost 8008",
         file=sys.stderr,
     )
+
+
+def check_subdir(subdir: str | Path | None) -> Path:
+    """Return `subdir` as a relative path inside the export folder. `None` and `"."`
+    mean no subdir."""
+    if subdir is None:
+        return Path()
+    path = Path(subdir)
+    if path.is_absolute() or path.drive or path.root:
+        raise ValueError(
+            f"subdir {subdir} is absolute, but only relative paths are allowed."
+        )
+    if ".." in path.parts:
+        raise ValueError(f"subdir {subdir} must not contain `..`.")
+    return path

@@ -87,9 +87,9 @@ lz-string, in the URL hash. No assets are needed. See `shinyliveUrls.md`.
 | File | What it holds |
 |---|---|
 | `shinylive/_main.py` | The `click` CLI: `export`, `assets ...`, `extension ...`, `url ...`, and hidden defunct commands |
-| `shinylive/_export.py` | `export()`, the main entry point |
+| `shinylive/_export.py` | `export()`, the main entry point; `check_subdir()` |
 | `shinylive/_app_json.py` | `read_app_files()`, `write_app_json()`; the `FileContentJson` and `AppInfo` types |
-| `shinylive/_utils.py` | `create_copy_fn()`, `copy_file_and_substitute()` (mustache), `path_length()`, `listdir_recursive()`, `tar_safe_extractall()`, `print_as_json()` |
+| `shinylive/_utils.py` | `create_copy_fn()`, `copy_file_and_substitute()` (mustache), `comparable_path()`, `path_length()`, `listdir_recursive()`, `tar_safe_extractall()`, `print_as_json()` |
 | `shinylive/_assets.py` | Download, cache, install, and remove assets; asset paths |
 | `shinylive/_assets_version.py` | Version inputs, `versions.json`, the GitHub check, `resolve_assets_version()`, `assets_version()` |
 | `shinylive/_version/__init__.py` | `SHINYLIVE_PACKAGE_VERSION`, `SHINYLIVE_ASSETS_VERSION_DEFAULT`, `SHINYLIVE_ASSETS_VERSION_FALLBACK` |
@@ -110,8 +110,9 @@ Other folders:
   downloaded to a user cache on first use. Anything that touches assets can
   hit the network.
 - **One assets version per process.** `assets_version()` resolves once and
-  then returns the same version. `export()` and the Quarto commands set it
-  with `set_assets_version()`, which also clears the cached
+  then returns the same version. `export()` and the Quarto commands (except
+  `extension info`, which passes the version on directly) set it with
+  `set_assets_version()`, which also clears the cached
   `pyodide-lock.json` data in `_deps.py`.
 - **Export is additive.** Re-exporting into the same `destdir` keeps files
   that are already there, and only prints a message if an asset file differs.
@@ -141,5 +142,6 @@ Other folders:
   your shell makes tests and exports use another assets version.
 - **stdout belongs to Quarto.** Inside `shinylive extension` commands, only the
   final JSON may go to stdout. Print anything else to stderr.
-- **Some tests need the assets.** They download them on first run and are
-  skipped in CI except on release; see `testing.md`.
+- **Some tests need the real assets.** They download them on first run and
+  are skipped in CI except on release. Most tests use the offline
+  `fake_assets` fixture instead; see `testing.md`.

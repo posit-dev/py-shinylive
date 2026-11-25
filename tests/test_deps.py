@@ -1,6 +1,7 @@
 """Tests for Shinylive dependency detection."""
 
 import os
+from pathlib import Path
 
 import pytest
 
@@ -111,4 +112,46 @@ def test_find_recursive_deps():
     assert sorted(_find_recursive_deps(["opencv-python"])) == [
         "numpy",
         "opencv-python",
+    ]
+
+
+def test_relative_imports_are_not_packages():
+    from shinylive._deps import _find_imports
+
+    source = (
+        "from .numpy import x\nfrom . import y\nfrom ..pandas import z\nimport json\n"
+    )
+    assert _find_imports(source) == ["json"]
+
+
+def test_requirements_txt_skips_options_and_urls():
+    from shinylive._deps import _find_packages_in_requirements
+
+    requirements_txt = """
+    -r other.txt
+    --index-url https://example.com/simple
+    -e ./local
+    git+https://github.com/a/b
+    https://example.com/x.whl
+    shiny[theme]>=1.0  # inline comment
+    pkg @ https://example.com/pkg.whl
+    .
+    ./local_pkg
+    ../other/pkg.whl
+    /wheels/x.whl
+    ~/wheels/y.whl
+    C:\\wheels\\z.whl
+    """
+    assert _find_packages_in_requirements(requirements_txt) == ["shiny", "pkg"]
+
+
+def test_package_lists_are_sorted(fake_assets: Path):
+    from shinylive._deps import _find_recursive_deps, shinylive_common_files
+
+    files = shinylive_common_files(asset_type=("base", "python"))
+    assert files == sorted(files)
+    assert _find_recursive_deps(["micropip", "numpy"]) == [
+        "micropip",
+        "numpy",
+        "packaging",
     ]

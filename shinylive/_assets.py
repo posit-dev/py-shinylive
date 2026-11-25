@@ -90,10 +90,14 @@ def download_shinylive(
             duration = current_time - start_time
             progress_size = int(count * block_size)
             speed = int(progress_size / (1024 * duration))
-            percent = min(int(count * block_size * 100 / total_size), 100)
-            sys.stderr.write(
-                f"\r{percent}%, {speed} KB/s, {progress_size / (1024 * 1024):.1f}/{total_size / (1024 * 1024):.1f} MB"
-            )
+            progress_mb = f"{progress_size / (1024 * 1024):.1f}"
+            if total_size > 0:
+                percent = min(int(progress_size * 100 / total_size), 100)
+                line = f"{percent}%, {speed} KB/s, {progress_mb}/{total_size / (1024 * 1024):.1f} MB"
+            else:
+                # The server did not send the size
+                line = f"{speed} KB/s, {progress_mb} MB"
+            sys.stderr.write("\r" + line)
             sys.stderr.flush()
             last_update_time = current_time
 
@@ -290,6 +294,9 @@ def copy_shinylive_local(
     `version` defaults to the build's own version (see `local_build_version()`)."""
     target_dir = _local_target_dir(source_dir, destdir, version)
     source_dir = Path(source_dir)
+    # Check before removing the old folder, so a bad path does not lose it
+    if not source_dir.is_dir():
+        raise RuntimeError("Source directory does not exist: " + str(source_dir))
     _remove_path(target_dir)
     shutil.copytree(source_dir, target_dir)
 
@@ -504,26 +511,3 @@ def print_shinylive_local_info(
             print("    (None)")
     else:
         print("    (Cache dir does not exist)")
-
-
-def _check_assets_url(
-    version: str = SHINYLIVE_ASSETS_VERSION_FALLBACK, url: Optional[str] = None
-) -> bool:
-    """Checks if the URL for the Shinylive assets bundle is valid.
-
-    Returns True if the URL is valid (with a 200 status code), False otherwise.
-
-    The reason it has both the `version` and `url` parameters is so that it behaves the
-    same as `download_shinylive()` and `ensure_shinylive_assets()`.
-    """
-    if url is None:
-        url = shinylive_bundle_url(version)
-
-    req = urllib.request.Request(url, method="HEAD")
-    resp = urllib.request.urlopen(req)
-    status = resp.getcode()
-
-    if status == 200:
-        return True
-    else:
-        return False

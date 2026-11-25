@@ -4,6 +4,7 @@ import base64
 import json
 import os
 import shutil
+import sys
 from pathlib import Path
 from typing import Literal, TypedDict
 
@@ -41,15 +42,21 @@ def read_app_files(appdir: Path, destdir: Path) -> list[FileContentJson]:
     # Recursively iterate over files in app directory, and collect the files into
     # app_files data structure.
     exclude_names = {"__pycache__", "venv", ".venv"}
+    # Compare resolved paths, so a relative destdir and an absolute appdir (or the
+    # other way around) still match
+    destdir_cmp = _utils.comparable_path(destdir)
     for root, dirs, files in os.walk(appdir, topdown=True):
         root = Path(root)
 
-        if _utils.is_relative_to(Path(root), destdir):
+        if _utils.comparable_path(root).is_relative_to(destdir_cmp):
             # In case destdir is inside of the appdir, don't copy those files.
+            dirs[:] = []
             continue
 
-        dirs[:] = [d for d in dirs if not d.startswith(".")]
-        dirs[:] = set(dirs) - exclude_names
+        # Sort, so the files in app.json are in the same order on every run
+        dirs[:] = sorted(
+            d for d in dirs if not d.startswith(".") and d not in exclude_names
+        )
         rel_dir = root.relative_to(appdir)
         files = [f for f in files if not f.startswith(".")]
         files = [f for f in files if f not in exclude_names]
@@ -69,7 +76,8 @@ def read_app_files(appdir: Path, destdir: Path) -> list[FileContentJson]:
 
             if filename == "shinylive.js":
                 print(
-                    f"Warning: Found shinylive.js in source directory '{appdir}/{rel_dir}'. Are you including a shinylive distribution in your app?"
+                    f"Warning: Found shinylive.js in source directory '{appdir}/{rel_dir}'. Are you including a shinylive distribution in your app?",
+                    file=sys.stderr,
                 )
 
             type: Literal["text", "binary"] = "text"
@@ -111,8 +119,7 @@ def write_app_json(
     if subdir_inverse != "":
         subdir_inverse += "/"
 
-    if not app_destdir.exists():
-        app_destdir.mkdir()
+    app_destdir.mkdir(parents=True, exist_ok=True)
 
     replacements = {
         # Default values
@@ -142,6 +149,7 @@ def write_app_json(
 
     app_json_output_file = app_destdir / "app.json"
 
-    print("Writing " + str(app_json_output_file), end="")
-    json.dump(app_info["files"], open(app_json_output_file, "w"))
-    print(":", app_json_output_file.stat().st_size, "bytes")
+    with open(app_json_output_file, "w", encoding="utf-8") as f:
+        json.dump(app_info["files"], f)
+    size = app_json_output_file.stat().st_size
+    print(f"Writing {app_json_output_file}: {size} bytes", file=sys.stderr)

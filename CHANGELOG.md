@@ -18,6 +18,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `shinylive assets cleanup` gains `--keep`. By default it keeps the newest downloaded version of the default series and of `SHINYLIVE_ASSETS_VERSION`. It also removes temp files left by interrupted downloads. `shinylive assets info` shows the version in use, the default series, and the last check. Downloads now extract to a temp folder and then move into place.
 
+* `shinylive export` now gives an error when `DESTDIR` is `APPDIR` or holds it (like `shinylive export myapp .`), instead of writing an app with no files. An export folder inside the app is now left out of the app for any mix of relative and absolute paths. The files in `app.json` are in the same order on every run.
+
+* `shinylive export --subdir` no longer accepts `..`, which wrote outside `DESTDIR`. Nested `--subdir` and `DESTDIR` folders are now created. On Windows, a nested `--subdir` now gets the right path to the shared assets.
+
+* `shinylive export` now prints all its messages to stderr (also with `--verbose`), and writes the template pages and `app.json` as UTF-8. A `--template-params` JSON string longer than a file name can be no longer fails on Python 3.10 to 3.13.
+
+* `shinylive assets install-from-local` no longer removes the installed version when `BUILD` does not exist. Download progress no longer shows negative numbers when the server does not send the file size.
+
+* An app's Pyodide packages are found more carefully: relative imports (`from .utils import x`) are no longer read as packages, and option lines (`-r`, `--index-url`), local paths (`./my_pkg`), VCS URLs, and inline comments in `requirements.txt` are skipped. Copied packages and Quarto resources are in the same order on every run.
+
+* `ShinyliveApp` and `shinylive url` fixes: folders can be passed as files (`shinylive url encode app.py www`) and keep their folder name, `add_file(overwrite=True)` replaces the file, `remove_file()` and `-` remove it, files can mix relative and absolute paths, names always use `/`, `write_files()` (`shinylive url decode --dir`) creates subfolders, writes UTF-8, and refuses names outside the folder, and URLs on other hosts are decoded with the right language and mode.
+
 ## [0.8.13] - 2026-10-29
 
 * Updated to Shinylive web assets 0.10.16, which bundles Shiny for Python 1.9.0.
