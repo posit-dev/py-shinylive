@@ -15,6 +15,7 @@ from __future__ import annotations
 import json
 import os
 import re
+import sys
 import tempfile
 import urllib.error
 import urllib.request
@@ -191,8 +192,10 @@ def update_versions_info(
     try:
         write_versions_json(new_info, dir)
     except OSError:
-        # A read-only cache (such as in a Docker image) must not stop the export
-        pass
+        # A read-only cache (such as in a Docker image) must not stop the export. Use
+        # what is saved, so that later commands that only read `versions.json` (like
+        # the Quarto ones) choose the same version.
+        return read_versions_json(dir)
     return new_info
 
 
@@ -223,19 +226,30 @@ def latest_tag_version(url: str) -> str:
     return m.group(1)
 
 
-def fetch_assets_versions() -> list[str]:
-    """Return all published (not draft, not prerelease) release versions."""
+def _get_github_json(url: str, token: Optional[str]) -> Any:
     headers = {"Accept": "application/vnd.github+json"}
-    token = os.environ.get("GITHUB_PAT") or os.environ.get("GITHUB_TOKEN")
     if token:
         headers["Authorization"] = f"Bearer {token}"
+    req = urllib.request.Request(url, headers=headers)
+    with urllib.request.urlopen(req, timeout=10) as resp:
+        return json.load(resp)
+
+
+def fetch_assets_versions() -> list[str]:
+    """Return all published (not draft, not prerelease) release versions."""
+    token = os.environ.get("GITHUB_PAT") or os.environ.get("GITHUB_TOKEN")
     versions: list[str] = []
     page = 1
     while True:
         url = f"{ASSETS_RELEASES_API_URL}?per_page=100&page={page}"
-        req = urllib.request.Request(url, headers=headers)
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            releases = json.load(resp)
+        try:
+            releases = _get_github_json(url, token)
+        except urllib.error.HTTPError as e:
+            # An expired or wrong token fails, but public releases need no token
+            if e.code != 401 or not token:
+                raise
+            token = None
+            releases = _get_github_json(url, token)
         for r in releases:
             if r.get("draft") or r.get("prerelease"):
                 continue
@@ -319,20 +333,28 @@ def resolve_assets_version(
 ) -> str:
     """Return an exact assets version for an exact version, a series, or `"latest"`.
 
-    When `download=True`, the chosen version is downloaded if needed; if that fails,
-    the highest downloaded match is used instead. When `check=False`, only the saved
-    `versions.json` is read (no network). When `warn=False`, an exact version outside
-    the default series does not warn.
+    When `download=True`, the chosen version is downloaded if needed. For a series or
+    `"latest"`, if that fails, the highest downloaded match is used instead. When
+    `check=False`, only the saved `versions.json` is read (no network). When
+    `warn=False`, an exact version outside the default series does not warn.
     """
     from ._assets import download_shinylive, shinylive_cache_dir
 
     spec = parse_assets_version(version)
+    dir = Path(dir) if dir is not None else Path(shinylive_cache_dir())
     if spec.kind == "exact":
         if warn:
             _warn_outside_default(spec.value)
+        if download and spec.value not in local_assets_versions(dir):
+            try:
+                download_shinylive(destdir=dir, version=spec.value)
+            except Exception as e:
+                raise RuntimeError(
+                    f"Can't download Shinylive assets v{spec.value}. Check that this "
+                    "version exists and that you are online."
+                ) from e
         return spec.value
 
-    dir = Path(dir) if dir is not None else Path(shinylive_cache_dir())
     key = (spec.value, str(dir), download, check)
     if key in _memo:
         return _memo[key]
@@ -370,12 +392,11 @@ def resolve_assets_version(
     chosen = max_version(matches)
 
     if stale:
-        warnings.warn(
+        _warn(
             "Can't check GitHub for new Shinylive assets releases. Using "
             f"v{chosen}, which may not be the newest {spec.value!r} release. "
             f"({info.error if info else ''}) Set GITHUB_PAT if GitHub is limiting "
-            "requests, or pass an exact version.",
-            stacklevel=2,
+            "requests, or pass an exact version."
         )
 
     if download and chosen not in local:
@@ -399,10 +420,9 @@ def resolve_assets_version(
                     "of downloaded assets."
                 ) from e
             failed, chosen = chosen, max_version(local_matches)
-            warnings.warn(
+            _warn(
                 f"Can't download Shinylive assets v{failed}. Using downloaded "
-                f"v{chosen} instead. ({e})",
-                stacklevel=2,
+                f"v{chosen} instead. ({e})"
             )
 
     _memo[key] = chosen
@@ -414,9 +434,19 @@ def _warn_outside_default(version: str) -> None:
     if assets_version_matches(version, default) or version in _warned:
         return
     _warned.add(version)
-    warnings.warn(
+    _warn(
         f"Shinylive assets v{version} are outside the default "
         f"{SHINYLIVE_ASSETS_VERSION_DEFAULT!r} series for this version of shinylive. "
-        "Unexpected behavior may occur.",
-        stacklevel=3,
+        "Unexpected behavior may occur."
     )
+
+
+def _warn(message: str) -> None:
+    """Warn, pointing at the first caller outside the shinylive package."""
+    package_dir = str(Path(__file__).parent)
+    frame = sys._getframe(1)
+    stacklevel = 2
+    while frame.f_back is not None and frame.f_code.co_filename.startswith(package_dir):
+        frame = frame.f_back
+        stacklevel += 1
+    warnings.warn(message, stacklevel=stacklevel)

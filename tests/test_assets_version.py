@@ -12,6 +12,9 @@ import shinylive._assets as assets
 import shinylive._assets_version as av
 from shinylive._version import SHINYLIVE_ASSETS_VERSION_FALLBACK
 
+# Saved before the `offline` fixture replaces it
+real_fetch_assets_versions = av.fetch_assets_versions
+
 NOW = datetime(2026, 11, 20, 17, 3, 0, tzinfo=timezone.utc)
 
 
@@ -281,3 +284,77 @@ def test_local_assets_versions(tmp_path: Path):
     write_info(tmp_path, ["0.10.17"])
     assert av.local_assets_versions(tmp_path) == ["0.10.16", "0.10.9"]
     assert av.local_assets_versions(tmp_path / "missing") == []
+
+
+def test_update_versions_info_read_only_cache_returns_saved(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, offline: Calls
+):
+    write_info(tmp_path, ["0.10.16"], hours_ago=30)
+    fake_github(monkeypatch, offline, "0.10.17", ["0.10.17", "0.10.16"])
+
+    def read_only(info: av.VersionsInfo, dir: Path) -> None:
+        raise PermissionError("read-only")
+
+    monkeypatch.setattr(av, "write_versions_json", read_only)
+    # The check finds 0.10.17, but it can't be saved. Return what is saved, so later
+    # `check=False` calls (like Quarto's) choose the same version.
+    info = av.update_versions_info(tmp_path, now=NOW)
+    assert info is not None and info.versions == ["0.10.16"]
+    checked = av.resolve_assets_version("0.10.*", tmp_path, now=NOW, download=False)
+    saved = av.resolve_assets_version("0.10.*", tmp_path, check=False, download=False)
+    assert checked == saved == "0.10.16"
+
+
+def test_resolve_exact_version_downloads(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, offline: Calls
+):
+    assert av.resolve_assets_version("0.10.16", tmp_path) == "0.10.16"
+    assert av.resolve_assets_version("0.10.16", tmp_path) == "0.10.16"
+    assert offline.downloads == ["0.10.16"]
+    assert av.resolve_assets_version("0.10.15", tmp_path, download=False) == "0.10.15"
+    assert offline.downloads == ["0.10.16"]
+
+    def fail(**kwargs: object) -> None:
+        raise OSError("not found")
+
+    monkeypatch.setattr(assets, "download_shinylive", fail)
+    with pytest.raises(RuntimeError, match="Can't download Shinylive assets v0.10.99"):
+        av.resolve_assets_version("0.10.99", tmp_path)
+
+
+def test_fetch_assets_versions_retries_without_bad_token(
+    monkeypatch: pytest.MonkeyPatch,
+):
+    import urllib.error
+
+    tokens: list[str | None] = []
+
+    def get(url: str, token: str | None) -> list[dict[str, object]]:
+        tokens.append(token)
+        if token is not None:
+            raise urllib.error.HTTPError(url, 401, "Bad credentials", {}, None)  # type: ignore
+        return [{"tag_name": "v0.10.17"}, {"tag_name": "v0.10.18", "draft": True}]
+
+    monkeypatch.setattr(av, "_get_github_json", get)
+    monkeypatch.setenv("GITHUB_PAT", "expired")
+    assert real_fetch_assets_versions() == ["0.10.17"]
+    assert tokens == ["expired", None]
+
+    # Without a token, a 401 is a real error
+    monkeypatch.delenv("GITHUB_PAT")
+    monkeypatch.delenv("GITHUB_TOKEN", raising=False)
+
+    def get_no_token(url: str, token: str | None) -> list[dict[str, object]]:
+        return get(url, "rejected")
+
+    monkeypatch.setattr(av, "_get_github_json", get_no_token)
+    with pytest.raises(urllib.error.HTTPError):
+        real_fetch_assets_versions()
+
+
+def test_warnings_point_outside_the_package(monkeypatch: pytest.MonkeyPatch):
+    # Called through `assets_version()`, the warning still points here
+    monkeypatch.setenv("SHINYLIVE_ASSETS_VERSION", "0.9.2")
+    with pytest.warns(UserWarning, match="outside the default") as record:
+        av.assets_version()
+    assert record[0].filename == __file__
