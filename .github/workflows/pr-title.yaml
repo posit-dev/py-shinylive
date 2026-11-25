@@ -1,0 +1,60 @@
+# Checks that the pull request title follows Conventional Commits
+# (https://www.conventionalcommits.org/), since it becomes the squash commit
+# message. Copied from posit-dev/shinyreact.
+#
+# `pull_request_target` gives a token that can comment on pull requests from
+# forks too. This is safe because the job never checks out the pull request's
+# code; it only reads the title.
+name: PR title
+
+on:
+  pull_request_target:
+    types: [opened, edited, synchronize, reopened]
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  conventional-commits:
+    runs-on: ubuntu-latest
+    steps:
+      - name: 🔍 Check the title
+        uses: amannn/action-semantic-pull-request@v6
+        id: lint
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          types: |
+            build
+            chore
+            ci
+            docs
+            feat
+            fix
+            perf
+            refactor
+            release
+            style
+            test
+
+      - name: 💬 Explain a bad title
+        uses: marocchino/sticky-pull-request-comment@v3
+        if: always() && (steps.lint.outputs.error_message != null)
+        with:
+          header: lint-error
+          message: |
+            The title of this pull request does not follow the [Conventional Commits](https://www.conventionalcommits.org/en/v1.0.0/) format, for example `fix: Handle empty app folders`. Please update the title.
+
+            <details><summary>Details</summary>
+
+            ${{ steps.lint.outputs.error_message }}
+
+            </details>
+
+      - name: 🧹 Remove the comment once the title is fixed
+        if: ${{ steps.lint.outputs.error_message == null }}
+        uses: marocchino/sticky-pull-request-comment@v3
+        with:
+          header: lint-error
+          delete: true
