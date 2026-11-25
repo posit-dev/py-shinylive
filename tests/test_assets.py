@@ -24,3 +24,61 @@ def test_assets_available():
     a release.
     """
     assert shinylive._assets._check_assets_url() is True
+
+
+def test_copy_local_build_keeps_old_folder_when_source_is_missing(tmp_path):
+    from pathlib import Path
+
+    old = Path(tmp_path) / "shinylive-0.10.16"
+    old.mkdir()
+    with pytest.raises(RuntimeError, match="does not exist"):
+        shinylive._assets.copy_shinylive_local(
+            tmp_path / "missing", tmp_path, "0.10.16"
+        )
+    assert old.exists()
+
+
+def test_download_progress_without_size(monkeypatch, tmp_path, capsys):
+    import io
+    import tarfile
+    import time
+
+    buf = io.BytesIO()
+    with tarfile.open(fileobj=buf, mode="w:gz") as tar:
+        info = tarfile.TarInfo("shinylive-0.10.16/file.txt")
+        info.size = 1
+        tar.addfile(info, io.BytesIO(b"x"))
+    data = io.BytesIO(buf.getvalue() + b"\0" * 20000)
+
+    class Response:
+        headers: dict[str, str] = {}
+
+        def read(self, n: int) -> bytes:
+            return data.read(n)
+
+        def __enter__(self):
+            return self
+
+        def __exit__(self, *args: object) -> None:
+            pass
+
+    clock = iter(range(0, 1000, 2))
+    monkeypatch.setattr(time, "time", lambda: next(clock))
+    monkeypatch.setattr(
+        shinylive._assets.urllib.request, "urlopen", lambda *a, **k: Response()
+    )
+    shinylive._assets.download_shinylive(tmp_path, url="https://example.com/x.tar.gz")
+    err = capsys.readouterr().err
+    assert "MB" in err
+    assert "-" not in err.split("Unzipping")[0].split("...")[1]
+    assert (tmp_path / "shinylive-0.10.16" / "file.txt").exists()
+
+
+def test_check_assets_url_is_false_for_missing_release(monkeypatch):
+    import urllib.error
+
+    def not_found(*args: object, **kwargs: object):
+        raise urllib.error.HTTPError("https://x", 404, "Not Found", {}, None)  # type: ignore
+
+    monkeypatch.setattr(shinylive._assets.urllib.request, "urlopen", not_found)
+    assert shinylive._assets._check_assets_url(url="https://x") is False

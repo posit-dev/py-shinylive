@@ -6,6 +6,7 @@ import shutil
 import sys
 import tempfile
 import time
+import urllib.error
 import urllib.request
 import uuid
 from pathlib import Path
@@ -90,10 +91,14 @@ def download_shinylive(
             duration = current_time - start_time
             progress_size = int(count * block_size)
             speed = int(progress_size / (1024 * duration))
-            percent = min(int(count * block_size * 100 / total_size), 100)
-            sys.stderr.write(
-                f"\r{percent}%, {speed} KB/s, {progress_size / (1024 * 1024):.1f}/{total_size / (1024 * 1024):.1f} MB"
-            )
+            progress_mb = f"{progress_size / (1024 * 1024):.1f}"
+            if total_size > 0:
+                percent = min(int(progress_size * 100 / total_size), 100)
+                line = f"{percent}%, {speed} KB/s, {progress_mb}/{total_size / (1024 * 1024):.1f} MB"
+            else:
+                # The server did not send the size
+                line = f"{speed} KB/s, {progress_mb} MB"
+            sys.stderr.write("\r" + line)
             sys.stderr.flush()
             last_update_time = current_time
 
@@ -290,6 +295,9 @@ def copy_shinylive_local(
     `version` defaults to the build's own version (see `local_build_version()`)."""
     target_dir = _local_target_dir(source_dir, destdir, version)
     source_dir = Path(source_dir)
+    # Check before removing the old folder, so a bad path does not lose it
+    if not source_dir.is_dir():
+        raise RuntimeError("Source directory does not exist: " + str(source_dir))
     _remove_path(target_dir)
     shutil.copytree(source_dir, target_dir)
 
@@ -520,10 +528,9 @@ def _check_assets_url(
         url = shinylive_bundle_url(version)
 
     req = urllib.request.Request(url, method="HEAD")
-    resp = urllib.request.urlopen(req)
-    status = resp.getcode()
-
-    if status == 200:
-        return True
-    else:
+    try:
+        with urllib.request.urlopen(req, timeout=DOWNLOAD_TIMEOUT_SECONDS) as resp:
+            return resp.getcode() == 200
+    except urllib.error.HTTPError:
+        # Such as a 404 for a missing release
         return False
