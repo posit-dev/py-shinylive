@@ -20,6 +20,11 @@ description: "GitHub Actions workflows (build and test, PyPI release, the reusab
 - `test-deploy-app.yaml` - on pull requests, runs `deploy-app.yaml` from this
   branch on `tests/app` with `shinylive-version: "."`. It never deploys,
   because the ref is not `main`.
+- `pr-title.yaml` - checks that pull request titles follow Conventional
+  Commits (`feat:`, `fix:`, `build:`, `release:`, ...), since the title becomes
+  the squash commit message. It uses `pull_request_target`, so it runs the
+  copy of the workflow from the base branch, and changes to it only take
+  effect after they merge.
 
 ## `examples/` and the `actions/v1` tag
 
