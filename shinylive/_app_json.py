@@ -4,6 +4,7 @@ import base64
 import json
 import os
 import shutil
+import sys
 from pathlib import Path
 from typing import Literal, TypedDict
 
@@ -75,7 +76,8 @@ def read_app_files(appdir: Path, destdir: Path) -> list[FileContentJson]:
 
             if filename == "shinylive.js":
                 print(
-                    f"Warning: Found shinylive.js in source directory '{appdir}/{rel_dir}'. Are you including a shinylive distribution in your app?"
+                    f"Warning: Found shinylive.js in source directory '{appdir}/{rel_dir}'. Are you including a shinylive distribution in your app?",
+                    file=sys.stderr,
                 )
 
             type: Literal["text", "binary"] = "text"
@@ -147,6 +149,7 @@ def write_app_json(
 
     app_json_output_file = app_destdir / "app.json"
 
-    print("Writing " + str(app_json_output_file), end="")
-    json.dump(app_info["files"], open(app_json_output_file, "w"))
-    print(":", app_json_output_file.stat().st_size, "bytes")
+    with open(app_json_output_file, "w", encoding="utf-8") as f:
+        json.dump(app_info["files"], f)
+    size = app_json_output_file.stat().st_size
+    print(f"Writing {app_json_output_file}: {size} bytes", file=sys.stderr)

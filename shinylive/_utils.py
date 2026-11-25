@@ -75,7 +75,7 @@ def copy_file_and_substitute(
     with open(src, "r", encoding="utf-8") as fin:
         in_content = fin.read()
         out_content = chevron.render(in_content, data)
-        with open(dest, "w") as fout:
+        with open(dest, "w", encoding="utf-8") as fout:
             fout.write(out_content)
 
 

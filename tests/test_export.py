@@ -105,3 +105,17 @@ def test_path_length_windows(monkeypatch: pytest.MonkeyPatch):
     assert _utils.path_length("a/b/c") == 3
     assert _utils.path_length("a\\b") == 2
     assert _utils.path_length(".") == 0
+
+
+def test_export_prints_nothing_to_stdout(
+    fake_assets: Path, tmp_path: Path, capsys: pytest.CaptureFixture[str]
+):
+    app = make_app(tmp_path / "myapp")
+    (app / "shinylive.js").write_text("x")
+    export(app, tmp_path / "site", template_params={"title": "Café ✨"})
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert "app.json" in captured.err
+    assert "shinylive.js" in captured.err
+    index = (tmp_path / "site" / "index.html").read_bytes().decode("utf-8")
+    assert index == "<title>Café ✨</title>"
