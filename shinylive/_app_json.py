@@ -41,15 +41,21 @@ def read_app_files(appdir: Path, destdir: Path) -> list[FileContentJson]:
     # Recursively iterate over files in app directory, and collect the files into
     # app_files data structure.
     exclude_names = {"__pycache__", "venv", ".venv"}
+    # Compare resolved paths, so a relative destdir and an absolute appdir (or the
+    # other way around) still match
+    destdir_cmp = _utils.comparable_path(destdir)
     for root, dirs, files in os.walk(appdir, topdown=True):
         root = Path(root)
 
-        if _utils.is_relative_to(Path(root), destdir):
+        if _utils.is_relative_to(_utils.comparable_path(root), destdir_cmp):
             # In case destdir is inside of the appdir, don't copy those files.
+            dirs[:] = []
             continue
 
-        dirs[:] = [d for d in dirs if not d.startswith(".")]
-        dirs[:] = set(dirs) - exclude_names
+        # Sort, so the files in app.json are in the same order on every run
+        dirs[:] = sorted(
+            d for d in dirs if not d.startswith(".") and d not in exclude_names
+        )
         rel_dir = root.relative_to(appdir)
         files = [f for f in files if not f.startswith(".")]
         files = [f for f in files if f not in exclude_names]
