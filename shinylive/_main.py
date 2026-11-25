@@ -11,6 +11,7 @@ import click
 from . import _assets, _deps, _export
 from ._assets_version import (
     assets_version_input,
+    parse_assets_version,
     resolve_assets_version,
     set_assets_version,
 )
@@ -95,6 +96,22 @@ Defaults to the SHINYLIVE_ASSETS_VERSION environment variable if set, and otherw
 "{SHINYLIVE_ASSETS_VERSION_DEFAULT}"."""
 
 
+def check_assets_version(
+    ctx: click.Context, param: click.Parameter, value: str | tuple[str, ...] | None
+) -> str | tuple[str, ...] | None:
+    """Click callback: reject a version input that is not an exact version, a series,
+    or "latest"."""
+    values: tuple[str, ...] = (
+        value if isinstance(value, tuple) else (() if value is None else (value,))
+    )
+    for v in values:
+        try:
+            parse_assets_version(v)
+        except ValueError as e:
+            raise click.BadParameter(str(e)) from e
+    return value
+
+
 # #############################################################################
 # ## Main
 # #############################################################################
@@ -166,6 +183,7 @@ After writing the output files, you can serve them locally with the following co
     type=str,
     default=None,
     help=ASSETS_VERSION_HELP,
+    callback=check_assets_version,
 )
 @click.option(
     "--verbose",
@@ -250,6 +268,7 @@ def assets_info(
     type=str,
     default=None,
     help=ASSETS_VERSION_HELP,
+    callback=check_assets_version,
 )
 @click.option(
     "--dir",
@@ -291,6 +310,7 @@ cleanup_help = "Remove all versions of local assets except the ones to keep."
     "--keep",
     type=str,
     multiple=True,
+    callback=check_assets_version,
     help=f"""Version to keep: an exact version ("{SHINYLIVE_ASSETS_VERSION_FALLBACK}"),
     a series ("{SHINYLIVE_ASSETS_VERSION_DEFAULT}"), or "latest". For a series, only
     the newest downloaded match is kept. Can be used more than once. Defaults to
@@ -352,6 +372,7 @@ def remove(
     type=str,
     default=None,
     help="Version of the shinylive assets being copied. Defaults to the newest known version in the default series.",
+    callback=check_assets_version,
 )
 @click.option(
     "--dir",
@@ -395,6 +416,7 @@ link_from_local_help = (
     type=str,
     default=None,
     help="Version of shinylive assets being linked. Defaults to the newest known version in the default series.",
+    callback=check_assets_version,
 )
 @click.option(
     "--dir",
@@ -465,9 +487,9 @@ def extension() -> None:
 """,
 )
 def extension_info() -> None:
-    # Only `info` checks GitHub (and saves `versions.json`). It does not download:
-    # `base-htmldeps` downloads the assets before the script is used.
-    version = resolve_assets_version(assets_version_input(), download=False)
+    # Only `info` checks GitHub (and saves `versions.json`). It also downloads, so the
+    # `codeblock-to-json` script it reports exists.
+    version = resolve_assets_version(assets_version_input())
     print_as_json(
         {
             "version": SHINYLIVE_PACKAGE_VERSION,

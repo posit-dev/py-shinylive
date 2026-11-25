@@ -50,10 +50,7 @@ def download_shinylive(
     destdir.mkdir(parents=True, exist_ok=True)
     existed_before = {p.name for p in destdir.iterdir()}
     tmp_name = None
-    # Extract to a temp dir, then move into place, so a half-extracted folder is never
-    # picked up as a version. The "extract-" prefix lets `assets cleanup` remove
-    # leftovers from an interrupted download.
-    tmp_dir = Path(tempfile.mkdtemp(prefix="extract-", dir=destdir))
+    tmp_dir = None
 
     try:
         print(f"Downloading {url}...", file=sys.stderr)
@@ -85,13 +82,19 @@ def download_shinylive(
         sys.stderr.write("\n")
 
         print(f"Unzipping to {destdir}/", file=sys.stderr)
+        # Extract to a temp dir, then move into place, so a half-extracted folder is
+        # never picked up as a version. The "extract-" prefix lets `assets cleanup`
+        # remove leftovers. It is made only now, so a slow download is not mistaken
+        # for a leftover.
+        tmp_dir = Path(tempfile.mkdtemp(prefix="extract-", dir=destdir))
         tar_safe_extractall(tmp_name, tmp_dir)
         for src in tmp_dir.iterdir():
             _move_into_place(src, destdir / src.name, src.name in existed_before)
     finally:
         if tmp_name is not None:
             Path(tmp_name).unlink(missing_ok=True)
-        shutil.rmtree(tmp_dir, ignore_errors=True)
+        if tmp_dir is not None:
+            shutil.rmtree(tmp_dir, ignore_errors=True)
 
 
 def _move_into_place(src: Path, target: Path, existed_before: bool) -> None:
@@ -210,18 +213,21 @@ def ensure_shinylive_assets(
     version: Optional[str] = None,
     url: Optional[str] = None,
 ) -> Path:
-    """Ensure that there is a local copy of shinylive."""
+    """Ensure that there is a local copy of shinylive.
+
+    `version` names the folder (`shinylive-<version>`) to look for. When `url` is set,
+    a missing folder is downloaded from `url` instead of from GitHub.
+    """
 
     if destdir is None:
         destdir = Path(shinylive_cache_dir())
-        # Resolving a series or "latest" downloads the chosen version
-        if version is None:
+        if version is None and url is None:
+            # The version used by this process (which also downloads it)
             version = assets_version()
-    version = resolve_assets_version(assets_version_input(version), dir=destdir)
-
-    if not destdir.exists():
-        print("Creating directory " + str(destdir), file=sys.stderr)
-        destdir.mkdir(parents=True)
+    # With no `url`, resolving downloads the chosen version from GitHub
+    version = resolve_assets_version(
+        assets_version_input(version), dir=destdir, download=url is None
+    )
 
     shinylive_bundle_dir = destdir / f"shinylive-{version}"
     if not shinylive_bundle_dir.exists():
@@ -278,9 +284,13 @@ def remove_stale_temp_files(dir: str | Path, minutes: float = 10) -> None:
     for path in dir.iterdir():
         if not path.name.startswith(("extract-", "old-", "versions-")):
             continue
-        if now - path.lstat().st_mtime > minutes * 60:
-            print(f"Removing leftover temp file {path}")
-            _remove_path(path)
+        try:
+            if now - path.lstat().st_mtime > minutes * 60:
+                print(f"Removing leftover temp file {path}")
+                _remove_path(path)
+        except FileNotFoundError:
+            # Another process (such as an R cleanup) removed it first
+            pass
 
 
 def remove_shinylive_assets(

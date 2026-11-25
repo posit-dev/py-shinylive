@@ -10,7 +10,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `shinylive export` gains `--assets-version`. It, `shinylive assets download --version`, and the `SHINYLIVE_ASSETS_VERSION` environment variable accept an exact version (`0.10.16`), a series (`0.11.*`), or `latest`. Pin an exact version for builds that must repeat exactly, such as in CI.
 
-* In the Quarto extension, only `shinylive extension info` checks GitHub. The later `extension` commands only read `versions.json`, so one render uses one version.
+* In the Quarto extension, only `shinylive extension info` checks GitHub, and it downloads the chosen version. The later `extension` commands only read `versions.json`, so one render uses one version.
+
+* `shinylive._version.SHINYLIVE_ASSETS_VERSION` now gives a `FutureWarning`. It is no longer the assets version in use; it is the fallback version. Run `shinylive assets version` to get the version in use.
 
 * `shinylive assets cleanup` gains `--keep`. By default it keeps the newest downloaded version of the default series and of `SHINYLIVE_ASSETS_VERSION`. It also removes temp files left by interrupted downloads. `shinylive assets info` shows the version in use, the default series, and the last check. Downloads now extract to a temp folder and then move into place.
 

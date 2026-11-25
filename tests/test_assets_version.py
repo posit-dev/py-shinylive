@@ -9,14 +9,14 @@ import tarfile
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
-from typing import Iterator
+from typing import Any, Iterator
 
 import pytest
 from click.testing import CliRunner
 
 import shinylive._assets as assets
 import shinylive._assets_version as av
-from shinylive._main import main
+from shinylive._main import main, use_quarto_assets_version
 from shinylive._version import SHINYLIVE_ASSETS_VERSION_FALLBACK
 
 # Saved before the `offline` fixture replaces it
@@ -473,26 +473,144 @@ def test_download_moves_into_place(real_download: Path, tmp_path: Path):
     assert sorted(p.name for p in cache.iterdir()) == ["shinylive-0.10.16"]
 
 
+def run_extension_info() -> dict[str, Any]:
+    result = CliRunner().invoke(main, ["extension", "info"])
+    assert result.exit_code == 0, result.output
+    return json.loads(result.stdout)
+
+
 def test_extension_commands_use_one_version(
     monkeypatch: pytest.MonkeyPatch, tmp_path: Path, offline: Calls
 ):
     fake_github(monkeypatch, offline, "0.10.17", ["0.10.17", "0.10.16"])
-    runner = CliRunner()
-    result = runner.invoke(main, ["extension", "info"])
-    assert result.exit_code == 0, result.output
-    info = json.loads(result.stdout)
+    info = run_extension_info()
     assert info["assets_version"] == "0.10.17"
     assert info["scripts"]["codeblock-to-json"] == str(
         tmp_path / "shinylive-0.10.17" / "scripts" / "codeblock-to-json.js"
     )
-    # `info` checks GitHub but does not download
-    assert offline.latest == 1 and offline.downloads == []
+    # `info` checks GitHub and downloads, so the script it reports exists
+    assert offline.latest == 1 and offline.downloads == ["0.10.17"]
 
     # Later commands only read versions.json, even when a new release is out
     fake_github(monkeypatch, offline, "0.10.18", ["0.10.18", "0.10.17"])
     av._reset()
-    from shinylive._main import use_quarto_assets_version
-
     use_quarto_assets_version()
     assert av.assets_version() == "0.10.17"
     assert offline.latest == 1 and offline.downloads == ["0.10.17"]
+
+
+def test_extension_commands_agree_with_read_only_cache(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, offline: Calls
+):
+    # A Docker image: 0.10.16 is downloaded, the cache can't be written, and GitHub
+    # has 0.10.17
+    (tmp_path / "shinylive-0.10.16").mkdir()
+    fake_github(monkeypatch, offline, "0.10.17", ["0.10.17", "0.10.16"])
+
+    def read_only(info: av.VersionsInfo, dir: Path) -> None:
+        raise PermissionError("read-only")
+
+    monkeypatch.setattr(av, "write_versions_json", read_only)
+    assert run_extension_info()["assets_version"] == "0.10.16"
+    av._reset()
+    use_quarto_assets_version()
+    assert av.assets_version() == "0.10.16"
+    assert offline.downloads == []
+
+
+def test_ensure_assets_with_url_does_not_use_github(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path, offline: Calls
+):
+    urls: list[str | None] = []
+
+    def download(destdir: Path, version: str, url: str | None = None, **kw: object):
+        urls.append(url)
+        (Path(destdir) / f"shinylive-{version}").mkdir()
+
+    monkeypatch.setattr(assets, "download_shinylive", download)
+    write_info(tmp_path, ["0.10.17"])
+    mirror = "https://example.com/shinylive-0.10.17.tar.gz"
+    assets.ensure_shinylive_assets(tmp_path, version="0.10.*", url=mirror)
+    assets.ensure_shinylive_assets(tmp_path, version="0.10.15", url=mirror)
+    assert urls == [mirror, mirror]
+
+    # Without a URL, the resolver downloads from GitHub, and only once
+    assets.ensure_shinylive_assets(tmp_path, version="0.10.16")
+    assert urls == [mirror, mirror, None]
+
+
+def test_download_keeps_folder_from_another_process(
+    monkeypatch: pytest.MonkeyPatch, real_download: Path, tmp_path: Path
+):
+    cache = tmp_path / "cache"
+    make_bundle(real_download, "0.10.16", "ours")
+    real_extract = assets.tar_safe_extractall
+
+    def extract(tarfile: str, destdir: Path) -> None:
+        # Another process finishes the same download while ours runs
+        (cache / "shinylive-0.10.16").mkdir()
+        (cache / "shinylive-0.10.16" / "file.txt").write_text("theirs")
+        real_extract(tarfile, destdir)
+
+    monkeypatch.setattr(assets, "tar_safe_extractall", extract)
+    assets.download_shinylive(destdir=cache, version="0.10.16")
+    assert (cache / "shinylive-0.10.16" / "file.txt").read_text() == "theirs"
+    assert sorted(p.name for p in cache.iterdir()) == ["shinylive-0.10.16"]
+
+
+def test_download_makes_extract_folder_after_download(
+    monkeypatch: pytest.MonkeyPatch, real_download: Path, tmp_path: Path
+):
+    cache = tmp_path / "cache"
+    make_bundle(real_download, "0.10.16", "one")
+    seen: list[str] = []
+    real_urlretrieve = assets.urllib.request.urlretrieve
+
+    def urlretrieve(url: str, reporthook: object = None) -> tuple[str, None]:
+        # A cleanup during the download must find no extract folder to remove
+        seen.extend(p.name for p in cache.iterdir())
+        return real_urlretrieve(url, reporthook)  # type: ignore
+
+    monkeypatch.setattr(assets.urllib.request, "urlretrieve", urlretrieve)
+    assets.download_shinylive(destdir=cache, version="0.10.16")
+    assert seen == []
+
+
+def test_remove_stale_temp_files_ignores_files_already_removed(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+):
+    old = time.time() - 3600
+    for name in ["extract-a", "old-b"]:
+        (tmp_path / name).mkdir()
+        os.utime(tmp_path / name, (old, old))
+    real_remove = assets._remove_path
+
+    def remove(path: Path) -> None:
+        # Another process removes "old-b" first
+        if path.name == "old-b":
+            real_remove(path)
+            raise FileNotFoundError(path)
+        real_remove(path)
+
+    monkeypatch.setattr(assets, "_remove_path", remove)
+    assets.remove_stale_temp_files(tmp_path)
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_cli_rejects_bad_versions():
+    runner = CliRunner()
+    for args in [
+        ["assets", "cleanup", "--keep", "0.10.x"],
+        ["assets", "download", "--version", "newest"],
+        ["export", "--assets-version", "v0.10.16", "app", "site"],
+    ]:
+        result = runner.invoke(main, args)
+        assert result.exit_code == 2, args
+        assert "Invalid Shinylive assets version" in result.output
+
+
+def test_old_assets_version_constant_warns():
+    import shinylive._version as version
+
+    with pytest.warns(FutureWarning, match="no longer the Shinylive assets version"):
+        assert version.SHINYLIVE_ASSETS_VERSION == SHINYLIVE_ASSETS_VERSION_FALLBACK
