@@ -1,89 +1,91 @@
-.PHONY: clean clean-test clean-pyc clean-build docs help
 .DEFAULT_GOAL := help
 
-define BROWSER_PYSCRIPT
-import os, webbrowser, sys
+.PHONY: help
+help: ## show this help
+	@grep -E '^[a-zA-Z0-9_-]+:.*?## .*$$' $(MAKEFILE_LIST) | \
+		awk 'BEGIN {FS = ":.*?## "}; {printf "\033[32m%-12s\033[0m %s\n", $$1, $$2}'
 
-from urllib.request import pathname2url
+.PHONY: setup
+setup: ## install the package, dev tools, and pre-commit hooks
+	@echo "📦 Installing the package and dev tools into .venv"
+	uv sync --upgrade
+	@echo "🪝 Installing pre-commit hooks"
+	uv run pre-commit install
 
-webbrowser.open("file://" + pathname2url(os.path.abspath(sys.argv[1])))
-endef
-export BROWSER_PYSCRIPT
+.PHONY: check
+check: pyrefly lint ## check types, style, and formatting
+	@echo "📐 Checking format with ruff"
+	uv run ruff format --check .
 
-define PRINT_HELP_PYSCRIPT
-import re, sys
+.PHONY: pyrefly
+pyrefly: ## check types with pyrefly
+	@echo "📝 Checking types with pyrefly"
+	uv run pyrefly check
 
-for line in sys.stdin:
-	match = re.match(r'^([a-zA-Z_-]+):.*?## (.*)$$', line)
-	if match:
-		target, help = match.groups()
-		print("%-20s %s" % (target, help))
-endef
-export PRINT_HELP_PYSCRIPT
+.PHONY: lint
+lint: ## check style and import order with ruff
+	@echo "🔍 Checking style with ruff"
+	uv run ruff check .
 
-BROWSER := python3 -c "$$BROWSER_PYSCRIPT"
+.PHONY: format
+format: ## format code and sort imports with ruff
+	@echo "🎨 Formatting code with ruff"
+	uv run ruff check --fix .
+	uv run ruff format .
 
-help:
-	@python3 -c "$$PRINT_HELP_PYSCRIPT" < $(MAKEFILE_LIST)
+.PHONY: test
+test: ## run tests with the default Python
+	@echo "🧪 Running tests with pytest"
+	uv run pytest
 
-clean: clean-build clean-pyc clean-test ## remove all build, test, coverage and Python artifacts
+.PHONY: test-all
+test-all: ## run tests on the built wheel with Python 3.10 to 3.14 (tox)
+	@echo "🔄 Running tests with tox on Python 3.10 to 3.14"
+	uv run tox run-parallel
 
-clean-build: ## remove build artifacts
-	rm -fr build/
-	rm -fr dist/
-	rm -fr .eggs/
+.PHONY: coverage
+coverage: ## measure test coverage and open the report
+	@echo "📊 Measuring test coverage"
+	uv run coverage run --source shinylive -m pytest
+	uv run coverage report -m
+	uv run coverage html
+	uv run python -m webbrowser "file://$(CURDIR)/htmlcov/index.html"
+
+.PHONY: dist
+dist: clean ## build the sdist and wheel
+	@echo "🧳 Building the package"
+	uv build
+	ls -l dist
+
+.PHONY: install
+install: dist ## install the built wheel into .venv (the next `uv run` restores the editable install)
+	@echo "📥 Installing the built wheel"
+	uv pip install --reinstall dist/shinylive*.whl
+
+.PHONY: release
+release: dist ## build and upload a release to PyPI
+	@echo "🚢 Publishing to PyPI"
+	uv publish
+
+.PHONY: clean
+clean: clean-build clean-pyc clean-test ## remove build, test, coverage, and Python artifacts
+
+.PHONY: clean-build
+clean-build:
+	@echo "🧹 Removing build artifacts"
+	rm -fr build/ dist/ .eggs/
 	find . -name '*.egg-info' -exec rm -fr {} +
 	find . -name '*.egg' -exec rm -f {} +
 
-clean-pyc: ## remove Python file artifacts
+.PHONY: clean-pyc
+clean-pyc:
+	@echo "🧹 Removing Python artifacts"
 	find . -name '*.pyc' -exec rm -f {} +
 	find . -name '*.pyo' -exec rm -f {} +
 	find . -name '*~' -exec rm -f {} +
 	find . -name '__pycache__' -exec rm -fr {} +
 
-clean-test: ## remove test and coverage artifacts
-	rm -fr .tox/
-	rm -f .coverage
-	rm -fr htmlcov/
-	rm -fr .pytest_cache
-	rm -rf typings/
-
-install-deps: ## install the package and dev tools into .venv
-	uv sync
-
-pyrefly: ## type check with pyrefly
-	uv run pyrefly check
-
-check: pyrefly lint ## check code quality with pyrefly and ruff
-	uv run ruff format --check .
-
-lint: ## check style and import order with ruff
-	uv run ruff check .
-
-format: ## format code and sort imports with ruff
-	uv run ruff check --fix .
-	uv run ruff format .
-
-test: ## run tests quickly with the default Python
-	uv run pytest
-
-test-all: ## run tests against the built wheel on Python 3.10 to 3.14 with tox
-	uv run tox run-parallel
-
-coverage: ## check code coverage quickly with the default Python
-	uv run coverage run --source shinylive -m pytest
-	uv run coverage report -m
-	uv run coverage html
-	$(BROWSER) htmlcov/index.html
-
-release: dist ## package and upload a release
-	uv publish
-
-dist: clean ## builds source and wheel package
-	uv build
-	ls -l dist
-
-## install the built wheel into .venv, replacing the editable install.
-## The next `uv run` puts the editable install back.
-install: dist
-	uv pip install --reinstall dist/shinylive*.whl
+.PHONY: clean-test
+clean-test:
+	@echo "🧹 Removing test and coverage artifacts"
+	rm -fr .tox/ .coverage htmlcov/ .pytest_cache typings/
