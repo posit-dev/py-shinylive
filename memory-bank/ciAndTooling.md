@@ -1,6 +1,6 @@
 ---
 title: "CI, release, and tooling"
-description: "GitHub Actions workflows (build and test, PyPI release, the reusable deploy-app workflow and its actions/v1 tag), the Makefile, packaging in setup.cfg, linting and typing config, and the CHANGELOG."
+description: "GitHub Actions workflows (build and test, PyPI release, the reusable deploy-app workflow and its actions/v1 tag), the Makefile, packaging in pyproject.toml, linting and typing config, and the CHANGELOG."
 ---
 
 # CI, release, and tooling
@@ -37,17 +37,20 @@ git push --force origin refs/tags/actions/v1
 
 `make test`, `make check` (`pyright`, `lint`, `black --check`,
 `isort --check-only`), `make lint` (flake8 on `shinylive` and `tests`),
-`make dist` (`setup.py sdist` and `bdist_wheel`), `make install`,
+`make dist` (`hatch build`), `make install`,
 `make coverage`, `make clean`.
 
-## Packaging (`setup.cfg`)
+## Packaging (`pyproject.toml`)
 
-- Version comes from `shinylive._version.SHINYLIVE_PACKAGE_VERSION`.
-- Only `shinylive` and `shinylive.*` are packaged, plus `py.typed`. There is
-  no `MANIFEST.in`, so `memory-bank/`, `.agents/`, and `AGENTS.md` are not in
-  the sdist or wheel.
+- The build backend is hatchling.
+- Version comes from `SHINYLIVE_PACKAGE_VERSION` in
+  `shinylive/_version/__init__.py` (read by a regex in `[tool.hatch.version]`).
+- The wheel holds only the `shinylive` package, including `py.typed`. The
+  sdist adds `tests/`, `CHANGELOG.md`, `README.md`, and `LICENSE`, so
+  `memory-bank/`, `.agents/`, and `AGENTS.md` are in neither.
 - The `shinylive` console script is `shinylive._main:main`.
-- flake8 and isort settings are here; pyright settings are in
+- isort settings are in `pyproject.toml`. flake8 settings are in `.flake8`,
+  because flake8 cannot read `pyproject.toml`. pyright settings are in
   `pyrightconfig.json` (strict).
 
 ## CHANGELOG

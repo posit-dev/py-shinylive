@@ -1,0 +1,77 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "shinylive"
+dynamic = ["version"]
+authors = [
+    {name = "Winston Chang", email = "winston@posit.co"},
+]
+description = "Run Shiny applications running Python in the browser."
+readme = "README.md"
+license = "MIT"
+license-files = ["LICENSE"]
+requires-python = ">=3.10"
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "Natural Language :: English",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+]
+dependencies = [
+    "shiny",
+    "click>=8.1.7",
+    "appdirs>=1.4.4",
+    "lzstring>=1.0.4",
+    "typing-extensions>=4.0.1",
+    "setuptools; python_version>='3.12'",
+    "chevron>=0.14.0",
+]
+
+[project.urls]
+Homepage = "https://github.com/posit-dev/py-shinylive"
+"Bug Tracker" = "https://github.com/posit-dev/py-shinylive/issues"
+Documentation = "https://github.com/posit-dev/py-shinylive"
+"Source Code" = "https://github.com/posit-dev/py-shinylive"
+Changelog = "https://github.com/posit-dev/py-shinylive/blob/main/CHANGELOG.md"
+
+[project.optional-dependencies]
+test = [
+    "pytest>=6.2.4",
+]
+dev = [
+    "black>=22.3.0",
+    "coverage",
+    "flake8>=3.9.2",
+    "flake8-bugbear>=22.6.22",
+    "isort>=5.11.2",
+    "pyright>=1.1.284",
+]
+
+[project.scripts]
+shinylive = "shinylive._main:main"
+
+[tool.hatch.version]
+path = "shinylive/_version/__init__.py"
+pattern = "SHINYLIVE_PACKAGE_VERSION\\s*=\\s*['\"](?P<version>[^'\"]+)['\"]"
+
+# `shinylive/py.typed` ships because it is inside the package.
+[tool.hatch.build.targets.wheel]
+packages = ["shinylive"]
+
+# Tests and the changelog are included so packagers (e.g. conda-forge) can
+# run the tests from the sdist.
+[tool.hatch.build.targets.sdist]
+only-include = [
+    "shinylive",
+    "tests",
+    "CHANGELOG.md",
+]
+
+[tool.isort]
+profile = "black"
