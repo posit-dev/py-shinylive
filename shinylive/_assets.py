@@ -388,8 +388,8 @@ def cleanup_shinylive_assets(
 
     shinylive_dir = Path(shinylive_dir)
     if not keep:
-        env = os.environ.get("SHINYLIVE_ASSETS_VERSION")
-        keep = [SHINYLIVE_ASSETS_VERSION_DEFAULT] + ([env] if env else [])
+        # `assets_version_input()` also rejects a bad SHINYLIVE_ASSETS_VERSION
+        keep = [SHINYLIVE_ASSETS_VERSION_DEFAULT, assets_version_input()]
 
     versions = local_assets_versions(shinylive_dir)
     kept: list[str] = []
