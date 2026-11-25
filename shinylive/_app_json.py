@@ -48,7 +48,7 @@ def read_app_files(appdir: Path, destdir: Path) -> list[FileContentJson]:
     for root, dirs, files in os.walk(appdir, topdown=True):
         root = Path(root)
 
-        if _utils.is_relative_to(_utils.comparable_path(root), destdir_cmp):
+        if _utils.comparable_path(root).is_relative_to(destdir_cmp):
             # In case destdir is inside of the appdir, don't copy those files.
             dirs[:] = []
             continue

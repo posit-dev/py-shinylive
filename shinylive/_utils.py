@@ -11,20 +11,6 @@ from typing import Callable
 import chevron
 
 
-def is_relative_to(path: Path, base: Path) -> bool:
-    """
-    Wrapper for `PurePath.is_relative_to`, which was added in Python 3.9.
-    """
-    if sys.version_info >= (3, 9):
-        return path.is_relative_to(base)
-    else:
-        try:
-            path.relative_to(base)
-            return True
-        except ValueError:
-            return False
-
-
 def comparable_path(path: str | Path) -> Path:
     """Return `path` made absolute, with symlinks resolved and, on Windows, in lower
     case. Use it only to compare paths, never to name files."""
@@ -127,7 +113,7 @@ def tar_safe_extractall(file: str | Path, destdir: str | Path) -> None:
         else:
             for member in tar.getmembers():
                 member_path = (destdir / member.name).resolve()
-                if not is_relative_to(member_path, destdir):
+                if not member_path.is_relative_to(destdir):
                     raise RuntimeError("Attempted path traversal in tar file.")
 
             tar.extractall(destdir)  # pyright: ignore[reportDeprecated]

@@ -12,7 +12,7 @@ from ._assets_version import (
     resolve_assets_version,
     set_assets_version,
 )
-from ._utils import comparable_path, is_relative_to
+from ._utils import comparable_path
 
 
 def export(
@@ -36,7 +36,7 @@ def export(
     if not (appdir / "app.py").exists():
         raise ValueError(f"Directory {appdir}/ must contain a file named app.py.")
 
-    if is_relative_to(comparable_path(appdir), comparable_path(destdir)):
+    if comparable_path(appdir).is_relative_to(comparable_path(destdir)):
         # Every app file would be skipped as part of the export
         raise ValueError(
             f"destdir {destdir}/ is or holds appdir {appdir}/. Export to a separate "
