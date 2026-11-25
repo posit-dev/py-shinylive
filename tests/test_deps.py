@@ -135,6 +135,12 @@ def test_requirements_txt_skips_options_and_urls():
     https://example.com/x.whl
     shiny[theme]>=1.0  # inline comment
     pkg @ https://example.com/pkg.whl
+    .
+    ./local_pkg
+    ../other/pkg.whl
+    /wheels/x.whl
+    ~/wheels/y.whl
+    C:\\wheels\\z.whl
     """
     assert _find_packages_in_requirements(requirements_txt) == ["shiny", "pkg"]
 

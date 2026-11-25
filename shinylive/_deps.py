@@ -647,6 +647,10 @@ def _find_packages_in_requirements(req_txt: str) -> list[str]:
         # Options, like `-r other.txt` or `--index-url URL`, are not packages
         if line.startswith("-"):
             continue
+        # Local paths, like `.`, `./my_pkg`, or `/wheels/x.whl`, are not Pyodide
+        # packages
+        if line.startswith((".", "/", "\\", "~")) or re.match(r"[a-zA-Z]:[\\/]", line):
+            continue
         # If it's a URL (`https://`, `git+https://`, ...), then it can't be a Pyodide
         # package. Ignore it.
         if re.match(r"[a-zA-Z][a-zA-Z0-9+.-]*://", line):
