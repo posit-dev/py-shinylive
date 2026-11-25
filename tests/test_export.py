@@ -69,3 +69,27 @@ def test_read_app_files_order_is_stable(tmp_path: Path):
         (app / d / "f.txt").write_text("x")
     names = [f["name"] for f in read_app_files(app, tmp_path / "site")]
     assert names == ["app.py", "a/f.txt", "b/f.txt", "c/f.txt", "www/style.css"]
+
+
+def test_export_nested_subdir_and_destdir(fake_assets: Path, tmp_path: Path):
+    app = make_app(tmp_path / "myapp")
+    site = tmp_path / "out" / "site"
+    export(app, site, subdir="a/b")
+    assert app_json_names(site / "a" / "b") == ["app.py", "www/style.css"]
+    assert (site / "a" / "b" / "edit" / "index.html").read_text() == "../../"
+
+
+@pytest.mark.parametrize("subdir", ["..", "../x", "a/../../x"])
+def test_export_subdir_must_stay_inside_destdir(
+    fake_assets: Path, tmp_path: Path, subdir: str
+):
+    app = make_app(tmp_path / "myapp")
+    with pytest.raises(ValueError, match="subdir"):
+        export(app, tmp_path / "site", subdir=subdir)
+    assert not (tmp_path / "x").exists()
+
+
+def test_export_subdir_dot_is_no_subdir(fake_assets: Path, tmp_path: Path):
+    app = make_app(tmp_path / "myapp")
+    export(app, tmp_path / "site", subdir=".")
+    assert (tmp_path / "site" / "edit" / "index.html").read_text() == ""

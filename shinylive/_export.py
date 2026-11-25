@@ -43,13 +43,7 @@ def export(
             "folder, such as `shinylive export myapp site`."
         )
 
-    if subdir is None:
-        subdir = ""
-    subdir = Path(subdir)
-    if subdir.is_absolute():
-        raise ValueError(
-            f"subdir {subdir} is absolute, but only relative paths are allowed."
-        )
+    subdir = check_subdir(subdir)
 
     # Resolve after the argument checks: it may use the network, and it downloads the
     # chosen version if needed. All later lookups of the assets folder in this process
@@ -65,7 +59,7 @@ def export(
 
     if not destdir.exists():
         print(f"Creating {destdir}/", file=sys.stderr)
-        destdir.mkdir()
+        destdir.mkdir(parents=True)
 
     copy_fn = _utils.create_copy_fn(overwrite=False, verbose_print=verbose_print)
 
@@ -149,3 +143,18 @@ def export(
         f"  python3 -m http.server --directory {destdir} --bind localhost 8008",
         file=sys.stderr,
     )
+
+
+def check_subdir(subdir: str | Path | None) -> Path:
+    """Return `subdir` as a relative path inside the export folder. `None` and `"."`
+    mean no subdir."""
+    if subdir is None:
+        return Path()
+    path = Path(subdir)
+    if path.is_absolute() or path.drive or path.root:
+        raise ValueError(
+            f"subdir {subdir} is absolute, but only relative paths are allowed."
+        )
+    if ".." in path.parts:
+        raise ValueError(f"subdir {subdir} must not contain `..`.")
+    return path

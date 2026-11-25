@@ -117,8 +117,7 @@ def write_app_json(
     if subdir_inverse != "":
         subdir_inverse += "/"
 
-    if not app_destdir.exists():
-        app_destdir.mkdir()
+    app_destdir.mkdir(parents=True, exist_ok=True)
 
     replacements = {
         # Default values
