@@ -11,8 +11,9 @@ A shinylive.io link holds the whole app in the URL hash:
 https://shinylive.io/<py|r>/<editor|app>/#[h=0&]code=<lz-string of JSON>
 ```
 
-The JSON is a list of `{"name", "content", "type"?}` dicts (`type` is only
-`"binary"` for base64 content). `h=0` hides the header and is only used in
+The JSON is a list of `{"name", "content", "type"?}` dicts (`type` is
+`"binary"` for base64 content and `"text"` otherwise; `add_file_contents()`
+leaves it out). `h=0` hides the header and is only used in
 `app` mode. This works for R apps too; no assets are needed.
 
 ## `ShinyliveApp`
@@ -59,10 +60,11 @@ and the suffix decides.
 
 - **Decoded URLs are untrusted.** Their file names can be anything; keep the
   `write_files()` name check.
-- **Folders in `files` are named differently by the two constructors.** With
-  `from_local()`, names are relative to the app's folder (`www/s.css`); with
-  `from_text()` and no `root_dir`, only the base name is kept (`s.css`).
-  `add_dir()` names files `<folder name>/...` (or flattens them).
+- **Files and folders in `files` are named differently.** A file is named
+  relative to the app's folder (`from_local()`), or by its base name
+  (`from_text()` with no `root_dir`). A folder inside the app's folder is named
+  the same way, file by file (`www/s.css`). Any other folder goes through
+  `add_dir()` and keeps its name (`www/s.css`), so its files never collide.
 - **Bundle names always use `/`.** Build them with `as_posix()`, never
   `str(Path)` or `os.path.join()`, which use `\` on Windows.
 - **`url_encode()` returns a `str`**, not a `ShinyliveApp`.

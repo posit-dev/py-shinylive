@@ -42,7 +42,7 @@ In order:
    (minus base files). See `pyodidePackages.md`.
 10. `write_app_json()` renders the template and writes `app.json`.
 
-All messages go to stderr.
+All messages go to stderr, including the `--verbose` ones.
 
 ## `read_app_files(appdir, destdir)` (`_app_json.py`)
 

@@ -22,13 +22,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 * `shinylive export --subdir` no longer accepts `..`, which wrote outside `DESTDIR`. Nested `--subdir` and `DESTDIR` folders are now created. On Windows, a nested `--subdir` now gets the right path to the shared assets.
 
-* `shinylive export` now prints all its messages to stderr, and writes the template pages and `app.json` as UTF-8. A `--template-params` JSON string longer than a file name can be no longer fails on Python 3.10 to 3.13.
+* `shinylive export` now prints all its messages to stderr (also with `--verbose`), and writes the template pages and `app.json` as UTF-8. A `--template-params` JSON string longer than a file name can be no longer fails on Python 3.10 to 3.13.
 
 * `shinylive assets install-from-local` no longer removes the installed version when `BUILD` does not exist. Download progress no longer shows negative numbers when the server does not send the file size.
 
-* An app's Pyodide packages are found more carefully: relative imports (`from .utils import x`) are no longer read as packages, and option lines (`-r`, `--index-url`), VCS URLs, and inline comments in `requirements.txt` are skipped. Copied packages and Quarto resources are in the same order on every run.
+* An app's Pyodide packages are found more carefully: relative imports (`from .utils import x`) are no longer read as packages, and option lines (`-r`, `--index-url`), local paths (`./my_pkg`), VCS URLs, and inline comments in `requirements.txt` are skipped. Copied packages and Quarto resources are in the same order on every run.
 
-* `ShinyliveApp` and `shinylive url` fixes: folders can be passed as files (`shinylive url encode app.py www`), `add_file(overwrite=True)` replaces the file, `remove_file()` and `-` remove it, files can mix relative and absolute paths, names always use `/`, `write_files()` (`shinylive url decode --dir`) creates subfolders, writes UTF-8, and refuses names outside the folder, and URLs on other hosts are decoded with the right language and mode.
+* `ShinyliveApp` and `shinylive url` fixes: folders can be passed as files (`shinylive url encode app.py www`) and keep their folder name, `add_file(overwrite=True)` replaces the file, `remove_file()` and `-` remove it, files can mix relative and absolute paths, names always use `/`, `write_files()` (`shinylive url decode --dir`) creates subfolders, writes UTF-8, and refuses names outside the folder, and URLs on other hosts are decoded with the right language and mode.
 
 ## [0.8.13] - 2026-10-29
 

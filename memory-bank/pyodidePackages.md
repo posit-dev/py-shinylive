@@ -22,10 +22,12 @@ the app needs from `<assets>/shinylive/pyodide/` so the site stays small.
    `requirements.txt`, `_find_packages_in_requirements()` keeps the leading
    name of each line and turns `_` into `-`. It drops comments (also inline),
    blank lines, option lines starting with `-` (`-r`, `--index-url`, `-e`),
-   and lines starting with a URL (`https://`, `git+https://`). For
+   local paths (`.`, `./my_pkg`, `/wheels/x.whl`, `C:\x.whl`), and lines
+   starting with a URL (`https://`, `git+https://`). For
    `pkg @ https://...` it keeps `pkg`.
 3. `_find_recursive_deps()` follows each package's `depends` list. Names not
-   in the lock are dropped (with a verbose message). It returns the names
+   in the lock are dropped. With `--verbose`, a message is printed for each,
+   except base names like `ssl`. It returns the names
    sorted, so the copy order is the same on every run.
 4. `_dep_names_to_pyodide_pkg_infos()` turns names into lock entries
    (`dep_name_to_dep_key()` lowercases and maps the lock's `name` to its key).

@@ -55,7 +55,7 @@ Shared with r-shinylive, same format:
   clock went backwards (`versions_check_due()`).
 - `check_versions_info()` reads where `/releases/latest` redirects to (no rate
   limit), and fetches the full release list from the GitHub API only when the
-  latest tag changed. `GITHUB_PAT` or `GITHUB_TOKEN` is used if set; a 401
+  latest tag changed or the saved list is empty. `GITHUB_PAT` or `GITHUB_TOKEN` is used if set; a 401
   retries without it.
 - A failed check keeps the old list and records `error`.
 - `write_versions_json()` writes a temp file and renames it. A read-only cache
@@ -72,7 +72,8 @@ Shared with r-shinylive, same format:
   warns. The new `versions.json` is saved only once the chosen version is
   downloaded, so later commands that only read it never pick a version they
   would have to download.
-- Results are memoized per `(input, dir, download, check)` in `_memo`.
+- Series and `"latest"` results are memoized per `(input, dir, download,
+  check)` in `_memo`. Exact versions return before the memo.
 
 `assets_version()` resolves once per process (`_session_version`).
 `set_assets_version()` sets it and clears the `_deps.py` caches when it
@@ -127,8 +128,6 @@ version. A local build is treated like any other installed version.
   the old `shinylive-<version>`.
 - **A server may send no size.** Mirrors may leave out `Content-Length`, so
   `_urlretrieve()` passes `-1` and the progress line shows only the MB so far.
-- **`urlopen()` raises for HTTP errors.** `_check_assets_url()` catches
-  `HTTPError` to return `False` for a missing release.
 - **Tests must not touch your real cache.** Monkeypatch
   `assets.shinylive_cache_dir` and call `_assets_version._reset()`; see the
   `offline` fixture in `tests/test_assets_version.py`.

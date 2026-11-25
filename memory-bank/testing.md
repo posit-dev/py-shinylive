@@ -13,11 +13,11 @@ black, and isort.
 | File | Covers | Needs assets |
 |---|---|---|
 | `tests/test_assets_version.py` | Version inputs, `versions.json`, resolving, downloads, cleanup, extension commands | No; fully offline |
-| `tests/test_deps.py` | `requirements.txt` parsing; module/name/key mapping and dependency lists | Yes, except `test_requirements_txt` |
+| `tests/test_deps.py` | `requirements.txt` parsing; module/name/key mapping and dependency lists | Only the `skip_if_not_release` tests |
 | `tests/test_url.py` | Encoding and decoding shinylive.io links; `ShinyliveApp` files | No |
 | `tests/test_export.py` | `export()`, `read_app_files()`, `path_length()` | Uses `fake_assets` |
 | `tests/test_cli.py` | `shinylive` CLI options and help | Uses `fake_assets` |
-| `tests/test_assets.py` | `_check_assets_url()` (one test uses the network); local builds; download progress | Mostly no |
+| `tests/test_assets.py` | The release's assets URL (one release-only test uses the network); local builds; download progress | Mostly no |
 
 `tests/app/` is a fixture app for the deploy-app workflow test; pytest and
 pyright ignore it.
@@ -47,8 +47,11 @@ caches. Use it to test export and package code with no network.
 
 - points `assets.shinylive_cache_dir` at `tmp_path`;
 - calls `_assets_version._reset()` (memo, warnings, session version);
-- replaces `fetch_latest_assets_version`, `fetch_assets_versions`, and
-  `download_shinylive` with fakes that record calls (`Calls`).
+- replaces `fetch_latest_assets_version` and `fetch_assets_versions` with
+  fakes that raise `AssertionError("network used")`; call `fake_github()` to
+  give them data;
+- replaces `download_shinylive` with a fake that records each version in
+  `calls.downloads` (`Calls`).
 
 Helpers: `fake_github()` sets the latest tag and list; `write_info()` writes a
 `versions.json`; the `real_download` fixture runs the real

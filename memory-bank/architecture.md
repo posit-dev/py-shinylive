@@ -110,8 +110,9 @@ Other folders:
   downloaded to a user cache on first use. Anything that touches assets can
   hit the network.
 - **One assets version per process.** `assets_version()` resolves once and
-  then returns the same version. `export()` and the Quarto commands set it
-  with `set_assets_version()`, which also clears the cached
+  then returns the same version. `export()` and the Quarto commands (except
+  `extension info`, which passes the version on directly) set it with
+  `set_assets_version()`, which also clears the cached
   `pyodide-lock.json` data in `_deps.py`.
 - **Export is additive.** Re-exporting into the same `destdir` keeps files
   that are already there, and only prints a message if an asset file differs.
